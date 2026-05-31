@@ -67,21 +67,31 @@ async function seedMockIfNeeded() {
 }
 
 // Descarga todas las colecciones del backend y refresca caché + store.
+// Resiliente: si una acción falla (p. ej. backend sin actualizar), esa
+// colección conserva su caché local y las demás sí se refrescan.
 async function pullAll() {
   const colls = Object.keys(ENTITIES);
-  const results = await Promise.all(colls.map((c) => apiClient.get(ENTITIES[c].read)));
+  const results = await Promise.allSettled(colls.map((c) => apiClient.get(ENTITIES[c].read)));
   const patch = {};
+  let ok = 0;
   for (let i = 0; i < colls.length; i++) {
     const c = colls[i];
-    const rows = Array.isArray(results[i]) ? results[i] : [];
-    await db.clear(ENTITIES[c].store);
-    if (rows.length) await db.bulkPut(ENTITIES[c].store, rows);
-    patch[c] = rows;
+    const res = results[i];
+    if (res.status === 'fulfilled' && Array.isArray(res.value)) {
+      const rows = res.value;
+      await db.clear(ENTITIES[c].store);
+      if (rows.length) await db.bulkPut(ENTITIES[c].store, rows);
+      patch[c] = rows;
+      ok++;
+    } else {
+      patch[c] = await db.getAll(ENTITIES[c].store); // conserva caché
+      console.warn(`[dataService] pull "${c}" falló:`, res.reason && res.reason.message);
+    }
   }
   patch.netWorthSeries = mockData.netWorthSeries;
   patch.baseCurrency = baseCurrencyFrom(patch.settings);
   store.hydrate(patch);
-  return { pulled: colls.length };
+  return { pulled: ok, total: colls.length };
 }
 
 export const dataService = {
@@ -172,6 +182,17 @@ export const dataService = {
     if (!apiClient.isConfigured()) return { refreshed: false };
     await pullAll();
     return { refreshed: true };
+  },
+
+  // Guarda un snapshot de patrimonio (calculado en el backend). Requiere conexión.
+  async saveSnapshot() {
+    if (!apiClient.isConfigured()) throw new Error('Sin backend configurado.');
+    if (!navigator.onLine) throw new Error('Sin conexión.');
+    const rec = await apiClient.post('saveNetWorthSnapshot', {});
+    await db.put('netWorthSnapshots', rec);
+    const items = await db.getAll('netWorthSnapshots');
+    store.set({ netWorthSnapshots: items });
+    return rec;
   },
 
   // Utilidad de desarrollo: limpia caché local y re-inicializa.

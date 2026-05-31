@@ -268,9 +268,14 @@ select.input { appearance: none; cursor: pointer;
 .search__icon svg { width: 18px; height: 18px; }
 .toolbar .input { width: auto; min-width: 130px; }
 
-/* acciones de fila */
-.row__actions { display: flex; gap: 2px; opacity: 0; transition: opacity var(--dur-fast) var(--ease-out); }
-.row:hover .row__actions, .table tr:hover .row__actions { opacity: 1; }
+/* acciones de fila/tarjeta — siempre visibles (en táctil), con énfasis al hover en escritorio */
+.row__actions { display: flex; gap: 2px; }
+@media (hover: hover) {
+  .row__actions { opacity: 0.5; transition: opacity var(--dur-fast) var(--ease-out); }
+  .row:hover .row__actions,
+  .table tr:hover .row__actions,
+  .card:hover .row__actions { opacity: 1; }
+}
 .icon-btn {
   width: 32px; height: 32px; display: grid; place-items: center; border-radius: var(--radius-xs);
   color: var(--text-tertiary); transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);

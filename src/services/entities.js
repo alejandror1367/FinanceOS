@@ -12,6 +12,7 @@ export const ENTITIES = {
   assets:       { store: 'assets',       entity: 'Assets',                read: 'getAssets' },
   liabilities:  { store: 'liabilities',  entity: 'Liabilities',           read: 'getLiabilities' },
   recurring:    { store: 'recurring',    entity: 'RecurringTransactions', read: 'getRecurring' },
+  netWorthSnapshots: { store: 'netWorthSnapshots', entity: 'NetWorthSnapshots', read: 'getNetWorthSnapshots' },
   settings:     { store: 'settings',     entity: 'Settings',              read: 'getSettings' },
 };
 

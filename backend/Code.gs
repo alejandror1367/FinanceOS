@@ -19,6 +19,8 @@ var ROUTES = {
   // Dashboard / reportes
   getDashboard: function (p) { return getDashboard_(p); },
   getNetWorth: function (p) { return getNetWorth_(p); },
+  getNetWorthSnapshots: function (p) { return listNetWorthSnapshots_(p); },
+  saveNetWorthSnapshot: function (d) { return saveNetWorthSnapshot_(d); },
   getReports: function (p) { return getReports_(p); },
 
   // Accounts
@@ -85,7 +87,7 @@ var ROUTES = {
 
 // Acciones permitidas vía GET (solo lectura).
 var READ_ACTIONS = {
-  getDashboard: 1, getNetWorth: 1, getReports: 1,
+  getDashboard: 1, getNetWorth: 1, getNetWorthSnapshots: 1, getReports: 1,
   getAccounts: 1, getTransactions: 1, getCategories: 1, getBudgets: 1,
   getGoals: 1, getInvestments: 1, getAssets: 1, getLiabilities: 1,
   getRecurring: 1, getSettings: 1, ping: 1,

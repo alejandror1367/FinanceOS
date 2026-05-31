@@ -5,7 +5,7 @@
 import { el } from '../utils/dom.js';
 import { icon } from '../utils/icons.js';
 import { selectors } from '../store/selectors.js';
-import { formatMoney, formatPercent, relativeDay } from '../utils/format.js';
+import { formatMoney, formatPercent, relativeDay, formatDate } from '../utils/format.js';
 import {
   Card, KpiCard, Trend, Badge, BarChart, ProgressBar, EmptyState, Button,
 } from '../components/ui.js';
@@ -54,15 +54,15 @@ export function renderDashboard(s) {
     }),
   ]);
 
-  // --- Evolución patrimonio (mini chart) ---
+  // --- Evolución patrimonio (snapshots reales si existen, si no placeholder) ---
+  const snaps = [...(s.netWorthSnapshots || [])].sort((a, b) => (a.date < b.date ? -1 : 1)).slice(-6);
+  const series = snaps.length
+    ? snaps.map((sn) => ({ label: formatDate(sn.date, 'short'), value: sn.netWorth }))
+    : (s.netWorthSeries || []).map((d) => ({ label: d.label, value: d.value }));
   const netWorthCard = Card({
     title: 'Evolución del patrimonio',
-    action: Badge('6 meses', 'info'),
-    body: el('div', {}, [
-      BarChart((s.netWorthSeries || []).map((d, i, arr) => ({
-        label: d.label, value: d.value, muted: i < arr.length - 1 ? false : false,
-      }))),
-    ]),
+    action: Badge(snaps.length ? `${snaps.length} snapshots` : 'Demo', 'info'),
+    body: el('div', {}, [BarChart(series)]),
   });
 
   // --- Gasto por categoría ---
