@@ -1,0 +1,159 @@
+/**
+ * Code.gs — punto de entrada del Web App y router por `action`.
+ * FinanceOS · Fase 2.
+ *
+ * Lecturas  -> doGet(?action=...&...params)
+ * Escrituras-> doPost(body JSON: { action, data })
+ *
+ * Respuesta estándar (docs/Architecture.md §7.2):
+ *   { success: true,  data: {...} }
+ *   { success: false, error: "..." }
+ *
+ * NOTA CORS (Fase 3): el frontend hará POST con content-type text/plain
+ * para evitar el preflight; el cuerpo se lee de e.postData.contents.
+ */
+
+// Mapa de acciones -> función handler. Las funciones viven en los .gs por
+// entidad y son globales, por lo que están disponibles al despachar.
+var ROUTES = {
+  // Dashboard / reportes
+  getDashboard: function (p) { return getDashboard_(p); },
+  getNetWorth: function (p) { return getNetWorth_(p); },
+  getReports: function (p) { return getReports_(p); },
+
+  // Accounts
+  getAccounts: function (p) { return listAccounts_(p); },
+  createAccount: function (d) { return createAccount_(d); },
+  updateAccount: function (d) { return updateAccount_(d); },
+  deleteAccount: function (d) { return deleteAccount_(d); },
+
+  // Transactions
+  getTransactions: function (p) { return listTransactions_(p); },
+  createTransaction: function (d) { return createTransaction_(d); },
+  updateTransaction: function (d) { return updateTransaction_(d); },
+  deleteTransaction: function (d) { return deleteTransaction_(d); },
+
+  // Categories
+  getCategories: function (p) { return listCategories_(p); },
+  createCategory: function (d) { return createCategory_(d); },
+  updateCategory: function (d) { return updateCategory_(d); },
+  deleteCategory: function (d) { return deleteCategory_(d); },
+
+  // Budgets
+  getBudgets: function (p) { return listBudgets_(p); },
+  createBudget: function (d) { return createBudget_(d); },
+  updateBudget: function (d) { return updateBudget_(d); },
+  deleteBudget: function (d) { return deleteBudget_(d); },
+
+  // Goals
+  getGoals: function (p) { return listGoals_(p); },
+  createGoal: function (d) { return createGoal_(d); },
+  updateGoal: function (d) { return updateGoal_(d); },
+  deleteGoal: function (d) { return deleteGoal_(d); },
+
+  // Investments
+  getInvestments: function (p) { return listInvestments_(p); },
+  createInvestment: function (d) { return createInvestment_(d); },
+  updateInvestment: function (d) { return updateInvestment_(d); },
+  deleteInvestment: function (d) { return deleteInvestment_(d); },
+
+  // Assets
+  getAssets: function (p) { return listAssets_(p); },
+  createAsset: function (d) { return createAsset_(d); },
+  updateAsset: function (d) { return updateAsset_(d); },
+  deleteAsset: function (d) { return deleteAsset_(d); },
+
+  // Liabilities
+  getLiabilities: function (p) { return listLiabilities_(p); },
+  createLiability: function (d) { return createLiability_(d); },
+  updateLiability: function (d) { return updateLiability_(d); },
+  deleteLiability: function (d) { return deleteLiability_(d); },
+
+  // Recurring
+  getRecurring: function (p) { return listRecurring_(p); },
+  createRecurring: function (d) { return createRecurring_(d); },
+  updateRecurring: function (d) { return updateRecurring_(d); },
+  deleteRecurring: function (d) { return deleteRecurring_(d); },
+
+  // Settings
+  getSettings: function (p) { return listSettings_(p); },
+  setSetting: function (d) { return setSetting_(d); },
+
+  // Meta
+  ping: function () { return { pong: true, app: APP.name, apiVersion: APP.apiVersion, time: nowIso_() }; },
+};
+
+// Acciones permitidas vía GET (solo lectura).
+var READ_ACTIONS = {
+  getDashboard: 1, getNetWorth: 1, getReports: 1,
+  getAccounts: 1, getTransactions: 1, getCategories: 1, getBudgets: 1,
+  getGoals: 1, getInvestments: 1, getAssets: 1, getLiabilities: 1,
+  getRecurring: 1, getSettings: 1, ping: 1,
+};
+
+function doGet(e) {
+  try {
+    var params = (e && e.parameter) ? e.parameter : {};
+    var action = params.action;
+    if (!action) return jsonOut_({ success: true, data: ROUTES.ping() });
+    if (!READ_ACTIONS[action]) {
+      throw new Error('Acción de solo lectura no válida en GET: ' + action);
+    }
+    return dispatch_(action, params);
+  } catch (err) {
+    return jsonErr_(err);
+  }
+}
+
+function doPost(e) {
+  try {
+    var body = parseBody_(e);
+    var action = body.action;
+    if (!action) throw new Error('Falta "action" en la solicitud.');
+    var handler = ROUTES[action];
+    if (!handler) throw new Error('Acción desconocida: ' + action);
+    var result = handler(body.data || {});
+    return jsonOut_({ success: true, data: result });
+  } catch (err) {
+    return jsonErr_(err);
+  }
+}
+
+function dispatch_(action, payload) {
+  var handler = ROUTES[action];
+  if (!handler) throw new Error('Acción desconocida: ' + action);
+  var result = handler(payload || {});
+  return jsonOut_({ success: true, data: result });
+}
+
+// ---------- Helpers de I/O ----------
+
+function parseBody_(e) {
+  if (e && e.postData && e.postData.contents) {
+    try {
+      return JSON.parse(e.postData.contents);
+    } catch (err) {
+      throw new Error('Cuerpo JSON inválido.');
+    }
+  }
+  // Fallback: action/data por querystring (data como JSON string).
+  if (e && e.parameter && e.parameter.action) {
+    var data = {};
+    if (e.parameter.data) {
+      try { data = JSON.parse(e.parameter.data); } catch (x) { data = {}; }
+    }
+    return { action: e.parameter.action, data: data };
+  }
+  throw new Error('Solicitud vacía.');
+}
+
+function jsonOut_(obj) {
+  return ContentService
+    .createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function jsonErr_(err) {
+  var msg = (err && err.message) ? err.message : String(err);
+  return jsonOut_({ success: false, error: msg });
+}
