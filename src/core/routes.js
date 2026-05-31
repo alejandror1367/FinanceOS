@@ -4,6 +4,7 @@
 import { renderDashboard } from '../views/dashboard.js';
 import { renderAccounts } from '../views/accounts.js';
 import { renderTransactions } from '../views/transactions.js';
+import { renderBudgets } from '../views/budgets.js';
 import { makeStub } from '../views/stub.js';
 
 export const routes = {
@@ -11,7 +12,7 @@ export const routes = {
   today:        { title: 'Hoy',           icon: 'today',        nav: 'primary', render: makeStub('Hoy', 'Tu copiloto financiero diario: saldo, movimientos recientes, próximos pagos y metas prioritarias.', 'today') },
   transactions: { title: 'Transacciones', icon: 'transactions', nav: 'primary', render: renderTransactions },
   accounts:     { title: 'Cuentas',       icon: 'accounts',     nav: 'primary', render: renderAccounts },
-  budgets:      { title: 'Presupuestos',  icon: 'budgets',      nav: 'primary', render: makeStub('Presupuestos', 'Presupuestos mensuales y anuales: consumido, disponible y proyectado.', 'budgets') },
+  budgets:      { title: 'Presupuestos',  icon: 'budgets',      nav: 'primary', render: renderBudgets },
 
   networth:     { title: 'Patrimonio',    icon: 'networth',     nav: 'wealth',  render: makeStub('Patrimonio', 'Activos menos pasivos y evolución histórica de tu patrimonio neto.', 'networth') },
   investments:  { title: 'Inversiones',   icon: 'investments',  nav: 'wealth',  render: makeStub('Inversiones', 'Acciones, ETFs, fondos, bonos, CDT y cripto: costo, valor y rentabilidad.', 'investments') },

@@ -91,6 +91,36 @@ export const selectors = {
     return s.accounts.find((a) => a.id === id);
   },
 
+  // ---- Presupuestos (valores derivados, no persistidos) ----
+  budgetConsumed(s, budget) {
+    const isMonthly = budget.period === 'monthly';
+    return s.transactions
+      .filter((t) => {
+        if (t.type !== 'expense' || t.categoryId !== budget.categoryId) return false;
+        const key = isMonthly ? String(t.date).slice(0, 7) : String(t.date).slice(0, 4);
+        return key === budget.periodKey;
+      })
+      .reduce((sum, t) => sum + (t.amount || 0), 0);
+  },
+
+  budgetStats(s, budget) {
+    const amount = budget.amount || 0;
+    const consumed = selectors.budgetConsumed(s, budget);
+    const available = amount - consumed;
+    const pct = amount ? (consumed / amount) * 100 : 0;
+
+    // Proyección al cierre solo para el mes en curso.
+    let projected = consumed;
+    const now = new Date();
+    const curMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    if (budget.period === 'monthly' && budget.periodKey === curMonthKey) {
+      const day = now.getDate();
+      const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+      projected = day > 0 ? (consumed / day) * daysInMonth : consumed;
+    }
+    return { amount, consumed, available, pct, projected };
+  },
+
   // Gasto por categoría del mes (para analítica ligera)
   expenseByCategory(s, ref) {
     const map = new Map();
