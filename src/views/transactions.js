@@ -92,7 +92,7 @@ function validateTx(d) {
   return null;
 }
 
-function openTxModal({ tx = {}, mode = 'create' }) {
+export function openTxModal({ tx = {}, mode = 'create' }) {
   const accounts = (store.get().accounts || []).filter((a) => !a.isArchived);
   if (!accounts.length) { toast('Crea una cuenta primero', { type: 'warning' }); return; }
 

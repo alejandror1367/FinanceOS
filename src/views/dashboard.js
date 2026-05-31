@@ -9,6 +9,7 @@ import { formatMoney, formatPercent, relativeDay } from '../utils/format.js';
 import {
   Card, KpiCard, Trend, Badge, BarChart, ProgressBar, EmptyState, Button,
 } from '../components/ui.js';
+import { openTxModal } from './transactions.js';
 
 export function renderDashboard(s) {
   const cur = s.baseCurrency;
@@ -152,7 +153,7 @@ export function renderDashboard(s) {
           el('h2', { class: 't-h1', text: `Hola, ${s.user}` }),
           el('p', { class: 'page-header__sub', text: 'Tu centro de comando financiero.' }),
         ]),
-        Button('Nuevo movimiento', { variant: 'primary', iconName: 'plus' }),
+        Button('Nuevo movimiento', { variant: 'primary', iconName: 'plus', onClick: () => openTxModal({ mode: 'create' }) }),
       ]),
     ]),
     kpis,
