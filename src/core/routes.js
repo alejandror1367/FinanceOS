@@ -2,13 +2,15 @@
 // Cada vista expone render(state) -> HTMLElement.
 
 import { renderDashboard } from '../views/dashboard.js';
+import { renderAccounts } from '../views/accounts.js';
+import { renderTransactions } from '../views/transactions.js';
 import { makeStub } from '../views/stub.js';
 
 export const routes = {
   dashboard:    { title: 'Dashboard',     icon: 'dashboard',    nav: 'primary', render: renderDashboard },
   today:        { title: 'Hoy',           icon: 'today',        nav: 'primary', render: makeStub('Hoy', 'Tu copiloto financiero diario: saldo, movimientos recientes, próximos pagos y metas prioritarias.', 'today') },
-  transactions: { title: 'Transacciones', icon: 'transactions', nav: 'primary', render: makeStub('Transacciones', 'Crear, editar, duplicar, buscar y filtrar ingresos, gastos y transferencias.', 'transactions') },
-  accounts:     { title: 'Cuentas',       icon: 'accounts',     nav: 'primary', render: makeStub('Cuentas', 'Efectivo, banco, ahorro, inversión y billeteras digitales.', 'accounts') },
+  transactions: { title: 'Transacciones', icon: 'transactions', nav: 'primary', render: renderTransactions },
+  accounts:     { title: 'Cuentas',       icon: 'accounts',     nav: 'primary', render: renderAccounts },
   budgets:      { title: 'Presupuestos',  icon: 'budgets',      nav: 'primary', render: makeStub('Presupuestos', 'Presupuestos mensuales y anuales: consumido, disponible y proyectado.', 'budgets') },
 
   networth:     { title: 'Patrimonio',    icon: 'networth',     nav: 'wealth',  render: makeStub('Patrimonio', 'Activos menos pasivos y evolución histórica de tu patrimonio neto.', 'networth') },

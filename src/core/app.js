@@ -118,8 +118,14 @@ function onStoreChange() {
   // Actualiza la píldora de sincronización sin reconstruir la topbar.
   const pill = document.getElementById('sync-pill');
   if (pill) pill.replaceWith(SyncPill(s.sync));
+  // No re-renderizar si hay un modal abierto o el usuario está escribiendo
+  // (evita perder foco/estado durante una sincronización en segundo plano).
+  const ae = document.activeElement;
+  const typing = ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT');
+  const modalOpen = document.body.classList.contains('modal-open');
+
   // Re-renderiza la vista activa cuando hay datos (sin animación ni reset de scroll).
-  if (s.ready && shellRefs && currentRoute) {
+  if (s.ready && shellRefs && currentRoute && !typing && !modalOpen) {
     renderView(routes[s.ui.route], { animate: false });
   }
 }
