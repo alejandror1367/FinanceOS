@@ -1,0 +1,125 @@
+/* ============================================================
+   FinanceOS — Temas (tokens semánticos) · Paleta v2
+   La UI usa EXCLUSIVAMENTE estas variables semánticas.
+   Cambiar de tema/paleta = cambiar el mapeo, no la UI.
+
+   Roles de color:
+   - Periwinkle  → primario / marca / Patrimonio Neto
+   - Emerald     → inversiones + tendencia creciente (↑)
+   - Champagne   → metas
+   - Red         → tendencia decreciente (↓)
+   - Slate       → neutro (gastos y KPIs sin categoría)
+   ============================================================ */
+
+/* ---------- Dark (por defecto) ---------- */
+:root,
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Superficies (4 niveles, sin negro puro) */
+  --bg-app: var(--graphite-900);
+  --bg-sidebar: var(--graphite-850);
+  --bg-surface: var(--graphite-800);
+  --bg-surface-2: #1E2530;
+  --bg-elevated: var(--graphite-750);
+  --bg-hover: rgba(255,255,255,0.04);
+  --bg-active: rgba(255,255,255,0.07);
+  --bg-input: var(--graphite-850);
+
+  /* Bordes */
+  --border-subtle: rgba(255,255,255,0.05);
+  --border: rgba(255,255,255,0.09);
+  --border-strong: rgba(255,255,255,0.14);
+
+  /* Texto */
+  --text-primary: var(--slate-100);
+  --text-secondary: var(--slate-400);
+  --text-tertiary: var(--slate-500);
+  --text-inverse: var(--graphite-900);
+
+  /* Primario (periwinkle) */
+  --accent: var(--periwinkle-500);
+  --accent-hover: var(--periwinkle-400);
+  --accent-contrast: #0E1322;
+  --accent-bg: rgba(138,164,255,0.14);
+
+  /* Emerald — inversiones + tendencia ↑ */
+  --positive: var(--emerald-400);
+  --positive-bg: rgba(62,207,142,0.14);
+
+  /* Champagne — metas */
+  --gold: var(--champagne-400);
+  --gold-bg: rgba(198,167,106,0.14);
+
+  /* Red — tendencia ↓ */
+  --negative: var(--red-400);
+  --negative-bg: rgba(229,115,107,0.14);
+
+  /* Funcionales */
+  --warning: var(--amber-400);
+  --warning-bg: rgba(224,162,58,0.14);
+  --info: var(--periwinkle-500);
+  --info-bg: rgba(138,164,255,0.14);
+  --neutral: var(--slate-400);
+  --neutral-bg: rgba(151,161,178,0.12);
+
+  --focus-ring: rgba(138,164,255,0.55);
+  --skeleton: rgba(255,255,255,0.06);
+  --skeleton-shine: rgba(255,255,255,0.10);
+  --overlay: rgba(8,10,14,0.62);
+}
+
+/* ---------- Light ---------- */
+[data-theme="light"] {
+  color-scheme: light;
+
+  --bg-app: #F1F3F7;
+  --bg-sidebar: #FFFFFF;
+  --bg-surface: #FFFFFF;
+  --bg-surface-2: #F5F7FA;
+  --bg-elevated: #FFFFFF;
+  --bg-hover: rgba(20,24,31,0.04);
+  --bg-active: rgba(20,24,31,0.07);
+  --bg-input: #FFFFFF;
+
+  --border-subtle: rgba(20,24,31,0.06);
+  --border: rgba(20,24,31,0.10);
+  --border-strong: rgba(20,24,31,0.16);
+
+  --text-primary: #1A2130;
+  --text-secondary: #5A6577;
+  --text-tertiary: #8A93A3;
+  --text-inverse: var(--slate-50);
+
+  /* En claro usamos tonos profundos (contraste AA en texto/relleno) */
+  --accent: var(--periwinkle-700);
+  --accent-hover: var(--periwinkle-600);
+  --accent-contrast: #FFFFFF;
+  --accent-bg: rgba(80,102,201,0.12);
+
+  --positive: var(--emerald-700);
+  --positive-bg: rgba(31,157,107,0.12);
+
+  --gold: var(--champagne-700);
+  --gold-bg: rgba(138,109,59,0.12);
+
+  --negative: var(--red-600);
+  --negative-bg: rgba(196,73,63,0.10);
+
+  --warning: var(--amber-600);
+  --warning-bg: rgba(176,122,30,0.12);
+  --info: var(--periwinkle-700);
+  --info-bg: rgba(80,102,201,0.12);
+  --neutral: var(--slate-600);
+  --neutral-bg: rgba(90,101,119,0.12);
+
+  --focus-ring: rgba(80,102,201,0.45);
+  --skeleton: rgba(20,24,31,0.06);
+  --skeleton-shine: rgba(20,24,31,0.03);
+  --overlay: rgba(20,24,31,0.35);
+
+  --shadow-xs: 0 1px 2px rgba(20,24,31,0.06);
+  --shadow-sm: 0 2px 10px rgba(20,24,31,0.08);
+  --shadow-md: 0 10px 30px rgba(20,24,31,0.10);
+  --shadow-lg: 0 24px 60px rgba(20,24,31,0.16);
+}
