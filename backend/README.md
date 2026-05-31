@@ -31,10 +31,17 @@ El frontend nunca conoce Sheets; solo el contrato `action`-based.
 4. Guarda. En el selector de funciones elige **`setupDatabase`** y pulsa **Ejecutar**.
    - Autoriza los permisos cuando lo pida (acceso a Sheets de tu cuenta).
    - En *Registros* (Ver → Registros) verás el **ID y la URL** del nuevo `FinanceOS_DB`. Ábrelo: tendrá las 12 hojas con cabeceras + categorías y settings semilla.
-5. **Implementar** → *Nueva implementación* → tipo **Aplicación web**:
+5. *(Recomendado)* Define un **token secreto** para proteger el endpoint:
+   ⚙️ *Configuración del proyecto* → *Propiedades del script* → añade
+   `FINANCEOS_API_TOKEN` = una cadena larga y aleatoria. Si la dejas vacía,
+   el endpoint queda abierto a cualquiera con el enlace.
+6. **Implementar** → *Nueva implementación* → tipo **Aplicación web**:
    - *Ejecutar como*: **Yo**.
-   - *Quién tiene acceso*: **Solo yo** (app privada).
-   - Copia la **URL `/exec`**. Esa URL es la que usará el frontend en la **Fase 3** (irá en `src/core/config.js → api.baseUrl`).
+   - *Quién tiene acceso*: **Cualquiera con el enlace**.
+     > Necesario para que la PWA pueda llamar al endpoint sin login interactivo
+     > (evita bloqueos de CORS/redirección). La privacidad la aporta el token.
+   - Copia la **URL `/exec`**. En la **Fase 3** va en
+     `src/core/config.js → api.baseUrl`, y el token en `api.token`.
 
 > Si cambias el código luego, usa *Implementar → Gestionar implementaciones → editar → Nueva versión* para que la URL `/exec` sirva lo último.
 

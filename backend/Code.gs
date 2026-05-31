@@ -96,6 +96,7 @@ function doGet(e) {
     var params = (e && e.parameter) ? e.parameter : {};
     var action = params.action;
     if (!action) return jsonOut_({ success: true, data: ROUTES.ping() });
+    assertAuthorized_(action, params.token);
     if (!READ_ACTIONS[action]) {
       throw new Error('Acción de solo lectura no válida en GET: ' + action);
     }
@@ -110,12 +111,30 @@ function doPost(e) {
     var body = parseBody_(e);
     var action = body.action;
     if (!action) throw new Error('Falta "action" en la solicitud.');
+    assertAuthorized_(action, body.token);
     var handler = ROUTES[action];
     if (!handler) throw new Error('Acción desconocida: ' + action);
     var result = handler(body.data || {});
     return jsonOut_({ success: true, data: result });
   } catch (err) {
     return jsonErr_(err);
+  }
+}
+
+/**
+ * Autorización por token compartido (opcional). Si la propiedad de script
+ * FINANCEOS_API_TOKEN está definida, toda acción (salvo "ping") debe enviar
+ * el mismo token. Si no está definida, no se exige (modo abierto).
+ */
+function getApiToken_() {
+  return PropertiesService.getScriptProperties().getProperty('FINANCEOS_API_TOKEN');
+}
+
+function assertAuthorized_(action, provided) {
+  if (action === 'ping') return;
+  var token = getApiToken_();
+  if (token && String(provided || '') !== String(token)) {
+    throw new Error('No autorizado.');
   }
 }
 
