@@ -15,15 +15,27 @@ import { toast } from '../services/toast.js';
 
 const ASSET_CATEGORIES = [
   { value: 'real_estate', label: 'Inmueble' },
+  { value: 'land', label: 'Terreno' },
   { value: 'vehicle', label: 'Vehículo' },
-  { value: 'valuables', label: 'Bienes' },
-  { value: 'receivable', label: 'Por cobrar' },
+  { value: 'business', label: 'Negocio / Participación' },
+  { value: 'valuables', label: 'Objetos de valor' },
+  { value: 'jewelry', label: 'Joyería' },
+  { value: 'art', label: 'Arte' },
+  { value: 'electronics', label: 'Electrónica' },
+  { value: 'collectible', label: 'Coleccionables' },
+  { value: 'receivable', label: 'Cuentas por cobrar' },
   { value: 'other', label: 'Otro' },
 ];
 const LIABILITY_TYPES = [
   { value: 'credit_card', label: 'Tarjeta de crédito' },
-  { value: 'loan', label: 'Préstamo' },
+  { value: 'loan', label: 'Préstamo personal' },
   { value: 'mortgage', label: 'Hipoteca' },
+  { value: 'auto_loan', label: 'Crédito vehículo' },
+  { value: 'student_loan', label: 'Crédito educativo' },
+  { value: 'line_of_credit', label: 'Línea de crédito' },
+  { value: 'installment', label: 'Compra a cuotas' },
+  { value: 'tax_debt', label: 'Deuda tributaria' },
+  { value: 'personal_debt', label: 'Deuda personal' },
   { value: 'other', label: 'Otra' },
 ];
 
