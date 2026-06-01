@@ -51,6 +51,7 @@ function createTransaction_(d) {
     description: sanitizeString_(d.description || '', 240),
     status: 'synced',
   });
+  applyTxBalanceDelta_(rec, +1); // actualiza saldo(s) de cuenta (TD-01)
   logAudit_('create', 'Transactions', rec.id, rec.type + ' ' + rec.amount + ' ' + rec.currency);
   return rec;
 }
@@ -79,14 +80,18 @@ function updateTransaction_(d) {
   patch.categoryId = merged.type === 'transfer' ? '' : merged.categoryId;
   if (d.description !== undefined) patch.description = sanitizeString_(d.description, 240);
 
+  applyTxBalanceDelta_(existing, -1); // revertir efecto anterior (TD-01)
   var rec = repoUpdate_('Transactions', d.id, patch);
+  applyTxBalanceDelta_(rec, +1);     // aplicar efecto nuevo
   logAudit_('update', 'Transactions', rec.id, 'Transacción actualizada');
   return rec;
 }
 
 function deleteTransaction_(d) {
   requireFields_(d, ['id']);
+  var existing = repoGet_('Transactions', d.id); // obtener antes de borrar
   repoSoftDelete_('Transactions', d.id);
+  if (existing && !existing.isDeleted) applyTxBalanceDelta_(existing, -1); // revertir efecto (TD-01)
   logAudit_('delete', 'Transactions', d.id, 'Transacción eliminada');
   return { id: d.id, deleted: true };
 }

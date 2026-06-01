@@ -143,6 +143,7 @@ export const dataService = {
     const record = stamp({ id: data.id || newId(), ...data });
     await db.put(cfg.store, record);
     await this._refreshStore(coll);
+    if (coll === 'transactions') await this._adjustAccountBalances(record, +1);
     await syncQueue.enqueue({ action: WRITE[coll].create, entity: cfg.entity, entityId: record.id, data: record });
     await syncEngine.refreshPending();
     syncEngine.flush();
@@ -152,9 +153,11 @@ export const dataService = {
   async update(coll, id, patch) {
     const cfg = ENTITIES[coll];
     const current = await db.get(cfg.store, id);
+    if (coll === 'transactions' && current) await this._adjustAccountBalances(current, -1);
     const record = { ...(current || { id }), ...patch, id, updatedAt: new Date().toISOString() };
     await db.put(cfg.store, record);
     await this._refreshStore(coll);
+    if (coll === 'transactions') await this._adjustAccountBalances(record, +1);
     await syncQueue.enqueue({ action: WRITE[coll].update, entity: cfg.entity, entityId: id, data: { id, ...patch } });
     await syncEngine.refreshPending();
     syncEngine.flush();
@@ -163,8 +166,10 @@ export const dataService = {
 
   async remove(coll, id) {
     const cfg = ENTITIES[coll];
+    const existing = coll === 'transactions' ? await db.get(cfg.store, id) : null;
     await db.delete(cfg.store, id); // optimista: fuera de la caché local
     await this._refreshStore(coll);
+    if (existing) await this._adjustAccountBalances(existing, -1);
     await syncQueue.enqueue({ action: WRITE[coll].remove, entity: cfg.entity, entityId: id, data: { id } });
     await syncEngine.refreshPending();
     syncEngine.flush();
@@ -194,6 +199,41 @@ export const dataService = {
     const items = await db.getAll('netWorthSnapshots');
     store.set({ netWorthSnapshots: items });
     return rec;
+  },
+
+  // ── Modelo híbrido de saldos (TD-01) ──────────────────────────────────────
+  // Ajusta el saldo de las cuentas afectadas por una transacción en IndexedDB.
+  // sign: +1 para aplicar, -1 para revertir. Solo actualiza local —
+  // el backend hace lo mismo al procesar la transacción vía sync.
+  async _adjustAccountBalances(tx, sign) {
+    if (!tx || !tx.amount || !tx.type) return;
+    const amount = tx.amount || 0;
+    if (tx.type === 'income') {
+      await this._shiftBalance(tx.accountId, sign * amount);
+    } else if (tx.type === 'expense') {
+      await this._shiftBalance(tx.accountId, -(sign * amount));
+    } else if (tx.type === 'transfer') {
+      await this._shiftBalance(tx.accountId, -(sign * amount));
+      if (tx.toAccountId) await this._shiftBalance(tx.toAccountId, sign * amount);
+    }
+  },
+
+  async _shiftBalance(accountId, delta) {
+    if (!accountId || !delta) return;
+    const account = await db.get('accounts', accountId);
+    if (!account) return;
+    const updated = { ...account, balance: Math.round((account.balance || 0) + delta), updatedAt: new Date().toISOString() };
+    await db.put('accounts', updated);
+    await this._refreshStore('accounts');
+  },
+
+  // Recalcula todos los saldos desde 0 sumando las transacciones (migración TD-01).
+  async recalculateBalances() {
+    if (!apiClient.isConfigured()) throw new Error('Sin backend configurado.');
+    if (!navigator.onLine) throw new Error('Sin conexión.');
+    const result = await apiClient.post('recalculateBalances', {});
+    await dataService.refresh(); // sincronizar saldos actualizados desde el backend
+    return result;
   },
 
   // Utilidad de desarrollo: limpia caché local y re-inicializa.

@@ -45,3 +45,28 @@ function deleteAccount_(d) {
   logAudit_('delete', 'Accounts', d.id, 'Cuenta eliminada: ' + (rec.name || d.id));
   return { id: d.id, deleted: true };
 }
+
+// ── Modelo híbrido de saldos (TD-01) ─────────────────────────────────────────
+
+// Suma delta al saldo de una cuenta. Llamado por applyTxBalanceDelta_.
+function adjustBalance_(accountId, delta) {
+  if (!accountId || !delta || delta === 0) return;
+  var account = repoGet_('Accounts', accountId);
+  if (!account || account.isDeleted) return;
+  repoUpdate_('Accounts', accountId, { balance: Math.round((account.balance || 0) + delta) });
+}
+
+// Aplica (+1) o revierte (-1) el efecto contable de una transacción en los saldos.
+// Llamado desde Transactions.gs al crear, editar y borrar transacciones.
+function applyTxBalanceDelta_(tx, sign) {
+  if (!tx || !tx.amount || !tx.type) return;
+  var amt = tx.amount || 0;
+  if (tx.type === 'income') {
+    adjustBalance_(tx.accountId, sign * amt);
+  } else if (tx.type === 'expense') {
+    adjustBalance_(tx.accountId, -(sign * amt));
+  } else if (tx.type === 'transfer') {
+    adjustBalance_(tx.accountId, -(sign * amt));
+    if (tx.toAccountId) adjustBalance_(tx.toAccountId, sign * amt);
+  }
+}

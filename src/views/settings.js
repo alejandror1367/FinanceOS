@@ -55,6 +55,14 @@ export function renderSettings() {
         toast('Actualizando…', { type: 'info' });
         try { await dataService.refresh(); toast('Datos actualizados'); } catch (e) { toast('No se pudo actualizar', { type: 'negative' }); }
       } })),
+      settingRow('Recalcular saldos', 'Suma todas las transacciones desde 0 y actualiza los saldos de cada cuenta', Button('Recalcular', { variant: 'ghost', iconName: 'analytics', onClick: () => confirmDialog({
+        title: 'Recalcular saldos desde transacciones',
+        message: 'Se ignorarán los saldos declarados. Cada cuenta quedará en la suma neta de sus transacciones registradas (desde 0). Úsalo solo si tienes todo el historial registrado.',
+        confirmLabel: 'Recalcular', onConfirm: async () => {
+          try { await dataService.recalculateBalances(); toast('Saldos recalculados correctamente'); }
+          catch (e) { toast(e.message || 'Error al recalcular', { type: 'negative' }); }
+        },
+      }) })),
       settingRow('Vaciar caché local', 'Borra los datos locales y vuelve a cargar', Button('Vaciar', { variant: 'ghost', iconName: 'trash', onClick: () => confirmDialog({
         title: 'Vaciar caché local',
         message: 'Se borrarán los datos guardados en este dispositivo y se recargará la app desde el backend. No afecta tu base de datos.',

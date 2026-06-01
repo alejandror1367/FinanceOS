@@ -87,6 +87,9 @@ var ROUTES = {
   getSettings: function (p) { return listSettings_(p); },
   setSetting: function (d) { return setSetting_(d); },
 
+  // Migración (TD-01)
+  recalculateBalances: function (d) { return recalculateAccountBalances_(d); },
+
   // Meta
   ping: function () { return { pong: true, app: APP.name, apiVersion: APP.apiVersion, time: nowIso_() }; },
 };
