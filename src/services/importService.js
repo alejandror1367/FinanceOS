@@ -50,13 +50,19 @@ function applyProfile(profile, headers, rows) {
   };
 }
 
-// Groq llama-3.1-8b-instant: ~20k TPM ≈ 80k chars. Truncamos a 60k para dejar margen al prompt.
-const MAX_TEXT_CHARS = 60_000;
+// Groq free tier: 6k TPM. Sistema prompt ~600 tokens → usuario max ~4k tokens ≈ 16k chars.
+const MAX_AI_CHARS = 14_000;
+const MAX_AI_ROWS  = 300;
+
+function compactCsv(headers, rows) {
+  const limited = rows.slice(0, MAX_AI_ROWS);
+  return [headers.join(','), ...limited.map((r) => r.map((c) => `"${String(c).replace(/"/g, '')}"`).join(','))].join('\n');
+}
 
 async function callClaude(payload) {
   const p = { ...payload };
-  if (typeof p.fileContent === 'string' && p.fileContent.length > MAX_TEXT_CHARS) {
-    p.fileContent = p.fileContent.slice(0, MAX_TEXT_CHARS);
+  if (typeof p.fileContent === 'string' && p.fileContent.length > MAX_AI_CHARS) {
+    p.fileContent = p.fileContent.slice(0, MAX_AI_CHARS);
   }
   return apiClient.post('parseStatement', p);
 }
@@ -88,9 +94,9 @@ export const importService = {
       const { headers, rows } = parseCSV(text);
       const profile = detectBank(headers, file.name);
       if (profile) return applyProfile(profile, headers, rows);
-      // Formato desconocido → Claude
+      // Formato desconocido → IA (solo headers + primeras MAX_AI_ROWS filas)
       onProgress?.('ai');
-      const result = await callClaude({ fileContent: text, fileName: file.name, mimeType: 'text/csv', bankHint: null });
+      const result = await callClaude({ fileContent: compactCsv(headers, rows), fileName: file.name, mimeType: 'text/csv', bankHint: null });
       return claudeResultToImport(result, null);
     }
 
@@ -100,9 +106,7 @@ export const importService = {
       const profile = detectBank(headers, file.name);
       if (profile) return applyProfile(profile, headers, rows);
       onProgress?.('ai');
-      // Convierte a CSV para enviar texto (más barato que base64)
-      const csvText = [headers.join(','), ...rows.map((r) => r.map((c) => `"${c}"`).join(','))].join('\n');
-      const result = await callClaude({ fileContent: csvText, fileName: file.name, mimeType: 'application/vnd.ms-excel', bankHint: null });
+      const result = await callClaude({ fileContent: compactCsv(headers, rows), fileName: file.name, mimeType: 'application/vnd.ms-excel', bankHint: null });
       return claudeResultToImport(result, null);
     }
 
