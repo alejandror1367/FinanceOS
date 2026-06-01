@@ -12,11 +12,12 @@ import { field, textInput, numberInput, select } from '../components/forms.js';
 import { toast } from '../services/toast.js';
 
 const TYPES = [
-  { value: 'cash', label: 'Efectivo', icon: 'wallet' },
-  { value: 'bank', label: 'Banco', icon: 'accounts' },
-  { value: 'savings', label: 'Ahorro', icon: 'budgets' },
-  { value: 'investment', label: 'Inversión', icon: 'investments' },
-  { value: 'digital_wallet', label: 'Billetera digital', icon: 'wallet' },
+  { value: 'cash',           label: 'Efectivo',          icon: 'wallet' },
+  { value: 'bank',           label: 'Banco',              icon: 'accounts' },
+  { value: 'savings',        label: 'Ahorro',             icon: 'budgets' },
+  { value: 'credit_card',    label: 'Tarjeta de crédito', icon: 'debts' },
+  { value: 'investment',     label: 'Inversión',          icon: 'investments' },
+  { value: 'digital_wallet', label: 'Billetera digital',  icon: 'wallet' },
 ];
 const typeLabel = (v) => (TYPES.find((t) => t.value === v) || {}).label || v;
 const typeIcon = (v) => (TYPES.find((t) => t.value === v) || {}).icon || 'accounts';

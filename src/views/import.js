@@ -250,6 +250,7 @@ Extrae TODAS las transacciones sin omitir ninguna.`;
     const { result, accountId } = state;
     const { bank, items, currency, period } = result;
     const s = store.get();
+    // Incluye todas las cuentas no archivadas, incluidas tarjetas de crédito
     const accounts   = (s.accounts   || []).filter((a) => !a.isArchived);
     const categories = (s.categories || []).filter((c) => c.kind === 'expense');
     const isInvestment = result.type === 'investment';
@@ -353,8 +354,8 @@ Extrae TODAS las transacciones sin omitir ninguna.`;
       tr.appendChild(el('td', { class: 'import-desc', title: item.description || '' }, [desc]));
       tr.appendChild(el('td', { class: amtClass }, [`${sign} ${formatMoney(item.amount || 0)}`]));
       const typeTd = el('td', {});
-      typeTd.appendChild(Badge({ label: TYPE_LABEL[item.type] || item.type, color: TYPE_COLOR[item.type] || 'neutral' }));
-      if (state.dupIndices.has(i)) typeTd.appendChild(Badge({ label: 'Dup?', color: 'warning' }));
+      typeTd.appendChild(Badge(TYPE_LABEL[item.type] || item.type || '—', TYPE_COLOR[item.type] || ''));
+      if (state.dupIndices.has(i)) typeTd.appendChild(Badge('Dup?', 'warning'));
       tr.appendChild(typeTd);
 
       function applyRowStyle() {

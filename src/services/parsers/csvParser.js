@@ -1,6 +1,7 @@
 // services/parsers/csvParser.js — parser CSV sin dependencias.
-// Soporta: delimitadores auto-detectados (, ; \t |), campos entre comillas,
-// BOM UTF-8, saltos de línea Windows/Unix.
+// Maneja: delimitadores auto-detectados, campos entre comillas,
+// BOM UTF-8, saltos Windows/Unix, wrappers de markdown (```csv...```),
+// y CSVs con una sola columna (cada fila envuelta en comillas extra por Claude).
 
 function detectDelimiter(text) {
   const sample = text.slice(0, 3000);
@@ -33,11 +34,26 @@ function splitLine(line, delim) {
 }
 
 export function parseCSV(text) {
-  const clean = text.replace(/^﻿/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  // Eliminar fences de markdown (```csv ... ```) que Claude puede agregar
+  const noFence = text.replace(/^```[a-z]*\r?\n?/m, '').replace(/\r?\n?```\s*$/m, '');
+  const clean = noFence.replace(/^﻿/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
   const delim = detectDelimiter(clean);
   const lines = clean.split('\n').filter((l) => l.trim());
   if (lines.length < 2) return { headers: [], rows: [] };
-  const headers = splitLine(lines[0], delim).map((h) => h.replace(/^"|"$/g, ''));
-  const rows = lines.slice(1).map((l) => splitLine(l, delim));
+
+  let headers = splitLine(lines[0], delim).map((h) => h.replace(/^"|"$/g, ''));
+  let rows = lines.slice(1).map((l) => splitLine(l, delim));
+
+  // Si solo se detectó 1 columna, el archivo probablemente tiene cada fila
+  // envuelta en comillas extra. Re-parsea el contenido de cada celda como CSV.
+  if (headers.length === 1) {
+    const allCells = [headers[0], ...rows.map((r) => r[0] || '')];
+    const reparsed = allCells.map((cell) => splitLine(cell, ','));
+    if (reparsed[0].length > 1) {
+      headers = reparsed[0];
+      rows = reparsed.slice(1).filter((r) => r.some((c) => c.trim()));
+    }
+  }
+
   return { headers, rows };
 }
