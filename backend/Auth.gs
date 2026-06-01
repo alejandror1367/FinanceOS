@@ -44,8 +44,8 @@ function verifyGoogleToken_(idToken) {
       return false;
     }
 
-    // 2. Email del propietario autorizado
-    if (data.email !== APP.allowedEmail) {
+    // 2. Email en la lista de autorizados
+    if (APP.allowedEmails.indexOf(data.email) === -1) {
       cache.put(cacheKey, '0', 300); // 5 min para cuentas no autorizadas
       Logger.log('[Auth] Intento de acceso no autorizado: ' + data.email);
       return false;

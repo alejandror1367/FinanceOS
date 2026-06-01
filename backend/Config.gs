@@ -14,8 +14,8 @@ var APP = {
   baseCurrency: 'COP',
   propKeySpreadsheetId: 'FINANCEOS_DB_ID',
 
-  // Auth (TD-09 opción C) — Google OAuth
-  allowedEmail: 'patitosalmir@gmail.com',
+  // Auth (TD-09 opción C) — Google OAuth. Añade aquí los correos autorizados.
+  allowedEmails: ['patitosalmir@gmail.com', 'alejandrorr1367@gmail.com'],
   googleClientId: '444939967819-uv535tm5fg5glrj2fqc4l3llrqmhvqbb.apps.googleusercontent.com',
 };
 
