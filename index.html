@@ -8,6 +8,13 @@
   <title>FinanceOS</title>
   <meta name="description" content="Sistema operativo financiero personal de Alejo." />
 
+  <!-- PWA / iOS -->
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="FinanceOS" />
+  <meta name="format-detection" content="telephone=no" />
+
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="assets/icon.svg" />
   <link rel="apple-touch-icon" href="assets/icon.svg" />
@@ -20,6 +27,8 @@
 </head>
 <body>
   <noscript>FinanceOS requiere JavaScript habilitado.</noscript>
+
+  <a class="skip-link" href="#view">Saltar al contenido</a>
 
   <!-- El shell de la aplicación se monta aquí -->
   <div id="app" class="app-root" aria-busy="true"></div>

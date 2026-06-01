@@ -32,7 +32,24 @@ export const theme = {
     return this.set(this.get() === 'dark' ? 'light' : 'dark');
   },
 
+  // 'system' | 'light' | 'dark' (lo elegido explícitamente).
+  mode() {
+    const saved = localStorage.getItem(KEY);
+    return (saved === 'light' || saved === 'dark') ? saved : 'system';
+  },
+
+  setMode(m) {
+    if (m === 'system') {
+      localStorage.removeItem(KEY);
+      return this.apply(this.get());
+    }
+    return this.set(m);
+  },
+
   init() {
+    // Reacciona a cambios del sistema cuando el modo es "system".
+    const mq = matchMedia('(prefers-color-scheme: light)');
+    mq.addEventListener?.('change', () => { if (this.mode() === 'system') this.apply(this.get()); });
     return this.apply(this.get());
   },
 };

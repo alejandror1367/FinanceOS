@@ -25,5 +25,11 @@
       "type": "image/svg+xml",
       "purpose": "maskable"
     }
+  ],
+  "shortcuts": [
+    { "name": "Hoy", "url": "./#/today", "description": "Tu copiloto diario" },
+    { "name": "Nueva transacción", "url": "./#/transactions", "description": "Registrar un movimiento" },
+    { "name": "Patrimonio", "url": "./#/networth", "description": "Activos y pasivos" },
+    { "name": "Analítica", "url": "./#/analytics", "description": "Tendencias e insights" }
   ]
 }

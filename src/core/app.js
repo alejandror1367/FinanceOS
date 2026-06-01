@@ -26,7 +26,7 @@ function buildShell() {
   const scrim = el('div', { class: 'scrim', on: { click: () => setNavOpen(false) } });
   const main = el('main', { class: 'main' });
   const topbarMount = el('div');
-  const content = el('div', { class: 'content', id: 'view', role: 'main' });
+  const content = el('div', { class: 'content', id: 'view', role: 'main', tabindex: '-1' });
 
   main.append(topbarMount, content);
   shell.append(buildSidebar(), main, scrim, buildBottomNav());
@@ -106,7 +106,16 @@ function renderView(route, opts = {}) {
 async function registerSW() {
   if (!('serviceWorker' in navigator)) return;
   try {
-    await navigator.serviceWorker.register('sw.js', { scope: './' });
+    const reg = await navigator.serviceWorker.register('sw.js', { scope: './' });
+    reg.addEventListener('updatefound', () => {
+      const sw = reg.installing;
+      if (!sw) return;
+      sw.addEventListener('statechange', () => {
+        if (sw.state === 'installed' && navigator.serviceWorker.controller) {
+          toast('Nueva versión disponible. Recarga para actualizar.', { type: 'info', timeout: 6000 });
+        }
+      });
+    });
   } catch (e) {
     console.warn('[app] No se pudo registrar el Service Worker:', e);
   }

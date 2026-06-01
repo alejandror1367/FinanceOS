@@ -14,7 +14,7 @@ import { renderToday } from '../views/today.js';
 import { renderRecurring } from '../views/recurring.js';
 import { renderJournal } from '../views/journal.js';
 import { renderExports } from '../views/exports.js';
-import { makeStub } from '../views/stub.js';
+import { renderSettings } from '../views/settings.js';
 
 export const routes = {
   dashboard:    { title: 'Dashboard',     icon: 'dashboard',    nav: 'primary', render: renderDashboard },
@@ -32,7 +32,7 @@ export const routes = {
   analytics:    { title: 'Analítica',     icon: 'analytics',    nav: 'insights', render: renderAnalytics },
   journal:      { title: 'Diario',        icon: 'journal',      nav: 'insights', render: renderJournal },
   exports:      { title: 'Exportaciones', icon: 'exports',      nav: 'insights', render: renderExports },
-  settings:     { title: 'Ajustes',       icon: 'settings',     nav: 'system',   render: makeStub('Ajustes', 'Preferencias, tema, moneda base y respaldos exportables.', 'settings') },
+  settings:     { title: 'Ajustes',       icon: 'settings',     nav: 'system',   render: renderSettings },
 };
 
 export const navSections = [

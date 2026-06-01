@@ -73,6 +73,14 @@ ul, ol { list-style: none; padding: 0; }
 .tabular { font-variant-numeric: tabular-nums; }
 
 /* Accesibilidad */
+.skip-link {
+  position: fixed; top: -60px; left: var(--space-3); z-index: var(--z-command);
+  background: var(--accent); color: var(--accent-contrast);
+  padding: var(--space-2) var(--space-4); border-radius: var(--radius-sm);
+  font-weight: var(--fw-semibold); transition: top var(--dur-base) var(--ease-out);
+}
+.skip-link:focus-visible { top: var(--space-3); }
+
 .sr-only {
   position: absolute; width: 1px; height: 1px;
   padding: 0; margin: -1px; overflow: hidden;
