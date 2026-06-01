@@ -4,6 +4,7 @@
 // No contiene lógica financiera (eso vive en store/selectors y services).
 
 import { CONFIG } from './config.js';
+import { auth } from './auth.js';
 import { store } from '../store/store.js';
 import { theme } from '../services/theme.js';
 import { dataService } from '../services/dataService.js';
@@ -141,6 +142,17 @@ function onStoreChange() {
 
 // --- Arranque ---
 async function bootstrap() {
+  // Verificar autenticación antes de montar la app (TD-09).
+  // Si hay un clientId configurado, requerimos sesión de Google.
+  if (CONFIG.auth.clientId && !auth.isAuthenticated()) {
+    await auth.prompt();
+  }
+
+  // Renovar el token silenciosamente cada 45 min (los tokens de Google duran 1 h).
+  if (CONFIG.auth.clientId) {
+    setInterval(() => auth.refreshSilent(), 45 * 60 * 1000);
+  }
+
   document.title = CONFIG.appName;
 
   shellRefs = buildShell();

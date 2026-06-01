@@ -7,18 +7,15 @@ export const CONFIG = {
   storageKeys: {
     theme: 'financeos.theme',
   },
-  // Conexión con el backend (Apps Script). El frontend solo conoce este
-  // endpoint y el contrato action-based, nunca Google Sheets.
-  //
-  // Para conectar (Fase 3):
-  //   1. baseUrl = URL "/exec" de tu Web App desplegada como
-  //      "Cualquiera con el enlace".
-  //   2. token   = mismo valor que la propiedad de script
-  //      FINANCEOS_API_TOKEN del backend (opcional pero recomendado).
-  // Con baseUrl en null, la app funciona en modo local/mock.
   api: {
     baseUrl: "https://script.google.com/macros/s/AKfycbzeLPrGZzHOjwAnFOt6ZNhFv5DesN29dn1Sh0p3O7OM0hV7v3EfHutdMa6OUcvdfbtu/exec",
-    token: "oO0jAwQkAYwagVGekVn62b2gzL3Xxsk",
+    token: null, // Obsoleto — reemplazado por Google OAuth (TD-09). El backend ya no lo usa.
     timeoutMs: 15000,
+  },
+  // Google OAuth (TD-09): protege la app con la cuenta de Google del propietario.
+  // Obtén el clientId en console.cloud.google.com → APIs → Credenciales → OAuth 2.0
+  // Origen autorizado: https://alejandror1367.github.io
+  auth: {
+    clientId: '444939967819-uv535tm5fg5glrj2fqc4l3llrqmhvqbb.apps.googleusercontent.com',
   },
 };

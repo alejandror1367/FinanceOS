@@ -104,7 +104,7 @@ function doGet(e) {
     var params = (e && e.parameter) ? e.parameter : {};
     var action = params.action;
     if (!action) return jsonOut_({ success: true, data: ROUTES.ping() });
-    assertAuthorized_(action, params.token);
+    assertAuthorized_(action, params.idToken);
     if (!READ_ACTIONS[action]) {
       throw new Error('Acción de solo lectura no válida en GET: ' + action);
     }
@@ -119,7 +119,7 @@ function doPost(e) {
     var body = parseBody_(e);
     var action = body.action;
     if (!action) throw new Error('Falta "action" en la solicitud.');
-    assertAuthorized_(action, body.token);
+    assertAuthorized_(action, body.idToken);
     var handler = ROUTES[action];
     if (!handler) throw new Error('Acción desconocida: ' + action);
     var result = handler(body.data || {});
@@ -130,18 +130,13 @@ function doPost(e) {
 }
 
 /**
- * Autorización por token compartido (opcional). Si la propiedad de script
- * FINANCEOS_API_TOKEN está definida, toda acción (salvo "ping") debe enviar
- * el mismo token. Si no está definida, no se exige (modo abierto).
+ * Autorización por Google ID Token (TD-09 opción C).
+ * Toda acción (salvo "ping") requiere un id_token válido de patitosalmir@gmail.com.
+ * La verificación se delega a verifyGoogleToken_() en Auth.gs.
  */
-function getApiToken_() {
-  return PropertiesService.getScriptProperties().getProperty('FINANCEOS_API_TOKEN');
-}
-
-function assertAuthorized_(action, provided) {
+function assertAuthorized_(action, idToken) {
   if (action === 'ping') return;
-  var token = getApiToken_();
-  if (token && String(provided || '') !== String(token)) {
+  if (!verifyGoogleToken_(idToken)) {
     throw new Error('No autorizado.');
   }
 }

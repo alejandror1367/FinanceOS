@@ -3,6 +3,7 @@
 import { el } from '../utils/dom.js';
 import { icon } from '../utils/icons.js';
 import { CONFIG } from '../core/config.js';
+import { auth } from '../core/auth.js';
 import { store } from '../store/store.js';
 import { theme } from '../services/theme.js';
 import { dataService } from '../services/dataService.js';
@@ -63,11 +64,26 @@ export function renderSettings() {
   });
 
   // Backend
+  const authEnabled = !!CONFIG.auth.clientId;
+  const sessionToken = auth.getToken();
+  const sessionEmail = sessionToken ? (() => { try { return JSON.parse(atob(sessionToken.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).email; } catch { return null; } })() : null;
+
   const backendCard = Card({
-    title: 'Backend',
+    title: 'Backend y sesión',
     body: el('div', { class: 'row-list' }, [
       settingRow('Conexión', connected ? 'Apps Script configurado' : 'Modo local (sin backend)', connected ? Badge('Conectado', 'positive') : Badge('Local', 'info')),
-      settingRow('Token', CONFIG.api.token ? 'Protegido por token' : 'Sin token', CONFIG.api.token ? Badge('Activo', 'positive') : Badge('Vacío', 'warning')),
+      authEnabled
+        ? settingRow(
+            'Sesión activa',
+            sessionEmail || 'Google OAuth',
+            Button('Cerrar sesión', { variant: 'ghost', iconName: 'close', onClick: () => confirmDialog({
+              title: 'Cerrar sesión',
+              message: '¿Cerrar la sesión de esta app? Necesitarás iniciar sesión con Google la próxima vez.',
+              confirmLabel: 'Cerrar sesión',
+              onConfirm: () => auth.signOut(),
+            }) }),
+          )
+        : settingRow('Autenticación', 'Sin Client ID configurado', Badge('Desactivada', 'warning')),
     ]),
   });
 

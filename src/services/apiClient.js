@@ -4,6 +4,7 @@
 // Apps Script no maneja (docs Fase 3). Respuesta: { success, data|error }.
 
 import { CONFIG } from '../core/config.js';
+import { auth } from '../core/auth.js';
 
 const api = CONFIG.api;
 
@@ -22,7 +23,8 @@ async function request(method, action, payload) {
     if (method === 'GET') {
       const url = new URL(api.baseUrl);
       url.searchParams.set('action', action);
-      if (api.token) url.searchParams.set('token', api.token);
+      const idToken = auth.getToken();
+      if (idToken) url.searchParams.set('idToken', idToken);
       const params = payload || {};
       Object.keys(params).forEach((k) => {
         if (params[k] != null) url.searchParams.set(k, params[k]);
@@ -36,7 +38,7 @@ async function request(method, action, payload) {
       response = await fetch(api.baseUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action, data: payload, token: api.token || undefined }),
+        body: JSON.stringify({ action, data: payload, idToken: auth.getToken() || undefined }),
         signal: controller.signal,
         redirect: 'follow',
       });
@@ -45,7 +47,12 @@ async function request(method, action, payload) {
     if (!response.ok) throw new Error('HTTP ' + response.status);
     const json = await response.json();
     if (!json || json.success !== true) {
-      throw new Error(json && json.error ? json.error : 'Respuesta inválida del backend.');
+      const err = json && json.error ? json.error : 'Respuesta inválida del backend.';
+      // Sesión expirada o inválida: limpiar y recargar → pantalla de login
+      if (err === 'No autorizado.' || err === 'No autorizado: falta credencial.') {
+        auth.signOut();
+      }
+      throw new Error(err);
     }
     return json.data;
   } finally {

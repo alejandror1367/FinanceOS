@@ -41,6 +41,10 @@
   <!-- Contenedor de toasts -->
   <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="false"></div>
 
+  <!-- Google Identity Services — dispara 'gsi:ready' cuando carga (TD-09) -->
+  <script src="https://accounts.google.com/gsi/client" async defer
+          onload="document.dispatchEvent(new Event('gsi:ready'))"></script>
+
   <script type="module" src="src/core/app.js"></script>
 </body>
 </html>

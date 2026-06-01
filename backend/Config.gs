@@ -12,8 +12,11 @@ var APP = {
   apiVersion: '1.0',
   dbFileName: 'FinanceOS_DB',
   baseCurrency: 'COP',
-  // Clave en PropertiesService donde se almacena el ID del spreadsheet.
   propKeySpreadsheetId: 'FINANCEOS_DB_ID',
+
+  // Auth (TD-09 opción C) — Google OAuth
+  allowedEmail: 'patitosalmir@gmail.com',
+  googleClientId: '444939967819-uv535tm5fg5glrj2fqc4l3llrqmhvqbb.apps.googleusercontent.com',
 };
 
 /**
