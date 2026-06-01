@@ -81,7 +81,7 @@ async function flush() {
       }
     }
     const pending = await refreshPending();
-    setStatus({ state: pending > 0 ? 'idle' : 'idle', lastSync: new Date().toISOString() });
+    setStatus({ state: pending > 0 ? 'pending' : 'idle', lastSync: new Date().toISOString() });
   } finally {
     running = false;
   }

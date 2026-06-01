@@ -14,8 +14,9 @@ function getSpreadsheetId_() {
   return id;
 }
 
+var _db;
 function getDb_() {
-  return SpreadsheetApp.openById(getSpreadsheetId_());
+  return _db || (_db = SpreadsheetApp.openById(getSpreadsheetId_()));
 }
 
 function getSheet_(name) {

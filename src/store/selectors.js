@@ -2,8 +2,8 @@
 // Los valores derivados NO se persisten (docs/Database.md §5): se calculan aquí.
 
 function sameMonth(iso, ref = new Date()) {
-  const d = new Date(iso);
-  return d.getFullYear() === ref.getFullYear() && d.getMonth() === ref.getMonth();
+  const refKey = `${ref.getFullYear()}-${String(ref.getMonth() + 1).padStart(2, '0')}`;
+  return String(iso).slice(0, 7) === refKey;
 }
 
 const MONTH_ABBR = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
