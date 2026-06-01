@@ -50,9 +50,10 @@ function applyProfile(profile, headers, rows) {
   };
 }
 
-// Groq free tier: 6k TPM. Sistema prompt ~600 tokens → usuario max ~4k tokens ≈ 16k chars.
-const MAX_AI_CHARS = 14_000;
-const MAX_AI_ROWS  = 300;
+// Groq free tier: 6k TPM. Sistema prompt ~600 tokens → usuario max ~2.5k tokens ≈ 8k chars.
+// 100 filas cubre cualquier extracto mensual (bancos colombianos: 30-80 tx/mes típico).
+const MAX_AI_CHARS = 8_000;
+const MAX_AI_ROWS  = 100;
 
 function compactCsv(headers, rows) {
   const limited = rows.slice(0, MAX_AI_ROWS);
