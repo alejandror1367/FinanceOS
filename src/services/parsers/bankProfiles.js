@@ -193,6 +193,35 @@ export const BANK_PROFILES = [
       };
     },
   },
+  {
+    id: 'financeos',
+    name: 'FinanceOS Import',
+    color: 'var(--accent)',
+    textColor: '#fff',
+    currency: 'COP',
+    matchFilename: /financeos/i,
+    matchHeaders(h) {
+      const n = h.map(norm);
+      return n.includes('fecha') && n.includes('monto') && n.includes('tipo') && n.includes('categoria');
+    },
+    mapRow(headers, row) {
+      const get = getter(headers, row);
+      const monto = parseMoney(get('monto'));
+      const tipo = norm(get('tipo', 'type'));
+      let type = 'expense';
+      if (tipo.includes('ingreso') || tipo === 'income') type = 'income';
+      else if (tipo.includes('transfer')) type = 'transfer';
+      else if (tipo.includes('gasto') || tipo === 'expense') type = 'expense';
+      return {
+        date: toIso(get('fecha', 'date')),
+        description: get('descripcion', 'description', 'descripción'),
+        amount: Math.abs(monto),
+        type,
+        categoryName: get('categoria', 'category') || '',
+        balance: parseMoney(get('saldo')) || undefined,
+      };
+    },
+  },
 ];
 
 export function detectBank(headers, filename) {

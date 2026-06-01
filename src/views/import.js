@@ -336,13 +336,22 @@ export function renderImport() {
       let ok = 0;
       for (const item of toImport) {
         try {
+          // Resuelve categoría: por nombre (FinanceOS CSV) > default seleccionado
+          let categoryId = item.type === 'expense' ? (state.defaultCategoryId || undefined) : undefined;
+          if (item.categoryName) {
+            const cats = store.get().categories || [];
+            const match = cats.find((c) =>
+              c.name.toLowerCase().trim() === item.categoryName.toLowerCase().trim()
+            );
+            if (match) categoryId = match.id;
+          }
           await dataService.mutate('transactions', 'create', {
             date: item.date,
             description: item.description || item.symbol || '',
             amount: Number(item.amount) || 0,
             type: item.type || 'expense',
             accountId: state.accountId || undefined,
-            categoryId: item.type === 'expense' ? (state.defaultCategoryId || undefined) : undefined,
+            categoryId,
             currency: item.currency || result.currency || 'COP',
             importedFrom: bank.name || 'Import',
           });
