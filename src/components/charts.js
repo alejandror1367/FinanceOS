@@ -1,0 +1,68 @@
+// components/charts.js — gráficos SVG ligeros (sin dependencias).
+// LineChart (multi-serie), Donut y Legend. Usan tokens semánticos de color.
+
+import { el } from '../utils/dom.js';
+
+export const CHART_PALETTE = [
+  'var(--accent)', 'var(--positive)', 'var(--gold)', 'var(--info)',
+  'var(--warning)', 'var(--negative)', 'var(--periwinkle-300)', 'var(--neutral)',
+];
+
+// series: [{ name, color, points: number[] }]. labels: string[].
+export function LineChart({ labels = [], series = [], height = 180 }) {
+  const W = 640, H = height;
+  const padL = 10, padR = 10, padT = 14, padB = 24;
+  const n = labels.length;
+  const all = series.flatMap((s) => s.points);
+  const max = Math.max(1, ...all);
+  const min = Math.min(0, ...all);
+  const range = (max - min) || 1;
+  const x = (i) => padL + (n <= 1 ? (W - padL - padR) / 2 : (i / (n - 1)) * (W - padL - padR));
+  const y = (v) => padT + (1 - (v - min) / range) * (H - padT - padB);
+
+  const grid = [0, 0.5, 1].map((f) => {
+    const gy = padT + f * (H - padT - padB);
+    return `<line x1="${padL}" y1="${gy.toFixed(1)}" x2="${W - padR}" y2="${gy.toFixed(1)}" stroke="var(--border-subtle)" stroke-width="1"/>`;
+  }).join('');
+
+  const paths = series.map((s) => {
+    const pts = s.points.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+    const dots = s.points.map((v, i) => `<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="2.5" fill="${s.color}"/>`).join('');
+    return `<polyline points="${pts}" fill="none" stroke="${s.color}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>${dots}`;
+  }).join('');
+
+  const xlabels = labels.map((l, i) =>
+    `<text x="${x(i).toFixed(1)}" y="${H - 6}" text-anchor="middle" font-size="11" fill="var(--text-tertiary)">${l}</text>`).join('');
+
+  const svg = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" style="width:100%;height:${H}px;display:block">${grid}${paths}${xlabels}</svg>`;
+  return el('div', { class: 'chart', html: svg });
+}
+
+// segments: [{ label, value, color }]
+export function Donut(segments = [], { size = 168, centerTop = '', centerSub = '' } = {}) {
+  const total = segments.reduce((a, s) => a + (s.value || 0), 0) || 1;
+  const r = 56, cx = 84, cy = 84;
+  const circ = 2 * Math.PI * r;
+  let offset = 0;
+  const arcs = segments.map((s) => {
+    const frac = (s.value || 0) / total;
+    const len = frac * circ;
+    const seg = `<circle r="${r}" cx="${cx}" cy="${cy}" fill="none" stroke="${s.color}" stroke-width="20" stroke-dasharray="${len.toFixed(2)} ${(circ - len).toFixed(2)}" stroke-dashoffset="${(-offset).toFixed(2)}" transform="rotate(-90 ${cx} ${cy})"/>`;
+    offset += len;
+    return seg;
+  }).join('');
+  const center = `<text x="${cx}" y="${cy - 2}" text-anchor="middle" font-size="16" font-weight="700" fill="var(--text-primary)">${centerTop}</text>` +
+    (centerSub ? `<text x="${cx}" y="${cy + 16}" text-anchor="middle" font-size="11" fill="var(--text-secondary)">${centerSub}</text>` : '');
+  const svg = `<svg viewBox="0 0 168 168" width="${size}" height="${size}" role="img">${arcs}${center}</svg>`;
+  return el('div', { class: 'donut', html: svg });
+}
+
+// items: [{ label, color, value }]
+export function Legend(items = []) {
+  return el('div', { class: 'legend' }, items.map((it) =>
+    el('div', { class: 'legend__item' }, [
+      el('span', { class: 'legend__dot', style: { background: it.color } }),
+      el('span', { class: 'legend__label', text: it.label }),
+      it.value != null ? el('span', { class: 'legend__val tabular', text: it.value }) : null,
+    ].filter(Boolean))));
+}

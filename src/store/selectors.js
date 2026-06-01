@@ -6,6 +6,18 @@ function sameMonth(iso, ref = new Date()) {
   return d.getFullYear() === ref.getFullYear() && d.getMonth() === ref.getMonth();
 }
 
+const MONTH_ABBR = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+function ymKey(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; }
+function lastMonths(n) {
+  const now = new Date();
+  const out = [];
+  for (let i = n - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    out.push({ key: ymKey(d), label: MONTH_ABBR[d.getMonth()] });
+  }
+  return out;
+}
+
 export const selectors = {
   liquidAccounts(s) {
     return s.accounts.filter((a) => !a.isArchived && a.type !== 'investment');
@@ -119,6 +131,59 @@ export const selectors = {
       projected = day > 0 ? (consumed / day) * daysInMonth : consumed;
     }
     return { amount, consumed, available, pct, projected };
+  },
+
+  // ---- Series temporales (Analítica) ----
+  // Flujo de caja por mes (últimos n meses, incluye el actual).
+  cashflow(s, n = 6) {
+    const months = lastMonths(n);
+    const acc = {};
+    months.forEach((m) => { acc[m.key] = { key: m.key, label: m.label, income: 0, expense: 0 }; });
+    for (const t of s.transactions) {
+      const key = String(t.date).slice(0, 7);
+      if (!acc[key]) continue;
+      if (t.type === 'income') acc[key].income += t.amount || 0;
+      else if (t.type === 'expense') acc[key].expense += t.amount || 0;
+    }
+    return months.map((m) => {
+      const r = acc[m.key];
+      return { ...r, savings: r.income - r.expense };
+    });
+  },
+
+  // Gasto por categoría para un mes dado (YYYY-MM).
+  categorySpend(s, monthKey) {
+    const map = new Map();
+    for (const t of s.transactions) {
+      if (t.type !== 'expense' || String(t.date).slice(0, 7) !== monthKey) continue;
+      map.set(t.categoryId, (map.get(t.categoryId) || 0) + t.amount);
+    }
+    return [...map.entries()]
+      .map(([id, amount]) => ({ category: selectors.categoryById(s, id), amount }))
+      .sort((a, b) => b.amount - a.amount);
+  },
+
+  // Mayor variación de gasto por categoría (mes actual vs anterior).
+  topCategoryChange(s) {
+    const months = lastMonths(2);
+    if (months.length < 2) return null;
+    const cur = new Map(); const prev = new Map();
+    for (const t of s.transactions) {
+      if (t.type !== 'expense') continue;
+      const key = String(t.date).slice(0, 7);
+      if (key === months[1].key) cur.set(t.categoryId, (cur.get(t.categoryId) || 0) + t.amount);
+      else if (key === months[0].key) prev.set(t.categoryId, (prev.get(t.categoryId) || 0) + t.amount);
+    }
+    let best = null;
+    for (const [id, curAmt] of cur.entries()) {
+      const prevAmt = prev.get(id) || 0;
+      if (prevAmt <= 0) continue;
+      const pct = ((curAmt - prevAmt) / prevAmt) * 100;
+      if (!best || Math.abs(pct) > Math.abs(best.pct)) {
+        best = { category: selectors.categoryById(s, id), pct, curAmt, prevAmt };
+      }
+    }
+    return best;
   },
 
   // Gasto por categoría del mes (para analítica ligera)
