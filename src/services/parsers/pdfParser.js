@@ -1,5 +1,5 @@
 // services/parsers/pdfParser.js — extracción de texto de PDFs via PDF.js (CDN).
-// Para PDFs digitales extrae texto; para escaneados retorna vacío (Claude usará visión).
+// Devuelve { text, isTextBased } en una sola pasada para evitar detached ArrayBuffer.
 
 let pdfjs = null;
 
@@ -11,14 +11,19 @@ async function loadPdfJs() {
   return pdfjs;
 }
 
-export async function extractPdfText(buffer) {
+// Extrae texto y determina si el PDF tiene contenido seleccionable.
+// Usa buffer.slice(0) para no dejar el ArrayBuffer original en estado "detached".
+export async function parsePdf(buffer) {
   const lib = await loadPdfJs();
-  const pdf = await lib.getDocument({ data: new Uint8Array(buffer) }).promise;
+  // Copia defensiva: PDF.js transfiere el ArrayBuffer internamente
+  const data = new Uint8Array(buffer.slice(0));
+  const pdf = await lib.getDocument({ data }).promise;
+
   const pageTexts = [];
   for (let i = 1; i <= Math.min(pdf.numPages, 50); i++) {
     const page = await pdf.getPage(i);
     const content = await page.getTextContent();
-    // Agrupa ítems por fila (coordenada Y redondeada), ordena por X → reconstruye líneas
+    // Agrupa items por fila (Y redondeado), ordena por columna (X)
     const byY = {};
     for (const item of content.items) {
       const y = Math.round(item.transform[5]);
@@ -31,24 +36,8 @@ export async function extractPdfText(buffer) {
       .filter((l) => l.trim());
     pageTexts.push(lines.join('\n'));
   }
-  return pageTexts.join('\n\n--- PÁGINA ---\n\n');
-}
 
-// Devuelve true si el PDF contiene texto seleccionable suficiente.
-export async function isPdfTextBased(buffer) {
-  try {
-    const lib = await loadPdfJs();
-    const pdf = await lib.getDocument({ data: new Uint8Array(buffer) }).promise;
-    // Muestra solo las primeras 3 páginas para decidir rápido
-    let totalChars = 0;
-    const pagesToCheck = Math.min(pdf.numPages, 3);
-    for (let i = 1; i <= pagesToCheck; i++) {
-      const page = await pdf.getPage(i);
-      const content = await page.getTextContent();
-      totalChars += content.items.reduce((s, it) => s + (it.str || '').length, 0);
-    }
-    return totalChars / pagesToCheck > 80;
-  } catch {
-    return false;
-  }
+  const text = pageTexts.join('\n\n--- PÁGINA ---\n\n');
+  const avgCharsPerPage = text.length / Math.max(pdf.numPages, 1);
+  return { text, isTextBased: avgCharsPerPage > 80 };
 }

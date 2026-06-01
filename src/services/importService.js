@@ -3,7 +3,7 @@
 
 import { parseCSV } from './parsers/csvParser.js';
 import { parseExcel } from './parsers/excelParser.js';
-import { extractPdfText, isPdfTextBased } from './parsers/pdfParser.js';
+import { parsePdf } from './parsers/pdfParser.js';
 import { BANK_PROFILES, detectBank } from './parsers/bankProfiles.js';
 import { apiClient } from './apiClient.js';
 
@@ -25,12 +25,6 @@ function readAsBuffer(file) {
   });
 }
 
-function bufferToBase64(buffer) {
-  const bytes = new Uint8Array(buffer);
-  let bin = '';
-  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
-  return btoa(bin);
-}
 
 function applyProfile(profile, headers, rows) {
   const items = [];
@@ -115,22 +109,18 @@ export const importService = {
       onProgress?.('pdf');
       const buffer = await readAsBuffer(file);
       const bankFromName = BANK_PROFILES.find((p) => p.matchFilename?.test(file.name)) || null;
-      let fileContent, mimeType;
 
-      const hasText = await isPdfTextBased(buffer);
-      if (hasText) {
-        fileContent = await extractPdfText(buffer);
-        mimeType = 'text/plain';
-      } else {
-        // PDF escaneado → enviar base64 para visión de Claude
-        const b64 = bufferToBase64(buffer);
-        if (b64.length > 9_000_000) throw new Error('PDF demasiado grande (>~6 MB). Intenta exportar como CSV desde la app del banco o dividirlo en páginas.');
-        fileContent = b64;
-        mimeType = 'application/pdf';
+      const { text, isTextBased } = await parsePdf(buffer);
+
+      if (!isTextBased) {
+        throw new Error(
+          'Este PDF es escaneado (imagen) y no tiene texto extraíble. ' +
+          'Descarga el extracto en formato CSV desde la app de tu banco e inténtalo de nuevo.'
+        );
       }
 
       onProgress?.('ai');
-      const result = await callClaude({ fileContent, fileName: file.name, mimeType, bankHint: bankFromName?.name || null });
+      const result = await callClaude({ fileContent: text, fileName: file.name, mimeType: 'text/plain', bankHint: bankFromName?.name || null });
       return claudeResultToImport(result, bankFromName);
     }
 
