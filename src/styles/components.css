@@ -286,6 +286,14 @@ select.input { appearance: none; cursor: pointer;
 
 body.modal-open { overflow: hidden; }
 
+/* ---------- Impresión (PDF) ---------- */
+#print-area { display: none; }
+@media print {
+  #app, #toast-region { display: none !important; }
+  #print-area { display: block; }
+  @page { margin: 16mm; }
+}
+
 /* ---------- Charts ---------- */
 .chart { width: 100%; }
 .donut { display: grid; place-items: center; }

@@ -13,6 +13,7 @@ import { renderAnalytics } from '../views/analytics.js';
 import { renderToday } from '../views/today.js';
 import { renderRecurring } from '../views/recurring.js';
 import { renderJournal } from '../views/journal.js';
+import { renderExports } from '../views/exports.js';
 import { makeStub } from '../views/stub.js';
 
 export const routes = {
@@ -30,7 +31,7 @@ export const routes = {
 
   analytics:    { title: 'Analítica',     icon: 'analytics',    nav: 'insights', render: renderAnalytics },
   journal:      { title: 'Diario',        icon: 'journal',      nav: 'insights', render: renderJournal },
-  exports:      { title: 'Exportaciones', icon: 'exports',      nav: 'insights', render: makeStub('Exportaciones', 'PDF, CSV, resúmenes mensual/anual y estado patrimonial.', 'exports') },
+  exports:      { title: 'Exportaciones', icon: 'exports',      nav: 'insights', render: renderExports },
   settings:     { title: 'Ajustes',       icon: 'settings',     nav: 'system',   render: makeStub('Ajustes', 'Preferencias, tema, moneda base y respaldos exportables.', 'settings') },
 };
 
