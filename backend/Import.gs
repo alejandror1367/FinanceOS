@@ -9,7 +9,7 @@
  * Soporta: texto plano, CSV, Excel (como texto) y PDF (base64)
  */
 
-var GEMINI_MODEL_ = 'gemini-1.5-flash';
+var GEMINI_MODEL_ = 'gemini-2.0-flash';
 var GEMINI_URL_   = 'https://generativelanguage.googleapis.com/v1beta/models/' +
                     GEMINI_MODEL_ + ':generateContent?key=';
 
