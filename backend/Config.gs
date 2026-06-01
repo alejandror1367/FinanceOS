@@ -164,13 +164,23 @@ var SCHEMAS = {
     { key: 'createdAt', type: 'ts' },
     { key: 'updatedAt', type: 'ts' },
   ],
+  Journal: [
+    { key: 'id', type: 's' },
+    { key: 'date', type: 'd' },
+    { key: 'category', type: 's' },   // reflection|decision|learning|objective
+    { key: 'title', type: 's' },
+    { key: 'content', type: 's' },
+    { key: 'isDeleted', type: 'b' },
+    { key: 'createdAt', type: 'ts' },
+    { key: 'updatedAt', type: 'ts' },
+  ],
 };
 
 // Orden de creación de hojas en el spreadsheet.
 var SHEET_NAMES = [
   'Accounts', 'Transactions', 'Categories', 'Budgets', 'Goals',
   'Investments', 'Assets', 'Liabilities', 'NetWorthSnapshots',
-  'RecurringTransactions', 'AuditLog', 'Settings',
+  'RecurringTransactions', 'AuditLog', 'Settings', 'Journal',
 ];
 
 // Enums permitidos (validación autoritativa).
@@ -182,4 +192,5 @@ var ENUMS = {
   goalStatus: ['active', 'paused', 'completed'],
   assetType: ['stock', 'etf', 'fund', 'bond', 'cdt', 'crypto'],
   frequency: ['daily', 'weekly', 'monthly', 'yearly'],
+  journalCategory: ['reflection', 'decision', 'learning', 'objective'],
 };

@@ -21,6 +21,7 @@ const state = {
   netWorthSeries: [],
   auditLog: [],
   settings: [],
+  journal: [],
 
   // Estado del motor de sincronización (Fase 3).
   sync: {

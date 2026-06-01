@@ -77,6 +77,12 @@ var ROUTES = {
   updateRecurring: function (d) { return updateRecurring_(d); },
   deleteRecurring: function (d) { return deleteRecurring_(d); },
 
+  // Journal
+  getJournal: function (p) { return listJournal_(p); },
+  createJournal: function (d) { return createJournal_(d); },
+  updateJournal: function (d) { return updateJournal_(d); },
+  deleteJournal: function (d) { return deleteJournal_(d); },
+
   // Settings
   getSettings: function (p) { return listSettings_(p); },
   setSetting: function (d) { return setSetting_(d); },
@@ -90,7 +96,7 @@ var READ_ACTIONS = {
   getDashboard: 1, getNetWorth: 1, getNetWorthSnapshots: 1, getReports: 1,
   getAccounts: 1, getTransactions: 1, getCategories: 1, getBudgets: 1,
   getGoals: 1, getInvestments: 1, getAssets: 1, getLiabilities: 1,
-  getRecurring: 1, getSettings: 1, ping: 1,
+  getRecurring: 1, getJournal: 1, getSettings: 1, ping: 1,
 };
 
 function doGet(e) {

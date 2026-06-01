@@ -10,14 +10,18 @@ import { renderInvestments } from '../views/investments.js';
 import { renderGoals } from '../views/goals.js';
 import { renderDebts } from '../views/debts.js';
 import { renderAnalytics } from '../views/analytics.js';
+import { renderToday } from '../views/today.js';
+import { renderRecurring } from '../views/recurring.js';
+import { renderJournal } from '../views/journal.js';
 import { makeStub } from '../views/stub.js';
 
 export const routes = {
   dashboard:    { title: 'Dashboard',     icon: 'dashboard',    nav: 'primary', render: renderDashboard },
-  today:        { title: 'Hoy',           icon: 'today',        nav: 'primary', render: makeStub('Hoy', 'Tu copiloto financiero diario: saldo, movimientos recientes, próximos pagos y metas prioritarias.', 'today') },
+  today:        { title: 'Hoy',           icon: 'today',        nav: 'primary', render: renderToday },
   transactions: { title: 'Transacciones', icon: 'transactions', nav: 'primary', render: renderTransactions },
   accounts:     { title: 'Cuentas',       icon: 'accounts',     nav: 'primary', render: renderAccounts },
   budgets:      { title: 'Presupuestos',  icon: 'budgets',      nav: 'primary', render: renderBudgets },
+  recurring:    { title: 'Recurrentes',   icon: 'calendar',     nav: 'primary', render: renderRecurring },
 
   networth:     { title: 'Patrimonio',    icon: 'networth',     nav: 'wealth',  render: renderNetWorth },
   investments:  { title: 'Inversiones',   icon: 'investments',  nav: 'wealth',  render: renderInvestments },
@@ -25,7 +29,7 @@ export const routes = {
   debts:        { title: 'Deudas',        icon: 'debts',        nav: 'wealth',  render: renderDebts },
 
   analytics:    { title: 'Analítica',     icon: 'analytics',    nav: 'insights', render: renderAnalytics },
-  journal:      { title: 'Diario',        icon: 'journal',      nav: 'insights', render: makeStub('Diario financiero', 'Reflexiones, decisiones, aprendizajes y objetivos.', 'journal') },
+  journal:      { title: 'Diario',        icon: 'journal',      nav: 'insights', render: renderJournal },
   exports:      { title: 'Exportaciones', icon: 'exports',      nav: 'insights', render: makeStub('Exportaciones', 'PDF, CSV, resúmenes mensual/anual y estado patrimonial.', 'exports') },
   settings:     { title: 'Ajustes',       icon: 'settings',     nav: 'system',   render: makeStub('Ajustes', 'Preferencias, tema, moneda base y respaldos exportables.', 'settings') },
 };

@@ -32,6 +32,7 @@ const WRITE = {
   assets:       { create: 'createAsset',       update: 'updateAsset',       remove: 'deleteAsset' },
   liabilities:  { create: 'createLiability',   update: 'updateLiability',   remove: 'deleteLiability' },
   recurring:    { create: 'createRecurring',   update: 'updateRecurring',   remove: 'deleteRecurring' },
+  journal:      { create: 'createJournal',     update: 'updateJournal',     remove: 'deleteJournal' },
 };
 
 function stamp(record) {

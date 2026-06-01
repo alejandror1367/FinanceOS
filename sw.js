@@ -5,7 +5,7 @@
    Rutas relativas para funcionar en GitHub Pages bajo subdirectorio.
 */
 
-const VERSION = 'financeos-v0.1.9';
+const VERSION = 'financeos-v0.2.0';
 const SHELL_CACHE = `${VERSION}-shell`;
 
 // Resuelto contra el scope del SW (directorio de registro).
@@ -53,6 +53,9 @@ const SHELL_ASSETS = [
   './src/views/goals.js',
   './src/views/debts.js',
   './src/views/analytics.js',
+  './src/views/today.js',
+  './src/views/recurring.js',
+  './src/views/journal.js',
   './src/views/stub.js',
 ];
 

@@ -5,13 +5,13 @@
 import { CONFIG } from '../core/config.js';
 
 const DB_NAME = CONFIG.dbName;
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 // Stores locales (espejo de las entidades de dominio).
 export const STORES = [
   'accounts', 'transactions', 'categories', 'budgets', 'goals',
   'investments', 'assets', 'liabilities', 'recurring',
-  'netWorthSnapshots', 'auditLog', 'settings', 'syncQueue', 'kv',
+  'netWorthSnapshots', 'auditLog', 'settings', 'journal', 'syncQueue', 'kv',
 ];
 
 let dbPromise = null;
