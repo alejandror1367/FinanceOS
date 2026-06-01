@@ -17,8 +17,8 @@ export const CONFIG = {
   //      FINANCEOS_API_TOKEN del backend (opcional pero recomendado).
   // Con baseUrl en null, la app funciona en modo local/mock.
   api: {
-    baseUrl: null,
-    token: null,
+    baseUrl: "https://script.google.com/macros/s/AKfycbzeLPrGZzHOjwAnFOt6ZNhFv5DesN29dn1Sh0p3O7OM0hV7v3EfHutdMa6OUcvdfbtu/exec",
+    token: "oO0jAwQkAYwagVGekVn62b2gzL3Xxsk",
     timeoutMs: 15000,
   },
 };
