@@ -286,6 +286,27 @@ select.input { appearance: none; cursor: pointer;
 
 body.modal-open { overflow: hidden; }
 
+/* ---------- Credit card panels ---------- */
+.cc-panels-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--space-4); }
+.cc-panel { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); }
+.cc-panel__head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3); }
+.cc-panel__name { display: flex; flex-direction: column; gap: 2px; }
+.cc-panel__title { font-size: var(--fs-body); font-weight: var(--fw-semibold); color: var(--text-primary); }
+.cc-panel__inst { font-size: var(--fs-caption); color: var(--text-tertiary); }
+.cc-panel__debt { font-size: var(--fs-h3); font-weight: var(--fw-semibold); }
+.cc-util-bar { height: 6px; background: var(--border-subtle); border-radius: 3px; overflow: hidden; }
+.cc-util-fill { height: 100%; border-radius: 3px; transition: width .3s var(--ease-out); }
+.cc-panel__grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+.cc-metric { display: flex; flex-direction: column; gap: 2px; }
+.cc-metric__label { font-size: 11px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: .04em; font-weight: var(--fw-medium); }
+.cc-metric__value { font-size: var(--fs-caption); font-weight: var(--fw-semibold); color: var(--text-primary); }
+.cc-metric__sub { font-size: 11px; color: var(--text-tertiary); }
+/* Utilization bar en cuentas */
+.util-bar { height: 4px; background: var(--border-subtle); border-radius: 2px; overflow: hidden; margin-top: 4px; max-width: 180px; }
+.util-bar__fill { height: 100%; background: var(--positive); border-radius: 2px; }
+.util-bar__fill--warn { background: var(--warning, var(--accent)); }
+.util-bar__fill--danger { background: var(--negative); }
+
 /* ---------- Impresión (PDF) ---------- */
 #print-area { display: none; }
 @media print {

@@ -1,5 +1,5 @@
 // views/accounts.js — módulo de Cuentas (CRUD).
-// Usa dataService (Optimistic UI + sync). Sin lógica de negocio aquí.
+// Tarjetas de crédito tienen campos extra: cupo, tasa, día de corte, día de pago, % mínimo.
 
 import { el } from '../utils/dom.js';
 import { icon } from '../utils/icons.js';
@@ -12,27 +12,58 @@ import { field, textInput, numberInput, select } from '../components/forms.js';
 import { toast } from '../services/toast.js';
 
 const TYPES = [
-  { value: 'cash',           label: 'Efectivo',          icon: 'wallet' },
-  { value: 'bank',           label: 'Banco',              icon: 'accounts' },
-  { value: 'savings',        label: 'Ahorro',             icon: 'budgets' },
-  { value: 'credit_card',    label: 'Tarjeta de crédito', icon: 'debts' },
-  { value: 'investment',     label: 'Inversión',          icon: 'investments' },
-  { value: 'digital_wallet', label: 'Billetera digital',  icon: 'wallet' },
+  { value: 'cash',           label: 'Efectivo',           icon: 'wallet' },
+  { value: 'bank',           label: 'Banco',               icon: 'accounts' },
+  { value: 'savings',        label: 'Ahorro',              icon: 'budgets' },
+  { value: 'credit_card',    label: 'Tarjeta de crédito',  icon: 'debts' },
+  { value: 'investment',     label: 'Inversión',           icon: 'investments' },
+  { value: 'digital_wallet', label: 'Billetera digital',   icon: 'wallet' },
 ];
 const typeLabel = (v) => (TYPES.find((t) => t.value === v) || {}).label || v;
-const typeIcon = (v) => (TYPES.find((t) => t.value === v) || {}).icon || 'accounts';
+const typeIcon  = (v) => (TYPES.find((t) => t.value === v) || {}).icon  || 'accounts';
+
+// Utilización de cupo para tarjetas (balance es negativo = deuda)
+function utilization(a) {
+  if (a.type !== 'credit_card' || !a.creditLimit) return null;
+  const used = Math.abs(a.balance || 0);
+  return Math.min(100, Math.round(used / a.creditLimit * 100));
+}
 
 function accountForm(existing) {
+  const isCc = existing?.type === 'credit_card';
+  const typeEl = select({ name: 'type', value: existing?.type || 'bank', options: TYPES.map((t) => ({ value: t.value, label: t.label })) });
+  const ccExtra = el('div');
+
+  function paintCcExtra() {
+    ccExtra.innerHTML = '';
+    if (typeEl.value !== 'credit_card') return;
+    ccExtra.appendChild(el('div', { class: 'field-row' }, [
+      field('Cupo total', numberInput({ name: 'creditLimit', value: existing?.creditLimit ?? '' })),
+      field('Tasa interés (E.A. %)', numberInput({ name: 'interestRate', value: existing?.interestRate ?? '' })),
+    ]));
+    ccExtra.appendChild(el('div', { class: 'field-row' }, [
+      field('Día de corte', numberInput({ name: 'cutoffDay', value: existing?.cutoffDay ?? '', placeholder: '5' })),
+      field('Día de pago', numberInput({ name: 'paymentDay', value: existing?.paymentDay ?? '', placeholder: '25' })),
+    ]));
+    ccExtra.appendChild(
+      field('% Pago mínimo', numberInput({ name: 'minPaymentPct', value: existing?.minPaymentPct ?? '5', placeholder: '5' })),
+    );
+  }
+
+  typeEl.addEventListener('change', paintCcExtra);
+  if (isCc) paintCcExtra();
+
   return el('div', {}, [
-    field('Nombre', textInput({ name: 'name', value: existing?.name || '', placeholder: 'Bancolombia', required: true })),
+    field('Nombre', textInput({ name: 'name', value: existing?.name || '', placeholder: 'Visa Bancolombia', required: true })),
     el('div', { class: 'field-row' }, [
-      field('Tipo', select({ name: 'type', value: existing?.type || 'bank', options: TYPES.map((t) => ({ value: t.value, label: t.label })) })),
+      field('Tipo', typeEl),
       field('Moneda', textInput({ name: 'currency', value: existing?.currency || 'COP' })),
     ]),
     el('div', { class: 'field-row' }, [
-      field('Saldo', numberInput({ name: 'balance', value: existing?.balance ?? 0 })),
+      field('Saldo actual', numberInput({ name: 'balance', value: existing?.balance ?? 0 })),
       field('Institución', textInput({ name: 'institution', value: existing?.institution || '', placeholder: 'Opcional' })),
     ]),
+    ccExtra,
   ]);
 }
 
@@ -45,36 +76,50 @@ function openAccountModal(existing) {
     onSubmit: async () => {
       const get = (n) => body.querySelector(`[name="${n}"]`);
       const data = {
-        name: get('name').value.trim(),
-        type: get('type').value,
-        currency: (get('currency').value || 'COP').trim().toUpperCase().slice(0, 3),
-        balance: Number(get('balance').value) || 0,
+        name:        get('name').value.trim(),
+        type:        get('type').value,
+        currency:    (get('currency').value || 'COP').trim().toUpperCase().slice(0, 3),
+        balance:     Number(get('balance').value) || 0,
         institution: get('institution').value.trim(),
       };
+      if (data.type === 'credit_card') {
+        data.creditLimit    = Number(get('creditLimit')?.value)    || 0;
+        data.interestRate   = Number(get('interestRate')?.value)   || 0;
+        data.cutoffDay      = Number(get('cutoffDay')?.value)      || 0;
+        data.paymentDay     = Number(get('paymentDay')?.value)     || 0;
+        data.minPaymentPct  = Number(get('minPaymentPct')?.value)  || 5;
+      }
       if (!data.name) { toast('El nombre es obligatorio', { type: 'negative' }); return false; }
       try {
         if (existing) { await dataService.update('accounts', existing.id, data); toast('Cuenta actualizada'); }
-        else { await dataService.create('accounts', data); toast('Cuenta creada'); }
+        else          { await dataService.create('accounts', data); toast('Cuenta creada'); }
       } catch (e) { toast('Error al guardar', { type: 'negative' }); return false; }
     },
   });
 }
 
 function accountRow(a) {
+  const util = utilization(a);
+  const subParts = [a.institution || '—'];
+  if (util !== null) subParts.push(`${util}% utilizado`);
+
   return el('div', { class: 'row' }, [
     el('div', { class: 'row__avatar', html: icon(typeIcon(a.type)) }),
     el('div', { class: 'row__main' }, [
-      el('div', { class: 'row__title' }, [a.name, ' ', Badge(typeLabel(a.type), 'info')]),
-      el('div', { class: 'row__sub', text: a.institution || '—' }),
-    ]),
+      el('div', { class: 'row__title' }, [a.name, ' ', Badge(typeLabel(a.type), a.type === 'credit_card' ? 'negative' : 'info')]),
+      el('div', { class: 'row__sub', text: subParts.join(' · ') }),
+      util !== null ? el('div', { class: 'util-bar' }, [
+        el('div', { class: `util-bar__fill${util > 80 ? ' util-bar__fill--danger' : util > 50 ? ' util-bar__fill--warn' : ''}`, style: `width:${util}%` }),
+      ]) : null,
+    ].filter(Boolean)),
     el('div', { class: 'row__amount tabular', text: formatMoney(a.balance, a.currency) }),
     el('div', { class: 'row__actions' }, [
-      el('button', { class: 'icon-btn', 'aria-label': 'Editar', title: 'Editar', on: { click: () => openAccountModal(a) }, html: icon('edit') }),
+      el('button', { class: 'icon-btn', 'aria-label': 'Editar', on: { click: () => openAccountModal(a) }, html: icon('edit') }),
       el('button', {
-        class: 'icon-btn icon-btn--danger', 'aria-label': 'Eliminar', title: 'Eliminar',
+        class: 'icon-btn icon-btn--danger', 'aria-label': 'Eliminar',
         on: { click: () => confirmDialog({
-          title: 'Eliminar cuenta', message: `¿Eliminar "${a.name}"? Esta acción se puede revertir desde la base de datos.`,
-          onConfirm: async () => { try { await dataService.remove('accounts', a.id); toast('Cuenta eliminada'); } catch (e) { toast('Error al eliminar', { type: 'negative' }); } },
+          title: 'Eliminar cuenta', message: `¿Eliminar "${a.name}"?`,
+          onConfirm: async () => { try { await dataService.remove('accounts', a.id); toast('Cuenta eliminada'); } catch (e) { toast('Error', { type: 'negative' }); } },
         }) },
         html: icon('trash'),
       }),

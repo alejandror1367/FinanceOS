@@ -1,6 +1,4 @@
-// views/debts.js — módulo de Deudas con estrategias de pago.
-// Snowball (menor saldo primero) · Avalanche (mayor tasa primero).
-// Reutiliza el CRUD de pasivos del módulo de Patrimonio.
+// views/debts.js — Deudas (Snowball/Avalanche) + panel de Tarjetas de crédito.
 
 import { el, mount } from '../utils/dom.js';
 import { icon } from '../utils/icons.js';
@@ -14,18 +12,76 @@ import { confirmDialog } from '../components/modal.js';
 import { openLiabilityModal, LIABILITY_TYPE_LIST } from './networth.js';
 import { toast } from '../services/toast.js';
 
-// Estrategia seleccionada (persiste entre re-renders).
 const STATE = { strategy: 'avalanche' };
-
 const typeLabel = (v) => (LIABILITY_TYPE_LIST.find((t) => t.value === v) || {}).label || v;
 
-function orderBy(debts, strategy) {
-  const copy = [...debts];
-  if (strategy === 'snowball') copy.sort((a, b) => (a.balance || 0) - (b.balance || 0));
-  else copy.sort((a, b) => (b.interestRate || 0) - (a.interestRate || 0));
-  return copy;
+// Calcula la próxima fecha a partir de un día del mes
+function nextDateForDay(day) {
+  if (!day) return null;
+  const now = new Date();
+  const d = new Date(now.getFullYear(), now.getMonth(), day);
+  if (d <= now) d.setMonth(d.getMonth() + 1);
+  return d.toISOString().slice(0, 10);
 }
 
+function daysUntil(isoDate) {
+  if (!isoDate) return null;
+  const diff = new Date(isoDate) - new Date(new Date().toISOString().slice(0, 10));
+  return Math.round(diff / 86400000);
+}
+
+// ---------- Tarjeta de crédito card ----------
+function creditCardPanel(a, cur) {
+  const debt     = Math.abs(a.balance || 0);
+  const limit    = a.creditLimit || 0;
+  const avail    = Math.max(0, limit - debt);
+  const util     = limit ? Math.min(100, Math.round(debt / limit * 100)) : 0;
+  const minPay   = a.minPaymentPct ? Math.round(debt * a.minPaymentPct / 100) : 0;
+  const corteFecha  = nextDateForDay(a.cutoffDay);
+  const pagoFecha   = nextDateForDay(a.paymentDay);
+  const diasCorte   = daysUntil(corteFecha);
+  const diasPago    = daysUntil(pagoFecha);
+
+  const utilColor = util > 80 ? 'var(--negative)' : util > 50 ? 'var(--warning, var(--accent))' : 'var(--positive)';
+
+  const card = el('div', { class: 'cc-panel' });
+
+  // Header
+  const head = el('div', { class: 'cc-panel__head' });
+  head.appendChild(el('div', { class: 'cc-panel__name' }, [
+    el('span', { class: 'cc-panel__title', text: a.name }),
+    el('span', { class: 'cc-panel__inst', text: a.institution || '' }),
+  ]));
+  head.appendChild(el('div', { class: 'cc-panel__debt tabular text-negative', text: formatMoney(debt, a.currency || cur) }));
+  card.appendChild(head);
+
+  // Barra de utilización
+  const barWrap = el('div', { class: 'cc-util-bar' });
+  barWrap.appendChild(el('div', { class: 'cc-util-fill', style: `width:${util}%;background:${utilColor}` }));
+  card.appendChild(barWrap);
+
+  // Métricas en grid
+  const grid = el('div', { class: 'cc-panel__grid' });
+  const metric = (label, value, sub) => {
+    const m = el('div', { class: 'cc-metric' });
+    m.appendChild(el('span', { class: 'cc-metric__label', text: label }));
+    m.appendChild(el('span', { class: 'cc-metric__value tabular', text: value }));
+    if (sub) m.appendChild(el('span', { class: 'cc-metric__sub', text: sub }));
+    return m;
+  };
+
+  grid.appendChild(metric('Cupo disponible', formatMoney(avail, a.currency || cur), `${100 - util}% libre`));
+  grid.appendChild(metric('Pago mínimo', formatMoney(minPay, a.currency || cur), `${pct(a.minPaymentPct || 0)} del saldo`));
+  grid.appendChild(metric('Próximo corte', corteFecha ? formatDate(corteFecha, 'short') : '—', diasCorte !== null ? `en ${diasCorte} días` : ''));
+  grid.appendChild(metric('Fecha de pago', pagoFecha ? formatDate(pagoFecha, 'short') : '—', diasPago !== null ? (diasPago <= 5 ? `⚠ ${diasPago} días` : `en ${diasPago} días`) : ''));
+  if (a.interestRate) grid.appendChild(metric('Tasa E.A.', pct(a.interestRate), 'interés anual'));
+  if (limit) grid.appendChild(metric('Cupo total', formatMoney(limit, a.currency || cur), `${util}% utilizado`));
+  card.appendChild(grid);
+
+  return card;
+}
+
+// ---------- Deuda row ----------
 function debtRow(l, rank, cur) {
   return el('div', { class: 'row' }, [
     el('div', { class: 'row__avatar', html: rank === 1 ? icon('bolt') : icon('debts'), style: rank === 1 ? { background: 'var(--negative-bg)', color: 'var(--negative)' } : {} }),
@@ -35,10 +91,17 @@ function debtRow(l, rank, cur) {
     ]),
     el('div', { class: 'row__amount tabular text-negative', text: formatMoney(l.balance, l.currency || cur) }),
     el('div', { class: 'row__actions' }, [
-      el('button', { class: 'icon-btn', 'aria-label': 'Editar', title: 'Editar', on: { click: () => openLiabilityModal({ liability: l, mode: 'edit' }) }, html: icon('edit') }),
-      el('button', { class: 'icon-btn icon-btn--danger', 'aria-label': 'Eliminar', title: 'Eliminar', on: { click: () => confirmDialog({ title: 'Eliminar deuda', message: `¿Eliminar "${l.name}"?`, onConfirm: async () => { try { await dataService.remove('liabilities', l.id); toast('Deuda eliminada'); } catch (e) { toast('Error', { type: 'negative' }); } } }) }, html: icon('trash') }),
+      el('button', { class: 'icon-btn', 'aria-label': 'Editar', on: { click: () => openLiabilityModal({ liability: l, mode: 'edit' }) }, html: icon('edit') }),
+      el('button', { class: 'icon-btn icon-btn--danger', 'aria-label': 'Eliminar', on: { click: () => confirmDialog({ title: 'Eliminar deuda', message: `¿Eliminar "${l.name}"?`, onConfirm: async () => { try { await dataService.remove('liabilities', l.id); toast('Deuda eliminada'); } catch (e) { toast('Error', { type: 'negative' }); } } }) }, html: icon('trash') }),
     ]),
   ]);
+}
+
+function orderBy(debts, strategy) {
+  const copy = [...debts];
+  if (strategy === 'snowball') copy.sort((a, b) => (a.balance || 0) - (b.balance || 0));
+  else copy.sort((a, b) => (b.interestRate || 0) - (a.interestRate || 0));
+  return copy;
 }
 
 export function renderDebts() {
@@ -81,8 +144,12 @@ export function renderDebts() {
   const cur = s.baseCurrency;
   const debts = (s.liabilities || []).filter((l) => (l.balance || 0) > 0);
   const totalDebt = debts.reduce((sum, l) => sum + (l.balance || 0), 0);
-  const totalMin = debts.reduce((sum, l) => sum + (l.minimumPayment || 0), 0);
-  const avgRate = totalDebt ? debts.reduce((sum, l) => sum + (l.interestRate || 0) * (l.balance || 0), 0) / totalDebt : 0;
+  const totalMin  = debts.reduce((sum, l) => sum + (l.minimumPayment || 0), 0);
+  const avgRate   = totalDebt ? debts.reduce((sum, l) => sum + (l.interestRate || 0) * (l.balance || 0), 0) / totalDebt : 0;
+
+  // Tarjetas de crédito (desde accounts)
+  const ccAccounts = (s.accounts || []).filter((a) => a.type === 'credit_card' && !a.isArchived);
+  const totalCcDebt = ccAccounts.reduce((sum, a) => sum + Math.abs(a.balance || 0), 0);
 
   root.append(
     el('div', { class: 'page-header' }, [
@@ -97,10 +164,22 @@ export function renderDebts() {
     el('div', { class: 'grid grid--kpi' }, [
       KpiCard({ label: 'Deuda total', value: formatMoney(totalDebt, cur), iconName: 'debts', variant: 'negative', hero: true,
         foot: [el('span', { class: 't-caption', text: `${debts.length} deudas` })] }),
+      KpiCard({ label: 'Tarjetas de crédito', value: formatMoney(totalCcDebt, cur), iconName: 'accounts', variant: 'negative',
+        foot: [el('span', { class: 't-caption', text: `${ccAccounts.length} tarjeta${ccAccounts.length !== 1 ? 's' : ''}` })] }),
       KpiCard({ label: 'Cuota mínima/mes', value: formatMoney(totalMin, cur), iconName: 'calendar', variant: 'neutral' }),
       KpiCard({ label: 'Tasa promedio', value: pct(avgRate), iconName: 'analytics', variant: 'warning' }),
     ]),
-    el('div', { class: 'section' }, [listMount]),
+
+    // Panel de tarjetas de crédito
+    ccAccounts.length ? el('div', { class: 'section' }, [
+      el('h3', { class: 't-h2 mb-4', text: 'Tarjetas de crédito' }),
+      el('div', { class: 'cc-panels-grid' }, ccAccounts.map((a) => creditCardPanel(a, cur))),
+    ]) : null,
+
+    el('div', { class: 'section' }, [
+      debts.length ? el('h3', { class: 't-h2 mb-4', text: 'Otras deudas' }) : null,
+      listMount,
+    ]),
   );
 
   paint();
