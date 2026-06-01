@@ -68,7 +68,8 @@ function openAssetModal({ asset = {}, mode = 'create' }) {
 }
 
 // ---------- Deudas (Liabilities) ----------
-function openLiabilityModal({ liability = {}, mode = 'create' }) {
+export const LIABILITY_TYPE_LIST = LIABILITY_TYPES;
+export function openLiabilityModal({ liability = {}, mode = 'create' }) {
   const body = el('div', {}, [
     field('Nombre', textInput({ name: 'name', value: liability.name || '', placeholder: 'Tarjeta de crédito' })),
     el('div', { class: 'field-row' }, [

@@ -7,6 +7,8 @@ import { renderTransactions } from '../views/transactions.js';
 import { renderBudgets } from '../views/budgets.js';
 import { renderNetWorth } from '../views/networth.js';
 import { renderInvestments } from '../views/investments.js';
+import { renderGoals } from '../views/goals.js';
+import { renderDebts } from '../views/debts.js';
 import { makeStub } from '../views/stub.js';
 
 export const routes = {
@@ -18,8 +20,8 @@ export const routes = {
 
   networth:     { title: 'Patrimonio',    icon: 'networth',     nav: 'wealth',  render: renderNetWorth },
   investments:  { title: 'Inversiones',   icon: 'investments',  nav: 'wealth',  render: renderInvestments },
-  goals:        { title: 'Metas',         icon: 'goals',        nav: 'wealth',  render: makeStub('Metas', 'Fondo de emergencia, vivienda, viaje, retiro y vehículo con avance y aportes.', 'goals') },
-  debts:        { title: 'Deudas',        icon: 'debts',        nav: 'wealth',  render: makeStub('Deudas', 'Saldo, tasa, cuota y vencimiento, con estrategias Snowball y Avalanche.', 'debts') },
+  goals:        { title: 'Metas',         icon: 'goals',        nav: 'wealth',  render: renderGoals },
+  debts:        { title: 'Deudas',        icon: 'debts',        nav: 'wealth',  render: renderDebts },
 
   analytics:    { title: 'Analítica',     icon: 'analytics',    nav: 'insights', render: makeStub('Analítica', 'Flujo de caja, patrimonio, gastos por categoría, ahorro y tendencias.', 'analytics') },
   journal:      { title: 'Diario',        icon: 'journal',      nav: 'insights', render: makeStub('Diario financiero', 'Reflexiones, decisiones, aprendizajes y objetivos.', 'journal') },
