@@ -5,7 +5,7 @@
    Rutas relativas para funcionar en GitHub Pages bajo subdirectorio.
 */
 
-const VERSION = 'financeos-v0.2.2';
+const VERSION = 'financeos-v0.2.3';
 const SHELL_CACHE = `${VERSION}-shell`;
 
 // Resuelto contra el scope del SW (directorio de registro).
@@ -86,6 +86,23 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET') return;
 
   const url = new URL(request.url);
+
+  // Fuentes de Google (cross-origin): cache-first — disponibles offline tras la primera carga (TD-06).
+  if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
+    const FONT_CACHE = `${VERSION}-fonts`;
+    event.respondWith(
+      caches.open(FONT_CACHE).then(async (cache) => {
+        const cached = await cache.match(request);
+        if (cached) return cached;
+        return fetch(request).then((res) => {
+          if (res.ok) cache.put(request, res.clone());
+          return res;
+        });
+      }),
+    );
+    return;
+  }
+
   // Solo gestionamos el mismo origen (el shell). Datos externos: pasar de largo.
   if (url.origin !== self.location.origin) return;
 

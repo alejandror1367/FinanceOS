@@ -131,7 +131,8 @@ function repoCreate_(entity, data) {
   if (hasKey_(schema, 'createdAt')) record.createdAt = ts;
   if (hasKey_(schema, 'updatedAt')) record.updatedAt = ts;
   sh.appendRow(toRow_(schema, record));
-  return repoGet_(entity, record.id);
+  // Devuelve el record ya construido en memoria; evita releer la hoja completa (TD-05).
+  return record;
 }
 
 function repoUpdate_(entity, id, patch) {

@@ -69,10 +69,11 @@ export function SkeletonKpis(n = 4) {
     Array.from({ length: n }, () => el('div', { class: 'skeleton skeleton--kpi' })));
 }
 
-// Mini gráfico de barras (sin librerías). data: [{label, value, muted?}]
-export function BarChart(data = []) {
+// Mini gráfico de barras (sin librerías). data: [{label, value, muted?}], ariaLabel: texto alternativo WCAG 1.1.1.
+export function BarChart(data = [], { ariaLabel } = {}) {
   const max = Math.max(1, ...data.map((d) => d.value));
-  return el('div', { class: 'bars' },
+  const a11yLabel = ariaLabel || (data.length ? 'Evolución: ' + data.map((d) => `${d.label} ${d.value}`).join(', ') : 'Gráfico de barras');
+  return el('div', { class: 'bars', role: 'img', 'aria-label': a11yLabel },
     data.map((d) => el('div', { class: 'bars__col' }, [
       el('div', {
         class: `bars__bar${d.muted ? ' bars__bar--muted' : ''}`,

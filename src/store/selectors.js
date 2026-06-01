@@ -42,7 +42,10 @@ export const selectors = {
   },
 
   totalAssets(s) {
-    const accountsValue = s.accounts.filter((a) => !a.isArchived).reduce((sum, a) => sum + (a.balance || 0), 0);
+    // Excluye cuentas de inversión: su valor viene de Investments (quantity×price), no de balance (TD-03).
+    const accountsValue = s.accounts
+      .filter((a) => !a.isArchived && a.type !== 'investment')
+      .reduce((sum, a) => sum + (a.balance || 0), 0);
     const otherAssets = s.assets.reduce((sum, a) => sum + (a.value || 0), 0);
     return accountsValue + selectors.investmentsValue(s) + otherAssets;
   },
@@ -196,5 +199,19 @@ export const selectors = {
     return [...map.entries()]
       .map(([categoryId, amount]) => ({ category: selectors.categoryById(s, categoryId), amount }))
       .sort((a, b) => b.amount - a.amount);
+  },
+
+  // Detecta si hay entidades con divisas distintas a baseCurrency (TD-02).
+  // Úsalo para mostrar un aviso en la UI antes de implementar conversión FX.
+  hasMixedCurrencies(s) {
+    const base = s.baseCurrency;
+    const currencies = [
+      ...s.accounts.map((a) => a.currency),
+      ...s.transactions.map((t) => t.currency),
+      ...s.investments.map((i) => i.currency),
+      ...s.assets.map((a) => a.currency),
+      ...s.liabilities.map((l) => l.currency),
+    ];
+    return currencies.some((c) => c && c !== base);
   },
 };

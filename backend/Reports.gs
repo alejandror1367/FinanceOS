@@ -19,7 +19,8 @@ function sum_(arr, fn) {
 }
 
 function computeNetWorth_(ctx) {
-  var accountsValue = sum_(ctx.accounts, function (a) { return a.balance; });
+  // Excluye cuentas de inversión: su valor ya viene de Investments (TD-03).
+  var accountsValue = sum_(ctx.accounts.filter(function (a) { return a.type !== 'investment'; }), function (a) { return a.balance; });
   var investmentsValue = sum_(ctx.investments, function (i) { return i.quantity * i.currentPrice; });
   var otherAssets = sum_(ctx.assets, function (a) { return a.value; });
   var totalAssets = accountsValue + investmentsValue + otherAssets;

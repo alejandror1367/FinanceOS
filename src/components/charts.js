@@ -9,8 +9,8 @@ export const CHART_PALETTE = [
 ];
 
 // series: [{ name, color, points: number[] }]. labels: string[].
-// opts: showValues (etiqueta el valor en cada punto), valueFormat(v)->string.
-export function LineChart({ labels = [], series = [], height = 210, showValues = true, valueFormat } = {}) {
+// opts: showValues (etiqueta el valor en cada punto), valueFormat(v)->string, ariaLabel (texto alternativo WCAG 1.1.1).
+export function LineChart({ labels = [], series = [], height = 210, showValues = true, valueFormat, ariaLabel } = {}) {
   const W = 640, H = height;
   const padL = 12, padR = 12, padT = 26, padB = 26;
   const n = labels.length;
@@ -48,12 +48,13 @@ export function LineChart({ labels = [], series = [], height = 210, showValues =
   const xlabels = labels.map((l, i) =>
     `<text x="${x(i).toFixed(1)}" y="${H - 7}" text-anchor="${anchor(i)}" font-size="11" fill="var(--text-tertiary)">${l}</text>`).join('');
 
-  const svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" style="height:auto;display:block">${grid}${zeroLine}${paths}${xlabels}</svg>`;
+  const a11yLabel = ariaLabel || (series[0] ? series[0].name : 'Gráfico de líneas');
+  const svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${a11yLabel}" style="height:auto;display:block"><title>${a11yLabel}</title>${grid}${zeroLine}${paths}${xlabels}</svg>`;
   return el('div', { class: 'chart', html: svg });
 }
 
 // segments: [{ label, value, color }]
-export function Donut(segments = [], { size = 168, centerTop = '', centerSub = '' } = {}) {
+export function Donut(segments = [], { size = 168, centerTop = '', centerSub = '', ariaLabel } = {}) {
   const total = segments.reduce((a, s) => a + (s.value || 0), 0) || 1;
   const r = 56, cx = 84, cy = 84;
   const circ = 2 * Math.PI * r;
@@ -67,7 +68,8 @@ export function Donut(segments = [], { size = 168, centerTop = '', centerSub = '
   }).join('');
   const center = `<text x="${cx}" y="${cy - 2}" text-anchor="middle" font-size="16" font-weight="700" fill="var(--text-primary)">${centerTop}</text>` +
     (centerSub ? `<text x="${cx}" y="${cy + 16}" text-anchor="middle" font-size="11" fill="var(--text-secondary)">${centerSub}</text>` : '');
-  const svg = `<svg viewBox="0 0 168 168" width="${size}" height="${size}" role="img">${arcs}${center}</svg>`;
+  const a11yLabel = ariaLabel || (segments.length ? 'Distribución: ' + segments.map((s) => s.label).join(', ') : 'Gráfico donut');
+  const svg = `<svg viewBox="0 0 168 168" width="${size}" height="${size}" role="img" aria-label="${a11yLabel}"><title>${a11yLabel}</title>${arcs}${center}</svg>`;
   return el('div', { class: 'donut', html: svg });
 }
 

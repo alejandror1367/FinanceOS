@@ -2,9 +2,13 @@
 import { el } from '../utils/dom.js';
 
 // Campo con etiqueta + control + zona de error.
+// Asocia <label for> con el control via id generado (WCAG 1.3.1 / 4.1.2 — TD-08).
 export function field(label, control, { error } = {}) {
+  if (!control.id && control.name) {
+    control.id = 'f-' + control.name + '-' + Math.random().toString(36).slice(2, 7);
+  }
   return el('div', { class: 'field' }, [
-    el('label', { class: 'field__label', text: label }),
+    el('label', { class: 'field__label', for: control.id || undefined, text: label }),
     control,
     el('div', { class: 'field__error', text: error || '' }),
   ]);
