@@ -6,12 +6,13 @@ import { el } from '../utils/dom.js';
 import { icon } from '../utils/icons.js';
 import { store } from '../store/store.js';
 import { selectors } from '../store/selectors.js';
-import { formatMoney, formatDate, formatPercent } from '../utils/format.js';
+import { formatMoney, formatDate, formatPercent, formatNumber } from '../utils/format.js';
 import { Card, EmptyState } from '../components/ui.js';
 import { LineChart, Donut, Legend, CHART_PALETTE } from '../components/charts.js';
 
 const now = new Date();
 const curMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+const compact = (v) => formatNumber(v, { notation: 'compact', maximumFractionDigits: 1 });
 
 const VARIANT_STYLE = {
   accent: ['--accent-bg', '--accent'], positive: ['--positive-bg', '--positive'],
@@ -88,7 +89,7 @@ export function renderAnalytics() {
   const cashflowCard = Card({
     title: 'Flujo de caja',
     body: el('div', {}, [
-      LineChart({ labels, series: [
+      LineChart({ labels, valueFormat: compact, series: [
         { name: 'Ingresos', color: 'var(--positive)', points: cf.map((m) => m.income) },
         { name: 'Gastos', color: 'var(--negative)', points: cf.map((m) => m.expense) },
       ] }),
@@ -102,7 +103,7 @@ export function renderAnalytics() {
   // Ahorro mensual
   const savingsCard = Card({
     title: 'Ahorro mensual',
-    body: LineChart({ labels, series: [{ name: 'Ahorro', color: 'var(--accent)', points: cf.map((m) => m.savings) }] }),
+    body: LineChart({ labels, valueFormat: compact, series: [{ name: 'Ahorro', color: 'var(--accent)', points: cf.map((m) => m.savings) }] }),
   });
 
   // Patrimonio (snapshots)
@@ -110,7 +111,7 @@ export function renderAnalytics() {
   const netWorthCard = Card({
     title: 'Patrimonio neto',
     body: snaps.length >= 2
-      ? LineChart({ labels: snaps.map((sn) => formatDate(sn.date, 'short')), series: [{ name: 'Patrimonio', color: 'var(--accent)', points: snaps.map((sn) => sn.netWorth) }] })
+      ? LineChart({ labels: snaps.map((sn) => formatDate(sn.date, 'short')), valueFormat: compact, series: [{ name: 'Patrimonio', color: 'var(--accent)', points: snaps.map((sn) => sn.netWorth) }] })
       : EmptyState({ title: 'Histórico insuficiente', message: 'Guarda al menos 2 snapshots en Patrimonio para ver la tendencia.', iconName: 'networth' }),
   });
 

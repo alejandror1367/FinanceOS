@@ -9,32 +9,46 @@ export const CHART_PALETTE = [
 ];
 
 // series: [{ name, color, points: number[] }]. labels: string[].
-export function LineChart({ labels = [], series = [], height = 180 }) {
+// opts: showValues (etiqueta el valor en cada punto), valueFormat(v)->string.
+export function LineChart({ labels = [], series = [], height = 210, showValues = true, valueFormat } = {}) {
   const W = 640, H = height;
-  const padL = 10, padR = 10, padT = 14, padB = 24;
+  const padL = 12, padR = 12, padT = 26, padB = 26;
   const n = labels.length;
+  const fmt = valueFormat || ((v) => String(Math.round(v)));
   const all = series.flatMap((s) => s.points);
   const max = Math.max(1, ...all);
   const min = Math.min(0, ...all);
   const range = (max - min) || 1;
   const x = (i) => padL + (n <= 1 ? (W - padL - padR) / 2 : (i / (n - 1)) * (W - padL - padR));
   const y = (v) => padT + (1 - (v - min) / range) * (H - padT - padB);
+  const anchor = (i) => (i === 0 ? 'start' : i === n - 1 ? 'end' : 'middle');
 
+  // Línea de referencia en cero si hay valores negativos.
   const grid = [0, 0.5, 1].map((f) => {
     const gy = padT + f * (H - padT - padB);
     return `<line x1="${padL}" y1="${gy.toFixed(1)}" x2="${W - padR}" y2="${gy.toFixed(1)}" stroke="var(--border-subtle)" stroke-width="1"/>`;
   }).join('');
+  const zeroLine = (min < 0)
+    ? `<line x1="${padL}" y1="${y(0).toFixed(1)}" x2="${W - padR}" y2="${y(0).toFixed(1)}" stroke="var(--border-strong)" stroke-width="1" stroke-dasharray="3 3"/>`
+    : '';
 
-  const paths = series.map((s) => {
+  const paths = series.map((s, si) => {
     const pts = s.points.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
-    const dots = s.points.map((v, i) => `<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="2.5" fill="${s.color}"/>`).join('');
-    return `<polyline points="${pts}" fill="none" stroke="${s.color}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>${dots}`;
+    const dots = s.points.map((v, i) => `<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="3" fill="${s.color}"/>`).join('');
+    let valueLabels = '';
+    if (showValues) {
+      // Serie 0 etiqueta encima del punto; series siguientes, debajo (evita choque).
+      const dy = si === 0 ? -9 : 16;
+      valueLabels = s.points.map((v, i) =>
+        `<text x="${x(i).toFixed(1)}" y="${(y(v) + dy).toFixed(1)}" text-anchor="${anchor(i)}" font-size="11" font-weight="600" fill="${s.color}">${fmt(v)}</text>`).join('');
+    }
+    return `<polyline points="${pts}" fill="none" stroke="${s.color}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>${dots}${valueLabels}`;
   }).join('');
 
   const xlabels = labels.map((l, i) =>
-    `<text x="${x(i).toFixed(1)}" y="${H - 6}" text-anchor="middle" font-size="11" fill="var(--text-tertiary)">${l}</text>`).join('');
+    `<text x="${x(i).toFixed(1)}" y="${H - 7}" text-anchor="${anchor(i)}" font-size="11" fill="var(--text-tertiary)">${l}</text>`).join('');
 
-  const svg = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" style="width:100%;height:${H}px;display:block">${grid}${paths}${xlabels}</svg>`;
+  const svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" style="height:auto;display:block">${grid}${zeroLine}${paths}${xlabels}</svg>`;
   return el('div', { class: 'chart', html: svg });
 }
 
