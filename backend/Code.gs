@@ -90,6 +90,9 @@ var ROUTES = {
   // Migración (TD-01)
   recalculateBalances: function (d) { return recalculateAccountBalances_(d); },
 
+  // Import (proxy Claude API)
+  parseStatement: function (d) { return parseStatement_(d); },
+
   // Meta
   ping: function () { return { pong: true, app: APP.name, apiVersion: APP.apiVersion, time: nowIso_() }; },
 };

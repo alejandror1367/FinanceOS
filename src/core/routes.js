@@ -15,6 +15,7 @@ import { renderRecurring } from '../views/recurring.js';
 import { renderJournal } from '../views/journal.js';
 import { renderExports } from '../views/exports.js';
 import { renderSettings } from '../views/settings.js';
+import { renderImport } from '../views/import.js';
 
 export const routes = {
   dashboard:    { title: 'Dashboard',     icon: 'dashboard',    nav: 'primary', render: renderDashboard },
@@ -32,6 +33,7 @@ export const routes = {
   analytics:    { title: 'Analítica',     icon: 'analytics',    nav: 'insights', render: renderAnalytics },
   journal:      { title: 'Diario',        icon: 'journal',      nav: 'insights', render: renderJournal },
   exports:      { title: 'Exportaciones', icon: 'exports',      nav: 'insights', render: renderExports },
+  import:       { title: 'Importar',      icon: 'importFile',   nav: 'insights', render: renderImport },
   settings:     { title: 'Ajustes',       icon: 'settings',     nav: 'system',   render: renderSettings },
 };
 
