@@ -55,7 +55,9 @@ export const BANK_PROFILES = [
     matchFilename: /bancolombia/i,
     matchHeaders(h) {
       const n = h.map(norm);
-      return n.some((x) => x.includes('referencia')) && n.some((x) => x.includes('valor') || x.includes('monto'));
+      return n.some((x) => x.includes('fecha')) &&
+        (n.some((x) => x.includes('valor')) || n.some((x) => x.includes('monto'))) &&
+        n.some((x) => x.includes('referencia') || x.includes('descripci') || x.includes('detalle') || x.includes('concepto'));
     },
     mapRow(headers, row) {
       const get = getter(headers, row);

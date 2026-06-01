@@ -5,7 +5,7 @@ import { el } from '../utils/dom.js';
 import { icon } from '../utils/icons.js';
 import { store } from '../store/store.js';
 import { dataService } from '../services/dataService.js';
-import { importService } from '../services/importService.js';
+import { importService, UnknownFormatError } from '../services/importService.js';
 import { formatMoney, formatDate } from '../utils/format.js';
 import { Button, Badge } from '../components/ui.js';
 import { toast } from '../services/toast.js';
@@ -47,10 +47,11 @@ export function renderImport() {
   // ---------- render: reemplaza contenido del root de una vez ----------
   function render() {
     let body;
-    if (state.phase === 'idle')      body = buildIdle();
+    if (state.phase === 'idle')           body = buildIdle();
     else if (state.phase === 'analyzing') body = buildAnalyzing();
     else if (state.phase === 'preview')   body = buildPreview();
     else if (state.phase === 'importing') body = buildImporting();
+    else if (state.phase === 'unknown')   body = buildUnknown();
     else                                  body = buildDone();
 
     const header = el('div', { class: 'view-header' }, [
@@ -71,6 +72,7 @@ export function renderImport() {
       state.progress = step;
       render();
     }).then((result) => {
+      if (!result) return;
       state.result = result;
       state.selected = new Set(result.items.map((_, i) => i));
 
@@ -89,9 +91,14 @@ export function renderImport() {
       state.phase = 'preview';
       render();
     }).catch((err) => {
-      state.phase = 'idle';
+      if (err instanceof UnknownFormatError) {
+        state.phase = 'unknown';
+        state.unknownHeaders = err.headers;
+      } else {
+        state.phase = 'idle';
+        toast(err.message || 'Error al procesar el archivo.', { type: 'error' });
+      }
       render();
-      toast(err.message || 'Error al procesar el archivo.', { type: 'error' });
     });
   }
 
@@ -144,6 +151,78 @@ export function renderImport() {
       'Los PDFs y formatos desconocidos se interpretan automáticamente con IA (requiere GEMINI_API_KEY en Apps Script).',
     ]));
     wrap.appendChild(help);
+
+    return wrap;
+  }
+
+  // ---------- Unknown format ----------
+  function buildUnknown() {
+    const CLAUDE_PROMPT = `Eres un asistente de finanzas personales. Analiza el extracto bancario adjunto y extrae TODAS las transacciones.
+
+Devuelve ÚNICAMENTE el CSV puro, sin explicaciones, sin bloques de código, sin markdown.
+
+Formato obligatorio — exactamente estas columnas:
+fecha,descripcion,monto,tipo,categoria
+
+Reglas:
+- fecha: YYYY-MM-DD
+- descripcion: máximo 60 caracteres
+- monto: NEGATIVO para gastos/débitos, POSITIVO para ingresos (sin símbolos de moneda)
+- tipo: exactamente una de estas: gasto | ingreso | transferencia
+- categoria: elige la más apropiada de esta lista (respeta mayúsculas exactas):
+  GASTOS: Restaurantes, Mercado, Arriendo, Transporte, Suscripciones, Salud, Educación, Ropa, Hogar, Entretenimiento, Servicios, Tecnología, Viajes, Otros gastos
+  INGRESOS: Salario, Freelance, Inversiones, Otros ingresos
+  TRANSFERENCIAS: Transferencia
+
+Ejemplo:
+fecha,descripcion,monto,tipo,categoria
+2026-05-01,Nómina empresa,5000000,ingreso,Salario
+2026-05-03,Rappi comida,-45000,gasto,Restaurantes
+2026-05-05,Netflix,-47900,gasto,Suscripciones
+2026-05-10,Transferencia a Nu,-500000,transferencia,Transferencia
+
+Extrae TODAS las transacciones sin omitir ninguna.`;
+
+    const wrap = el('div', { class: 'import-wrap' });
+
+    const infoCard = el('div', { class: 'card card--pad' });
+    infoCard.appendChild(el('h3', { style: 'margin:0 0 8px;font-size:var(--fs-h3)' }, ['Formato no reconocido']));
+    infoCard.appendChild(el('p', { style: 'margin:0 0 12px;color:var(--text-secondary);font-size:var(--fs-caption)' }, [
+      `Archivo: ${state.file?.name || ''} · Los headers detectados no coinciden con ningún banco configurado. `,
+      'Usa el siguiente prompt en claude.ai para convertir el extracto al formato FinanceOS CSV e importarlo sin problemas.',
+    ]));
+
+    const steps = el('ol', { style: 'margin:0 0 16px;padding-left:20px;font-size:var(--fs-caption);color:var(--text-secondary);line-height:2' });
+    ['Copia el prompt de abajo.', 'Abre claude.ai y sube el PDF o pega el contenido del extracto.', 'Claude te devuelve un CSV listo.', 'Guárdalo como financeos-import.csv y arrástralo aquí.'].forEach((s) => {
+      steps.appendChild(el('li', {}, [s]));
+    });
+    infoCard.appendChild(steps);
+    wrap.appendChild(infoCard);
+
+    const promptCard = el('div', { class: 'card card--pad', style: 'position:relative' });
+    promptCard.appendChild(el('p', { style: 'margin:0 0 8px;font-size:var(--fs-caption);font-weight:var(--fw-semibold);color:var(--text-secondary)' }, ['PROMPT PARA CLAUDE']));
+
+    const pre = el('pre', { style: 'margin:0;font-size:11px;line-height:1.5;white-space:pre-wrap;word-break:break-word;color:var(--text-primary);max-height:260px;overflow-y:auto' });
+    pre.textContent = CLAUDE_PROMPT;
+    promptCard.appendChild(pre);
+
+    const copyBtn = Button({
+      label: 'Copiar prompt',
+      variant: 'outline',
+      onClick: () => {
+        navigator.clipboard.writeText(CLAUDE_PROMPT).then(() => {
+          copyBtn.textContent = '¡Copiado!';
+          setTimeout(() => { copyBtn.textContent = 'Copiar prompt'; }, 2000);
+        });
+      },
+    });
+    copyBtn.style.marginTop = '12px';
+    promptCard.appendChild(copyBtn);
+    wrap.appendChild(promptCard);
+
+    const backBtn = Button({ label: '← Volver', variant: 'ghost', onClick: () => { state.phase = 'idle'; state.file = null; render(); } });
+    backBtn.style.marginTop = '8px';
+    wrap.appendChild(backBtn);
 
     return wrap;
   }

@@ -1,11 +1,11 @@
 // services/importService.js — pipeline de importación de archivos financieros.
-// Flujo: detectar tipo → parsear → detectar banco → aplicar perfil nativo o Claude.
+// Estrategia: parseo nativo para bancos conocidos; mensaje con prompt de Claude
+// para formatos desconocidos (más confiable que APIs con límites de tokens).
 
 import { parseCSV } from './parsers/csvParser.js';
 import { parseExcel } from './parsers/excelParser.js';
 import { parsePdf } from './parsers/pdfParser.js';
 import { BANK_PROFILES, detectBank } from './parsers/bankProfiles.js';
-import { apiClient } from './apiClient.js';
 
 function readAsText(file) {
   return new Promise((res, rej) => {
@@ -25,7 +25,6 @@ function readAsBuffer(file) {
   });
 }
 
-
 function applyProfile(profile, headers, rows) {
   const items = [];
   for (const row of rows) {
@@ -44,38 +43,15 @@ function applyProfile(profile, headers, rows) {
   };
 }
 
-// Groq free tier: 6k TPM. Sistema prompt ~600 tokens → usuario max ~2.5k tokens ≈ 8k chars.
-// 100 filas cubre cualquier extracto mensual (bancos colombianos: 30-80 tx/mes típico).
-const MAX_AI_CHARS = 8_000;
-const MAX_AI_ROWS  = 100;
-
-function compactCsv(headers, rows) {
-  const limited = rows.slice(0, MAX_AI_ROWS);
-  return [headers.join(','), ...limited.map((r) => r.map((c) => `"${String(c).replace(/"/g, '')}"`).join(','))].join('\n');
-}
-
-async function callClaude(payload) {
-  const p = { ...payload };
-  if (typeof p.fileContent === 'string' && p.fileContent.length > MAX_AI_CHARS) {
-    p.fileContent = p.fileContent.slice(0, MAX_AI_CHARS);
+// Error especial que la vista interpreta para mostrar el prompt de Claude.
+export class UnknownFormatError extends Error {
+  constructor(headers) {
+    super('UNKNOWN_FORMAT');
+    this.headers = headers;
   }
-  return apiClient.post('parseStatement', p);
-}
-
-function claudeResultToImport(result, fallbackBank) {
-  const profile = BANK_PROFILES.find((p) => p.id === result.bankId) || fallbackBank || null;
-  return {
-    bank: profile || { name: result.accountName || 'Desconocido', color: 'var(--bg-surface-2)', textColor: 'var(--text-primary)' },
-    type: 'transactions',
-    currency: result.currency || 'COP',
-    items: result.transactions || [],
-    period: result.period || null,
-  };
 }
 
 export const importService = {
-  // Procesa un File y devuelve { bank, type, currency, items[], period }.
-  // onProgress(step): 'reading' | 'pdf' | 'ai' — para actualizar la UI.
   async processFile(file, onProgress) {
     onProgress?.('reading');
 
@@ -89,10 +65,7 @@ export const importService = {
       const { headers, rows } = parseCSV(text);
       const profile = detectBank(headers, file.name);
       if (profile) return applyProfile(profile, headers, rows);
-      // Formato desconocido → IA (solo headers + primeras MAX_AI_ROWS filas)
-      onProgress?.('ai');
-      const result = await callClaude({ fileContent: compactCsv(headers, rows), fileName: file.name, mimeType: 'text/csv', bankHint: null });
-      return claudeResultToImport(result, null);
+      throw new UnknownFormatError(headers);
     }
 
     if (isExcel) {
@@ -100,28 +73,16 @@ export const importService = {
       const { headers, rows } = await parseExcel(buffer);
       const profile = detectBank(headers, file.name);
       if (profile) return applyProfile(profile, headers, rows);
-      onProgress?.('ai');
-      const result = await callClaude({ fileContent: compactCsv(headers, rows), fileName: file.name, mimeType: 'application/vnd.ms-excel', bankHint: null });
-      return claudeResultToImport(result, null);
+      throw new UnknownFormatError(headers);
     }
 
     if (isPdf) {
       onProgress?.('pdf');
       const buffer = await readAsBuffer(file);
-      const bankFromName = BANK_PROFILES.find((p) => p.matchFilename?.test(file.name)) || null;
-
-      const { text, isTextBased } = await parsePdf(buffer);
-
-      if (!isTextBased) {
-        throw new Error(
-          'Este PDF es escaneado (imagen) y no tiene texto extraíble. ' +
-          'Descarga el extracto en formato CSV desde la app de tu banco e inténtalo de nuevo.'
-        );
-      }
-
-      onProgress?.('ai');
-      const result = await callClaude({ fileContent: text, fileName: file.name, mimeType: 'text/plain', bankHint: bankFromName?.name || null });
-      return claudeResultToImport(result, bankFromName);
+      const { isTextBased } = await parsePdf(buffer);
+      // PDFs requieren Claude — lanzar UnknownFormatError para mostrar el prompt
+      if (!isTextBased) throw new UnknownFormatError([]);
+      throw new UnknownFormatError([]);
     }
 
     throw new Error(`Formato no soportado: .${ext}. Usa CSV, Excel (.xlsx) o PDF.`);
