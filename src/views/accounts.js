@@ -45,9 +45,10 @@ function accountForm(existing) {
       field('Día de corte', numberInput({ name: 'cutoffDay', value: existing?.cutoffDay ?? '', placeholder: '5' })),
       field('Día de pago', numberInput({ name: 'paymentDay', value: existing?.paymentDay ?? '', placeholder: '25' })),
     ]));
-    ccExtra.appendChild(
-      field('% Pago mínimo', numberInput({ name: 'minPaymentPct', value: existing?.minPaymentPct ?? '5', placeholder: '5' })),
-    );
+    ccExtra.appendChild(el('div', { class: 'field-row' }, [
+      field('Pago mínimo ($)', numberInput({ name: 'minPayment', value: existing?.minPayment ?? '', placeholder: '0' })),
+      field('Total a pagar ($)', numberInput({ name: 'totalDue', value: existing?.totalDue ?? '', placeholder: '0' })),
+    ]));
   }
 
   typeEl.addEventListener('change', paintCcExtra);
@@ -83,11 +84,12 @@ function openAccountModal(existing) {
         institution: get('institution').value.trim(),
       };
       if (data.type === 'credit_card') {
-        data.creditLimit    = Number(get('creditLimit')?.value)    || 0;
-        data.interestRate   = Number(get('interestRate')?.value)   || 0;
-        data.cutoffDay      = Number(get('cutoffDay')?.value)      || 0;
-        data.paymentDay     = Number(get('paymentDay')?.value)     || 0;
-        data.minPaymentPct  = Number(get('minPaymentPct')?.value)  || 5;
+        data.creditLimit  = Number(get('creditLimit')?.value)  || 0;
+        data.interestRate = Number(get('interestRate')?.value) || 0;
+        data.cutoffDay    = Number(get('cutoffDay')?.value)    || 0;
+        data.paymentDay   = Number(get('paymentDay')?.value)   || 0;
+        data.minPayment   = Number(get('minPayment')?.value)   || 0;
+        data.totalDue     = Number(get('totalDue')?.value)     || 0;
       }
       if (!data.name) { toast('El nombre es obligatorio', { type: 'negative' }); return false; }
       try {

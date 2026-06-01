@@ -36,7 +36,8 @@ function creditCardPanel(a, cur) {
   const limit    = a.creditLimit || 0;
   const avail    = Math.max(0, limit - debt);
   const util     = limit ? Math.min(100, Math.round(debt / limit * 100)) : 0;
-  const minPay   = a.minPaymentPct ? Math.round(debt * a.minPaymentPct / 100) : 0;
+  const minPay   = a.minPayment || 0;
+  const totalDue = a.totalDue  || 0;
   const corteFecha  = nextDateForDay(a.cutoffDay);
   const pagoFecha   = nextDateForDay(a.paymentDay);
   const diasCorte   = daysUntil(corteFecha);
@@ -71,7 +72,8 @@ function creditCardPanel(a, cur) {
   };
 
   grid.appendChild(metric('Cupo disponible', formatMoney(avail, a.currency || cur), `${100 - util}% libre`));
-  grid.appendChild(metric('Pago mínimo', formatMoney(minPay, a.currency || cur), `${pct(a.minPaymentPct || 0)} del saldo`));
+  if (totalDue)  grid.appendChild(metric('Total a pagar', formatMoney(totalDue, a.currency || cur), 'este corte'));
+  if (minPay)    grid.appendChild(metric('Pago mínimo', formatMoney(minPay, a.currency || cur), 'según extracto'));
   grid.appendChild(metric('Próximo corte', corteFecha ? formatDate(corteFecha, 'short') : '—', diasCorte !== null ? `en ${diasCorte} días` : ''));
   grid.appendChild(metric('Fecha de pago', pagoFecha ? formatDate(pagoFecha, 'short') : '—', diasPago !== null ? (diasPago <= 5 ? `⚠ ${diasPago} días` : `en ${diasPago} días`) : ''));
   if (a.interestRate) grid.appendChild(metric('Tasa E.A.', pct(a.interestRate), 'interés anual'));

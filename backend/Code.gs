@@ -90,6 +90,9 @@ var ROUTES = {
   // Migración (TD-01)
   recalculateBalances: function (d) { return recalculateAccountBalances_(d); },
 
+  // Cotizaciones en tiempo real (Yahoo Finance)
+  getQuotes: function (p) { return getQuotes_(p); },
+
   // Import (proxy Gemini API)
   parseStatement: function (d) { return parseStatement_(d); },
 
@@ -102,7 +105,7 @@ var READ_ACTIONS = {
   getDashboard: 1, getNetWorth: 1, getNetWorthSnapshots: 1, getReports: 1,
   getAccounts: 1, getTransactions: 1, getCategories: 1, getBudgets: 1,
   getGoals: 1, getInvestments: 1, getAssets: 1, getLiabilities: 1,
-  getRecurring: 1, getJournal: 1, getSettings: 1, ping: 1,
+  getRecurring: 1, getJournal: 1, getSettings: 1, getQuotes: 1, ping: 1,
 };
 
 function doGet(e) {
