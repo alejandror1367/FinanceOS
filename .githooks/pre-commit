@@ -1,0 +1,34 @@
+#!/bin/sh
+# .githooks/pre-commit
+# Auto-bump del Service Worker cuando se commitean archivos del app shell.
+# Evita que el mobile PWA sirva JS/CSS cacheados de versiones anteriores.
+#
+# Activa este hook una sola vez por clon del repo:
+#   git config core.hooksPath .githooks
+
+# Archivos del shell que justifican un bump (excluye sw.js para evitar bucle)
+SHELL_CHANGED=$(git diff --cached --name-only | grep -E "^(src/|index\.html|manifest\.json|assets/)")
+
+# Nada del shell en stage → no hacer nada
+[ -z "$SHELL_CHANGED" ] && exit 0
+
+# Si sw.js ya está en stage (bump manual), respetar y no volver a bumpear
+SW_STAGED=$(git diff --cached --name-only | grep "^sw\.js$")
+if [ -n "$SW_STAGED" ]; then
+  echo "[sw] sw.js ya en stage — omitiendo auto-bump"
+  exit 0
+fi
+
+# Bump del patch version usando Node.js
+node -e "
+const fs = require('fs');
+const sw = fs.readFileSync('sw.js', 'utf8');
+const m = sw.match(/financeos-v(\d+)\.(\d+)\.(\d+)/);
+if (!m) { process.stderr.write('[sw] VERSION no encontrada en sw.js\n'); process.exit(0); }
+const [, major, minor, patch] = m;
+const next = major + '.' + minor + '.' + (Number(patch) + 1);
+fs.writeFileSync('sw.js', sw.replace(/financeos-v\d+\.\d+\.\d+/g, 'financeos-v' + next));
+process.stdout.write('[sw] auto-bump: v' + major+'.'+minor+'.'+patch+' → v'+next+'\n');
+"
+
+git add sw.js
