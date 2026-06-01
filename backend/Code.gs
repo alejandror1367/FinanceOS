@@ -90,7 +90,7 @@ var ROUTES = {
   // Migración (TD-01)
   recalculateBalances: function (d) { return recalculateAccountBalances_(d); },
 
-  // Import (proxy Claude API)
+  // Import (proxy Gemini API)
   parseStatement: function (d) { return parseStatement_(d); },
 
   // Meta
