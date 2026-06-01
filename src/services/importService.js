@@ -50,8 +50,15 @@ function applyProfile(profile, headers, rows) {
   };
 }
 
+// Groq llama-3.1-8b-instant: ~20k TPM ≈ 80k chars. Truncamos a 60k para dejar margen al prompt.
+const MAX_TEXT_CHARS = 60_000;
+
 async function callClaude(payload) {
-  return apiClient.post('parseStatement', payload);
+  const p = { ...payload };
+  if (typeof p.fileContent === 'string' && p.fileContent.length > MAX_TEXT_CHARS) {
+    p.fileContent = p.fileContent.slice(0, MAX_TEXT_CHARS);
+  }
+  return apiClient.post('parseStatement', p);
 }
 
 function claudeResultToImport(result, fallbackBank) {

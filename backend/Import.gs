@@ -13,7 +13,7 @@
  * PDFs escaneados (sin texto) no son soportados sin un modelo de visión.
  */
 
-var GROQ_MODEL_  = 'llama-3.3-70b-versatile';
+var GROQ_MODEL_  = 'llama-3.1-8b-instant'; // 20k TPM gratis (vs 12k del 70b)
 var GROQ_URL_    = 'https://api.groq.com/openai/v1/chat/completions';
 
 var SYSTEM_PROMPT_ =
