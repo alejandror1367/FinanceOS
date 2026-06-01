@@ -36,7 +36,13 @@ function initGSI() {
     cancel_on_tap_outside: false,
   });
   renderLoginScreen();
-  google.accounts.id.prompt(); // One Tap — resuelve sin interacción si hay sesión activa
+  // One Tap — resuelve sin interacción si hay sesión activa en el dispositivo.
+  // En mobile PWA/standalone puede no estar disponible; el botón es el fallback.
+  google.accounts.id.prompt((notification) => {
+    if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+      console.info('[auth] One Tap no disponible en este contexto — usa el botón de login');
+    }
+  });
 }
 
 function renderLoginScreen() {

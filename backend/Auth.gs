@@ -51,8 +51,10 @@ function verifyGoogleToken_(idToken) {
       return false;
     }
 
-    // 3. Audience: el token debe ser para este cliente de Google (si está configurado)
-    if (APP.googleClientId && data.aud !== APP.googleClientId) {
+    // 3. Audience: el campo aud debe contener el clientId de este proyecto.
+    // Usamos indexOf porque en algunos contextos aud puede ser una lista separada por espacios.
+    if (APP.googleClientId && String(data.aud || '').indexOf(APP.googleClientId) === -1) {
+      Logger.log('[Auth] Audience no válida: ' + data.aud);
       cache.put(cacheKey, '0', 60);
       return false;
     }

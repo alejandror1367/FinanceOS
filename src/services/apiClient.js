@@ -48,9 +48,13 @@ async function request(method, action, payload) {
     const json = await response.json();
     if (!json || json.success !== true) {
       const err = json && json.error ? json.error : 'Respuesta inválida del backend.';
-      // Sesión expirada o inválida: limpiar y recargar → pantalla de login
+      // Sesión expirada: recargar UNA SOLA VEZ por sesión de browser para evitar bucle.
+      // sessionStorage sobrevive a location.reload() pero no a cerrar el tab.
       if (err === 'No autorizado.' || err === 'No autorizado: falta credencial.') {
-        auth.signOut();
+        if (!sessionStorage.getItem('financeos.auth.reload')) {
+          sessionStorage.setItem('financeos.auth.reload', '1');
+          auth.signOut(); // limpia token + recarga
+        }
       }
       throw new Error(err);
     }
