@@ -18,6 +18,22 @@ npx serve .
 
 Abre `http://localhost:3000/`.
 
+## Setup del repositorio (una sola vez por clon)
+
+Activa el git hook que auto-bumpa la versión del Service Worker cada vez que
+se commitean archivos del shell (`src/`, `index.html`, `manifest.json`, `assets/`).
+Evita que el mobile PWA sirva JS/CSS cacheados de versiones anteriores.
+
+```bash
+git config core.hooksPath .githooks
+```
+
+### Tests financieros
+
+```bash
+node --test tests/selectors.test.js
+```
+
 ## Estructura
 
 ```
@@ -38,7 +54,12 @@ docs/          PRD, Architecture, Database, Roadmap
 
 ## Configuración del backend
 
-Copia `src/core/config.js` y define `api.baseUrl` (URL `/exec` del Web App) y `api.token`.
+En `src/core/config.js` define:
+
+- `api.baseUrl` — URL `/exec` del Web App de Apps Script.
+- `auth.clientId` — Client ID de Google Cloud Console (OAuth).
+
 Con `api.baseUrl = null` la app funciona en modo local con datos mock.
+Con `auth.clientId` vacío, la autenticación de Google está desactivada.
 
 Detalles de despliegue del backend en `backend/README.md`, y del frontend en `DEPLOY.md`.
