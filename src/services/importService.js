@@ -112,7 +112,7 @@ export const importService = {
       } else {
         // PDF escaneado → enviar base64 para visión de Claude
         const b64 = bufferToBase64(buffer);
-        if (b64.length > 9_000_000) throw new Error('PDF demasiado grande (>~6 MB). Intenta exportar como CSV desde la app del banco.');
+        if (b64.length > 9_000_000) throw new Error('PDF demasiado grande (>~6 MB). Intenta exportar como CSV desde la app del banco o dividirlo en páginas.');
         fileContent = b64;
         mimeType = 'application/pdf';
       }
