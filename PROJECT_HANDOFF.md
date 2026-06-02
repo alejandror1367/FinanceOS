@@ -334,6 +334,42 @@ Ver `docs/TechnicalDebt.md` para el registro completo (40 ítems con ID, impacto
 
 ---
 
+## 14b. Cambios — sesión 2026-06-01 (tarde, en casa)
+
+### Módulo Inversiones — refactor completo de precios en vivo
+
+**`src/services/priceService.js`** ← archivo nuevo  
+Registro global de precios en vivo compartido entre `investments.js` (escribe) y `selectors.js` (lee), sin pasar por el store. Persiste en `localStorage` con TTL de 15 min. Se restaura automáticamente al cargar la app; el dashboard ve precios correctos desde el primer render aunque el usuario nunca haya visitado Inversiones.
+
+**`src/views/investments.js`**
+- Migrado de variables de módulo propias a `priceService`
+- Auto-refresh de precios al entrar a la sección (`priceService.isStale`)
+- Precios persisten en F5 vía `localStorage` (restaurados por `priceService` al arrancar)
+- Brokers XTB y ARQ Invest aparecen como opciones quick-create en el formulario de nueva compra. Si se seleccionan, se crea la cuenta automáticamente antes de guardar la inversión
+- Guard `bodyMount.isConnected` en la suscripción al store: renders anteriores desconectados del DOM dejan de ejecutar `paint()` — elimina fuga de suscripciones que acumulaba trabajo con cada navegación
+- Eliminado `_applyPricesToStore()` que causaba ciclo `store.set → onStoreChange → renderInvestments → store.set → …` que congelaba la sección
+
+**`src/store/selectors.js`**
+- `investmentsValue()` usa `priceService.priceFor(symbol)` para precio real con fallback a `currentPrice`; convierte USD/EUR→COP usando `priceService.fxRates`
+- `investmentsCost()` convierte divisas y usa `avgCost || purchasePrice` (fix para inversiones creadas manualmente que guardan `purchasePrice`, no `avgCost`)
+
+### Service Worker — actualizaciones sin Ctrl+Shift+R
+
+**`sw.js`** v0.2.6
+- Estrategia de fetch: **network-first** para todos los assets JS/CSS (antes cache-first). Online: siempre descarga la versión más reciente; Offline: fallback al caché
+- Instalación: ya no llama `skipWaiting()` en `install` — espera el mensaje `SKIP_WAITING` del cliente para activar
+- Handler `message` que recibe `{ type: 'SKIP_WAITING' }` y activa el nuevo SW inmediatamente
+
+**`src/core/app.js`**
+- Cuando se detecta un SW nuevo instalado (`sw.state === 'installed'`): muestra toast "Actualizando…" y envía `SKIP_WAITING`
+- Listener `controllerchange` recarga la página automáticamente cuando el nuevo SW toma el control
+- Resultado: F5 después del primer load ya trae siempre la versión más reciente; sin necesidad de Ctrl+Shift+R
+
+### Hooks de accessibility — eliminados (bloqueaban edición)
+Los hooks `UserPromptSubmit`/`PreToolUse`/`PostToolUse` de `accessibility-agents` instalados en `~/.claude/settings.json` requerían `python3` que no está disponible en Windows → salía error en cada prompt y bloqueaban todos los edits a archivos en `src/`. Se eliminaron del settings global.
+
+---
+
 ## 14. Últimos cambios importantes (sesión 2026-06-01)
 
 ### Deuda técnica P0 implementada
@@ -378,22 +414,21 @@ Ver `docs/TechnicalDebt.md` para el registro completo (40 ítems con ID, impacto
 ```
 Rama:    main
 Remote:  https://github.com/alejandror1367/FinanceOS.git
-HEAD:    bb85bfd  docs(readme): setup del repo, hook del SW y configuracion actualizada
-Status:  limpio (solo prompts/ sin trackear, ignorado intencionalmente)
+HEAD:    8756d4c  fix(investments): eliminar freeze + dashboard con precios reales via priceService
+Status:  limpio · sincronizado con origin/main
+SW:      v0.2.6
 ```
 
 ### Commits recientes
 ```
-bb85bfd docs(readme): setup del repo, hook del SW y configuracion actualizada
-5968c2b Revert "test(hook): verificar auto-bump del SW"
-c378fb5 chore(hooks): pre-commit auto-bump del SW
-e6347b6 chore(sw): bump v0.2.4
-b90163b feat(TD-01): modelo híbrido de saldos
-0a805a3 fix(auth): corregir bucle en mobile PWA
-f27f685 feat(auth): autorizar segundo correo
-7590539 feat(auth): Google OAuth completo (TD-09)
-c6c06f1 fix(debt/P0): implementar hallazgos críticos TD-02 a TD-08
-58ca87b docs: auditorías y registro de deuda técnica
+8756d4c fix(investments): eliminar freeze + dashboard con precios reales via priceService
+0f193fd fix(investments): eliminar bucle infinito al entrar a Inversiones + SW auto-update
+851fd02 fix(dashboard): inversiones con precios en vivo en todas las vistas + conversión multimoneda
+20ffeb3 fix(sw): network-first para assets JS/CSS — F5 ya obtiene la versión más reciente
+d070a2c fix(investments): precios persisten en F5 via localStorage + auto-refresh al entrar + brokers XTB/ARQ
+84ab7f0 fix(investments): precios persisten entre re-renders usando caché a nivel de módulo
+5f2ecaa fix(investments): sin precio muestra '— sin precio —' en lugar de $0/-100%
+ebbee77 fix: datos que desaparecen (TD-13), sync pill, enum credit_card, campos nuevos backend
 ```
 
 ---
@@ -491,25 +526,52 @@ Copia este prompt al iniciar una nueva sesión:
 ---
 
 ```
-Lee PROJECT_HANDOFF.md en la raíz del repositorio para reconstruir el contexto completo del proyecto.
+Lee PROJECT_HANDOFF.md en la raíz del repositorio. Aquí el contexto rápido:
 
-Contexto rápido:
-- FinanceOS: sistema operativo financiero personal para Alejo. App web privada (PWA).
-- Stack: HTML + CSS + JavaScript ES Modules (SIN frameworks, SIN TypeScript, SIN build tools, SIN npm runtime).
-- Backend: Google Apps Script. BD: Google Sheets. Hosting: GitHub Pages.
-- CLAUDE.md contiene las reglas absolutas del proyecto — léelo antes de cualquier cambio.
-- Tests: `node --test tests/selectors.test.js` → 33/33 deben pasar siempre.
-- Pre-commit hook activo: git config core.hooksPath .githooks (auto-bump SW version).
+PROYECTO: FinanceOS — sistema operativo financiero personal y privado para Alejo (PWA).
+URL producción: https://alejandror1367.github.io/FinanceOS/
+Repo: https://github.com/alejandror1367/FinanceOS (rama main)
 
-Estado al 2026-06-01:
-- Toda la deuda técnica P0 implementada (TD-01 a TD-09).
-- PENDIENTE URGENTE: subir 5 archivos .gs al backend de Apps Script y publicar Nueva versión
-  (Accounts.gs, Transactions.gs, Code.gs, Auth.gs, Migration.gs) — activan el modelo híbrido de saldos.
-- Deuda P1/P2 pendiente en docs/TechnicalDebt.md.
+STACK (reglas absolutas — no romper nunca):
+- Frontend: HTML + CSS + JavaScript ES Modules puro. SIN React/Vue/Svelte/Angular.
+- SIN TypeScript. SIN Vite/Webpack/build tools. SIN dependencias npm en runtime.
+- Backend: solo Google Apps Script. BD: solo Google Sheets.
+- Commits automáticos: hacer commit+push después de cada cambio verificado.
 
-Próxima tarea recomendada: Sprint de quick wins P1 — empezar por TD-11 (1 línea), TD-12 (1 línea) y TD-16.
+ARCHIVOS CLAVE:
+- CLAUDE.md → reglas absolutas (leer antes de cualquier cambio)
+- src/core/config.js → api.baseUrl + auth.clientId (valores reales commiteados)
+- src/services/priceService.js → caché compartido de precios en vivo (nuevo, sesión tarde)
+- src/store/selectors.js → usa priceService para investmentsValue con conversión FX
+- src/views/investments.js → DCA, precios Yahoo Finance, brokers XTB/ARQ
+- sw.js → v0.2.6, network-first, auto-update via SKIP_WAITING
+- docs/TechnicalDebt.md → registro priorizado de deuda técnica (P0→P3)
+- tests/selectors.test.js → 33 tests financieros (deben pasar siempre)
+
+ESTADO AL 2026-06-01 (sesión tarde):
+✅ Inversiones: auto-refresh de precios al entrar, persistencia F5 via localStorage,
+   brokers XTB y ARQ Invest en formulario nueva compra
+✅ Dashboard: card de Inversiones muestra valor real con precios en vivo y conversión USD→COP
+✅ SW: F5 ya trae versión nueva sin Ctrl+Shift+R; auto-reload cuando hay update
+✅ Fix freeze al navegar a Inversiones (ciclo store.set eliminado con priceService)
+
+PENDIENTE URGENTE (de sesiones anteriores — NO olvidar):
+- Subir 5 archivos .gs al backend Apps Script + publicar Nueva versión:
+  backend/Accounts.gs, Transactions.gs, Code.gs, Auth.gs, Migration.gs (nuevo)
+  Activan el modelo híbrido de saldos (transacciones mueven dinero automáticamente)
+- Luego: Ajustes → Recalcular saldos en la app (migra saldos existentes)
+
+DEUDA TÉCNICA P1 PENDIENTE (docs/TechnicalDebt.md):
+- TD-11: syncEngine.js:84 — state: pending > 0 ? 'idle' : 'idle'  (1 línea)
+- TD-12: sameMonth() usa Date local → drift UTC-5  (1 línea)
+- TD-16: openById sin cachear en Utils.gs → 5-8 aperturas/request  (3 líneas)
+- TD-17: .input:focus con opacidad baja → puede fallar WCAG 2.4.11
+- TD-10/13/15: syncEngine, flush antes de pull, getBootstrap
+
+Para tests: node --test tests/selectors.test.js → 33/33
+Para servidor local: npx serve . → http://localhost:3000
 ```
 
 ---
 
-*Generado automáticamente el 2026-06-01 por Claude Sonnet 4.6 al cerrar la sesión de desarrollo.*
+*Actualizado el 2026-06-01 (sesión tarde) por Claude Sonnet 4.6.*
