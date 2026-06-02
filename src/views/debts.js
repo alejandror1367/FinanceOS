@@ -20,6 +20,101 @@ const pct = (n) => `${(Number(n) || 0).toFixed(1).replace(/\.0$/, '')}%`;
 const STATE = { strategy: 'avalanche' };
 const typeLabel = (v) => (LIABILITY_TYPE_LIST.find((t) => t.value === v) || {}).label || v;
 
+// ── Amortización ─────────────────────────────────────────────────────────────
+// Itera mes a mes para calcular con precisión meses y total de intereses.
+function amortize(balance, eaRate, payment) {
+  if (!balance || balance <= 0) return { months: 0, totalInterest: 0 };
+  if (!payment || payment <= 0) return { months: null, totalInterest: null };
+  const r = eaRate > 0 ? Math.pow(1 + eaRate / 100, 1 / 12) - 1 : 0;
+  let bal = balance; let totalInterest = 0; let months = 0;
+  while (bal > 0.01 && months < 600) {
+    const interest = bal * r;
+    const capital = payment - interest;
+    if (capital <= 0) return { months: Infinity, totalInterest: Infinity };
+    totalInterest += interest;
+    bal = Math.max(0, bal - capital);
+    months++;
+  }
+  return { months, totalInterest: Math.round(totalInterest) };
+}
+
+function payoffDateLabel(months) {
+  if (!months || months === Infinity || months > 600) return null;
+  const d = new Date();
+  d.setMonth(d.getMonth() + months);
+  return new Intl.DateTimeFormat('es-CO', { month: 'short', year: 'numeric' }).format(d);
+}
+
+// ── Tarjeta de proyección ─────────────────────────────────────────────────────
+function projectionCard(debtList, cur) {
+  const rows = debtList
+    .filter((d) => d.balance > 0 && d.minPayment > 0)
+    .map((d) => {
+      const { months, totalInterest } = amortize(d.balance, d.interestRate || 0, d.minPayment);
+      return { ...d, months, totalInterest };
+    });
+
+  if (!rows.length) return null;
+
+  const totalInterestSum = rows.reduce((s, r) => s + (r.totalInterest || 0), 0);
+  const maxMonths = Math.max(...rows.map((r) => r.months || 0));
+  const freeDate = payoffDateLabel(maxMonths);
+  const hasInfinity = rows.some((r) => r.months === Infinity);
+
+  const card = el('div', { class: 'card card--pad-sm mt-4' });
+  card.appendChild(el('p', { class: 't-caption text-secondary', style: 'margin:0 0 var(--space-3)' },
+    ['PROYECCIÓN (pagando solo los mínimos declarados)']));
+
+  const tbl = el('table', { class: 'inv-summary-table' });
+  tbl.appendChild(el('thead', {}, [el('tr', {}, [
+    el('th', {}, ['Deuda']),
+    el('th', { class: 'text-right' }, ['Saldo']),
+    el('th', { class: 'text-right' }, ['Cuota/mes']),
+    el('th', { class: 'text-right' }, ['Meses']),
+    el('th', { class: 'text-right' }, ['Intereses totales']),
+    el('th', { class: 'text-right' }, ['Libre en']),
+  ])]));
+
+  const tbody = el('tbody');
+  rows.forEach((r) => {
+    const tr = el('tr', {});
+    tr.appendChild(el('td', {}, [r.name]));
+    tr.appendChild(el('td', { class: 'text-right tabular' }, [formatMoney(r.balance, r.currency || cur)]));
+    tr.appendChild(el('td', { class: 'text-right tabular' }, [formatMoney(r.minPayment, r.currency || cur)]));
+    tr.appendChild(el('td', { class: 'text-right tabular' }, [r.months === Infinity ? '∞' : r.months === null ? '—' : String(r.months)]));
+    tr.appendChild(el('td', { class: 'text-right tabular text-negative' }, [
+      r.totalInterest === null ? '—' : r.totalInterest === Infinity ? '∞' : `+${formatMoney(r.totalInterest, r.currency || cur)}`,
+    ]));
+    tr.appendChild(el('td', { class: 'text-right tabular text-secondary' }, [
+      r.months === Infinity ? 'nunca' : r.months === null ? '—' : (payoffDateLabel(r.months) || '—'),
+    ]));
+    tbody.appendChild(tr);
+  });
+  tbl.appendChild(tbody);
+  card.appendChild(tbl);
+
+  const footer = el('div', { class: 'row-flex between', style: 'margin-top:var(--space-3);flex-wrap:wrap;gap:var(--space-2)' });
+  if (!hasInfinity && freeDate) {
+    footer.appendChild(el('span', { class: 't-caption' }, [
+      el('span', { class: 'text-secondary', text: 'Libre de deudas: ' }),
+      el('b', { class: 'text-positive', text: freeDate }),
+    ]));
+  }
+  if (totalInterestSum > 0) {
+    footer.appendChild(el('span', { class: 't-caption' }, [
+      el('span', { class: 'text-secondary', text: 'Intereses totales: ' }),
+      el('b', { class: 'text-negative', text: `+${formatMoney(totalInterestSum, cur)}` }),
+    ]));
+  }
+  if (hasInfinity) {
+    footer.appendChild(el('span', { class: 't-caption text-negative' }, [
+      '⚠ La cuota mínima no cubre los intereses en alguna deuda.',
+    ]));
+  }
+  card.appendChild(footer);
+  return card;
+}
+
 // Calcula la próxima fecha a partir de un día del mes
 function nextDateForDay(day) {
   if (!day) return null;
@@ -264,7 +359,8 @@ export function renderDebts() {
           ]),
         ]),
         el('div', { class: 'card card--pad-sm mt-4' }, [el('div', { class: 'row-list' }, ordered.map((d, i) => debtRow(d, i + 1, cur)))]),
-      ]));
+        projectionCard(ordered, cur),
+      ].filter(Boolean)));
     }
 
     root.replaceChildren(...children);
