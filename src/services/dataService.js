@@ -67,9 +67,6 @@ async function seedMockIfNeeded() {
   await db.kvSet(SEED_FLAG, true);
 }
 
-// Descarga todas las colecciones del backend y refresca caché + store.
-// TD-13 fix: re-aplica operaciones pendientes de la cola después de pull,
-// para que los creates/updates locales no se pierdan hasta ser confirmados.
 // Envuelve una promesa en la forma {status, value|reason} de Promise.allSettled.
 function settle(promise) {
   return promise.then(
@@ -78,41 +75,10 @@ function settle(promise) {
   );
 }
 
-async function pullAll() {
-  const colls = Object.keys(ENTITIES);
-
-  // BUG-C1 (cold start): calentamos la verificación del token con UNA petición
-  // secuencial antes de la ráfaga concurrente. Así el backend cachea el token
-  // (verifyGoogleToken_, 25 min) y las 11 peticiones restantes no disparan 11
-  // verificaciones simultáneas contra Google tokeninfo — la "estampida" que
-  // devolvía "No autorizado." en cada primera carga. Reintentamos el warm-up un
-  // par de veces porque es la petición que "abre la puerta".
-  // (TD-15 sustituirá las 12 peticiones por un único getBootstrap y hará esto innecesario.)
-  let head = await settle(apiClient.get(ENTITIES[colls[0]].read));
-  for (let i = 0; i < 2 && head.status === 'rejected'; i++) {
-    await new Promise((r) => setTimeout(r, 600));
-    head = await settle(apiClient.get(ENTITIES[colls[0]].read));
-  }
-  const tail = await Promise.allSettled(colls.slice(1).map((c) => apiClient.get(ENTITIES[c].read)));
-  const results = [head, ...tail];
-  const patch = {};
-  let ok = 0;
-  for (let i = 0; i < colls.length; i++) {
-    const c = colls[i];
-    const res = results[i];
-    if (res.status === 'fulfilled' && Array.isArray(res.value)) {
-      const rows = res.value;
-      await db.clear(ENTITIES[c].store);
-      if (rows.length) await db.bulkPut(ENTITIES[c].store, rows);
-      patch[c] = rows;
-      ok++;
-    } else {
-      patch[c] = await db.getAll(ENTITIES[c].store);
-      console.warn(`[dataService] pull "${c}" falló:`, res.reason && res.reason.message);
-    }
-  }
-
-  // Re-aplicar operaciones pendientes para que no se pierdan antes de sincronizar
+// Reaplica la cola pendiente sobre patch + IndexedDB y finaliza el hydrate del store.
+// TD-13: tras un pull (clear+replace) re-aplicamos las operaciones encoladas para que
+// los creates/updates locales no se pierdan hasta que el backend los confirme.
+async function reconcileAndHydrate(patch, colls) {
   try {
     const { ENTITY_TO_STORE } = await import('./entities.js');
     const pending = await syncQueue.all();
@@ -139,7 +105,74 @@ async function pullAll() {
   patch.netWorthSeries = mockData.netWorthSeries;
   patch.baseCurrency = baseCurrencyFrom(patch.settings);
   store.hydrate(patch);
+}
+
+// Aplica un mapa { coll: rows[] } del backend a IndexedDB + store: sustituye la caché
+// de cada colección con datos frescos; las que falten/fallen conservan su caché local.
+async function applyCollections(data, colls) {
+  const patch = {};
+  let ok = 0;
+  for (const c of colls) {
+    const rows = data && Array.isArray(data[c]) ? data[c] : null;
+    if (rows) {
+      await db.clear(ENTITIES[c].store);
+      if (rows.length) await db.bulkPut(ENTITIES[c].store, rows);
+      patch[c] = rows;
+      ok++;
+    } else {
+      patch[c] = await db.getAll(ENTITIES[c].store);
+    }
+  }
+  await reconcileAndHydrate(patch, colls);
   return { pulled: ok, total: colls.length };
+}
+
+// TD-15: descarga las 12 colecciones en UNA sola petición (getBootstrap).
+// Una sola request autenticada → sin "estampida" de verificación de token (raíz de BUG-C1).
+async function pullBootstrap() {
+  const colls = Object.keys(ENTITIES);
+  const data = await apiClient.get('getBootstrap');
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    throw new Error('getBootstrap: respuesta inválida');
+  }
+  return applyCollections(data, colls);
+}
+
+// Fallback (backend sin getBootstrap): descarga cada colección por separado (12 requests).
+// BUG-C1: warm-up secuencial de la primera petición para que el backend cachee la
+// verificación del token (verifyGoogleToken_, 25 min) antes de la ráfaga concurrente,
+// evitando la estampida de verificaciones contra Google tokeninfo. Reintentamos el
+// warm-up un par de veces porque es la petición que "abre la puerta".
+async function pullAll() {
+  const colls = Object.keys(ENTITIES);
+  let head = await settle(apiClient.get(ENTITIES[colls[0]].read));
+  for (let i = 0; i < 2 && head.status === 'rejected'; i++) {
+    await new Promise((r) => setTimeout(r, 600));
+    head = await settle(apiClient.get(ENTITIES[colls[0]].read));
+  }
+  const tail = await Promise.allSettled(colls.slice(1).map((c) => apiClient.get(ENTITIES[c].read)));
+  const results = [head, ...tail];
+  const data = {};
+  for (let i = 0; i < colls.length; i++) {
+    const res = results[i];
+    if (res.status === 'fulfilled' && Array.isArray(res.value)) {
+      data[colls[i]] = res.value;
+    } else {
+      console.warn(`[dataService] pull "${colls[i]}" falló:`, res.reason && res.reason.message);
+    }
+  }
+  return applyCollections(data, colls);
+}
+
+// Ruta de descarga preferida: getBootstrap (1 request) con fallback automático a
+// pullAll (12 requests) si el backend aún no expone getBootstrap o falla puntualmente.
+async function pullData() {
+  try {
+    return await pullBootstrap();
+  } catch (e) {
+    console.warn('[dataService] getBootstrap no disponible → pullAll:', e.message);
+    return await pullAll();
+  }
 }
 
 export const dataService = {
@@ -178,13 +211,13 @@ export const dataService = {
 
     if (navigator.onLine) {
       try {
-        let res = await pullAll();
+        let res = await pullData();
         // BUG-C1: si TODO falló (cold start con la verificación del token todavía
         // fría/transitoria), reintentar una vez tras un breve respiro. El primer
         // intento ya habrá calentado el estado de auth en el backend.
         if (res.pulled === 0) {
           await new Promise((r) => setTimeout(r, 800));
-          res = await pullAll();
+          res = await pullData();
         }
       }
       catch (e) { console.warn('[dataService] pull falló (se usa caché):', e); }
@@ -242,7 +275,7 @@ export const dataService = {
   // Fuerza una descarga manual (botón "Actualizar").
   async refresh() {
     if (!apiClient.isConfigured()) return { refreshed: false };
-    await pullAll();
+    await pullData();
     return { refreshed: true };
   },
 

@@ -125,3 +125,30 @@ function getReports_(p) {
   // Punto de extensión para reportes específicos en fases de módulo.
   return { available: ['getDashboard', 'getNetWorth'], note: 'Reportes avanzados en fases posteriores.' };
 }
+
+/**
+ * getBootstrap — TD-15: devuelve las 12 colecciones en UNA sola ejecución
+ * (un único openById, memoizado en getDb_), en lugar de 12 invocaciones HTTP
+ * separadas. Reduce latencia y cuota, y elimina la "estampida" de verificación
+ * de token del cold start (BUG-C1) al hacer una sola request autenticada.
+ * Reutiliza las mismas funciones list*_ que las acciones individuales para
+ * mantener idénticos los filtros (cuentas archivadas, soft-deletes, etc.).
+ * Las claves coinciden con ENTITIES del frontend (src/services/entities.js).
+ */
+function getBootstrap_(p) {
+  p = p || {};
+  return {
+    accounts:          listAccounts_(p),
+    transactions:      listTransactions_(p),
+    categories:        listCategories_(p),
+    budgets:           listBudgets_(p),
+    goals:             listGoals_(p),
+    investments:       listInvestments_(p),
+    assets:            listAssets_(p),
+    liabilities:       listLiabilities_(p),
+    recurring:         listRecurring_(p),
+    netWorthSnapshots: listNetWorthSnapshots_(p),
+    journal:           listJournal_(p),
+    settings:          listSettings_(p),
+  };
+}
