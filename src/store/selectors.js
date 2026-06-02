@@ -2,6 +2,7 @@
 // Los valores derivados NO se persisten (docs/Database.md §5): se calculan aquí.
 
 import { priceService } from '../services/priceService.js';
+import { roundMoney } from '../utils/format.js';
 
 // Normalizes a periodKey that Google Sheets may auto-convert from 'YYYY-MM' to a Date object.
 function normPeriodKey(raw, len) {
@@ -43,27 +44,29 @@ export const selectors = {
   investmentsValue(s) {
     const fx   = priceService.fxRates;
     const base = s.baseCurrency || 'COP';
-    return s.investments.filter((i) => !i.isDeleted).reduce((sum, i) => {
+    const sum = s.investments.filter((i) => !i.isDeleted).reduce((acc, i) => {
       const lp    = priceService.priceFor(i.symbol);
       const price = lp?.price || i.currentPrice || 0;
       const native = (i.quantity || 0) * price;
-      if (!native) return sum;
+      if (!native) return acc;
       const cur = i.currency || base;
-      if (cur === base) return sum + native;
-      return fx[cur] ? sum + native * fx[cur] : sum + native;
+      if (cur === base) return acc + native;
+      return fx[cur] ? acc + native * fx[cur] : acc + native;
     }, 0);
+    return roundMoney(sum, base);
   },
 
   investmentsCost(s) {
     const fx   = priceService.fxRates;
     const base = s.baseCurrency || 'COP';
-    return s.investments.filter((i) => !i.isDeleted).reduce((sum, i) => {
+    const sum = s.investments.filter((i) => !i.isDeleted).reduce((acc, i) => {
       const native = (i.quantity || 0) * (i.avgCost || i.purchasePrice || 0);
-      if (!native) return sum;
+      if (!native) return acc;
       const cur = i.currency || base;
-      if (cur === base) return sum + native;
-      return fx[cur] ? sum + native * fx[cur] : sum + native;
+      if (cur === base) return acc + native;
+      return fx[cur] ? acc + native * fx[cur] : acc + native;
     }, 0);
+    return roundMoney(sum, base);
   },
 
   investmentsReturnPct(s) {

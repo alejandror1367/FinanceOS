@@ -3,20 +3,40 @@
 const DEFAULT_CURRENCY = 'COP';
 const DEFAULT_LOCALE = 'es-CO';
 
+// TD-21: decimales canónicos por divisa (0 para monedas sin centavos, 2 para la mayoría).
+const CURRENCY_DECIMALS = {
+  COP: 0, CLP: 0, JPY: 0, KRW: 0, VND: 0, IDR: 0,
+  USD: 2, EUR: 2, GBP: 2, ARS: 2, MXN: 2, BRL: 2, CAD: 2, CHF: 2, AUD: 2,
+  BTC: 8, ETH: 6, USDT: 2, USDC: 2,
+};
+
+// TD-21: decimales por defecto según la divisa (admite override explícito).
+function defaultDecimals(currency) {
+  return CURRENCY_DECIMALS[currency?.toUpperCase()] ?? 2;
+}
+
 export function formatMoney(amount, currency = DEFAULT_CURRENCY, opts = {}) {
   const value = Number(amount) || 0;
   const { compact = false, signed = false, decimals } = opts;
-  const maxFrac = decimals !== undefined ? decimals : compact ? 1 : 0;
+  const frac = decimals !== undefined ? decimals : compact ? 1 : defaultDecimals(currency);
   const nf = new Intl.NumberFormat(DEFAULT_LOCALE, {
     style: 'currency',
     currency,
-    minimumFractionDigits: decimals !== undefined ? decimals : 0,
-    maximumFractionDigits: maxFrac,
+    minimumFractionDigits: frac,
+    maximumFractionDigits: frac,
     notation: compact ? 'compact' : 'standard',
   });
   const formatted = nf.format(Math.abs(value));
   if (signed && value !== 0) return (value > 0 ? '+' : '−') + formatted;
   return value < 0 ? '−' + formatted : formatted;
+}
+
+// TD-22: redondeo controlado al número de decimales canónicos de la divisa.
+// Úsalo al final de una cadena de cálculos para evitar acumulación de error float.
+export function roundMoney(amount, currency = DEFAULT_CURRENCY) {
+  const decimals = defaultDecimals(currency);
+  const factor = Math.pow(10, decimals);
+  return Math.round((Number(amount) || 0) * factor) / factor;
 }
 
 export function formatNumber(n, opts = {}) {

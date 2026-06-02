@@ -13,6 +13,7 @@ import { Card, Badge, Button } from '../components/ui.js';
 import { segmented } from '../components/forms.js';
 import { confirmDialog } from '../components/modal.js';
 import { toast } from '../services/toast.js';
+import { guardedOp } from '../components/crud.js';
 
 function settingRow(label, sub, control) {
   return el('div', { class: 'row' }, [
@@ -59,32 +60,29 @@ export function renderSettings() {
         el('div', { class: 'row-flex', style: { gap: '8px' } }, [
           Button('Reintentar', { variant: 'ghost', iconName: 'refresh', onClick: async () => {
             toast('Reintentando…', { type: 'info' });
-            try { await syncEngine.retryFailed(); toast('Reintento enviado'); } catch (e) { toast('No se pudo reintentar', { type: 'negative' }); }
+            await guardedOp(() => syncEngine.retryFailed(), 'Reintento enviado', 'No se pudo reintentar');
           } }),
           Button('Descartar', { variant: 'ghost', iconName: 'trash', onClick: () => confirmDialog({
             title: 'Descartar cambios fallidos',
             message: 'Se eliminarán de la cola las operaciones que no se pudieron sincronizar. Esta acción no se puede deshacer.',
-            confirmLabel: 'Descartar', onConfirm: async () => { try { await syncEngine.discardFailed(); toast('Cambios descartados'); } catch (e) { toast('Error', { type: 'negative' }); } },
+            confirmLabel: 'Descartar', onConfirm: () => guardedOp(() => syncEngine.discardFailed(), 'Cambios descartados'),
           }) }),
         ]),
       ) : null,
       settingRow('Actualizar desde el backend', 'Vuelve a descargar tus datos', Button('Actualizar', { variant: 'ghost', iconName: 'refresh', onClick: async () => {
         if (!connected) { toast('Modo local: sin backend', { type: 'info' }); return; }
         toast('Actualizando…', { type: 'info' });
-        try { await dataService.refresh(); toast('Datos actualizados'); } catch (e) { toast('No se pudo actualizar', { type: 'negative' }); }
+        await guardedOp(() => dataService.refresh(), 'Datos actualizados', 'No se pudo actualizar');
       } })),
       settingRow('Recalcular saldos', 'Suma todas las transacciones desde 0 y actualiza los saldos de cada cuenta', Button('Recalcular', { variant: 'ghost', iconName: 'analytics', onClick: () => confirmDialog({
         title: 'Recalcular saldos desde transacciones',
         message: 'Se ignorarán los saldos declarados. Cada cuenta quedará en la suma neta de sus transacciones registradas (desde 0). Úsalo solo si tienes todo el historial registrado.',
-        confirmLabel: 'Recalcular', onConfirm: async () => {
-          try { await dataService.recalculateBalances(); toast('Saldos recalculados correctamente'); }
-          catch (e) { toast(e.message || 'Error al recalcular', { type: 'negative' }); }
-        },
+        confirmLabel: 'Recalcular', onConfirm: () => guardedOp(() => dataService.recalculateBalances(), 'Saldos recalculados correctamente', 'Error al recalcular'),
       }) })),
       settingRow('Vaciar caché local', 'Borra los datos locales y vuelve a cargar', Button('Vaciar', { variant: 'ghost', iconName: 'trash', onClick: () => confirmDialog({
         title: 'Vaciar caché local',
         message: 'Se borrarán los datos guardados en este dispositivo y se recargará la app desde el backend. No afecta tu base de datos.',
-        confirmLabel: 'Vaciar', onConfirm: async () => { try { await dataService.reset(); toast('Caché vaciada'); setTimeout(() => location.reload(), 400); } catch (e) { toast('Error', { type: 'negative' }); } },
+        confirmLabel: 'Vaciar', onConfirm: () => guardedOp(async () => { await dataService.reset(); toast('Caché vaciada'); setTimeout(() => location.reload(), 400); }, ''),
       }) })),
     ]),
   });

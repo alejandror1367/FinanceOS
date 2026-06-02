@@ -11,6 +11,7 @@ import { Card, Badge, ProgressBar, EmptyState, Button } from '../components/ui.j
 import { openModal, confirmDialog } from '../components/modal.js';
 import { field, textInput, numberInput, select } from '../components/forms.js';
 import { toast } from '../services/toast.js';
+import { guardedOp, guardedSave } from '../components/crud.js';
 
 const GOAL_TYPES = [
   { value: 'emergency_fund', label: 'Fondo de emergencia', icon: 'budgets' },
@@ -96,10 +97,10 @@ function openGoalModal({ goal = {}, mode = 'create' }) {
       };
       if (!data.name) { toast('El nombre es obligatorio', { type: 'negative' }); return false; }
       if (data.targetAmount <= 0) { toast('La meta debe ser mayor a cero', { type: 'negative' }); return false; }
-      try {
-        if (mode === 'edit') { await dataService.update('goals', goal.id, data); toast('Meta actualizada'); }
-        else { await dataService.create('goals', data); toast('Meta creada'); }
-      } catch (e) { toast('Error al guardar', { type: 'negative' }); return false; }
+      return guardedSave(
+        () => mode === 'edit' ? dataService.update('goals', goal.id, data) : dataService.create('goals', data),
+        mode === 'edit' ? 'Meta actualizada' : 'Meta creada',
+      );
     },
   });
 }
@@ -125,8 +126,7 @@ function openContributeModal(goal) {
       if (amount <= 0) { toast('Ingresa un monto válido', { type: 'negative' }); return false; }
       const next = (goal.currentAmount || 0) + amount;
       const status = next >= (goal.targetAmount || 0) ? 'completed' : goal.status;
-      try { await dataService.update('goals', goal.id, { currentAmount: next, status }); toast('Aporte registrado'); }
-      catch (e) { toast('Error al aportar', { type: 'negative' }); return false; }
+      return guardedSave(() => dataService.update('goals', goal.id, { currentAmount: next, status }), 'Aporte registrado', 'Error al aportar');
     },
   });
 }
@@ -175,7 +175,7 @@ function goalCard(g, cur, monthlySavings) {
       el('div', { class: 'row__actions' }, [
         el('button', { class: 'icon-btn', 'aria-label': 'Aportar', title: 'Aportar', on: { click: () => openContributeModal(g) }, html: icon('plus') }),
         el('button', { class: 'icon-btn', 'aria-label': 'Editar', title: 'Editar', on: { click: () => openGoalModal({ goal: g, mode: 'edit' }) }, html: icon('edit') }),
-        el('button', { class: 'icon-btn icon-btn--danger', 'aria-label': 'Eliminar', title: 'Eliminar', on: { click: () => confirmDialog({ title: 'Eliminar meta', message: `¿Eliminar "${g.name}"?`, onConfirm: async () => { try { await dataService.remove('goals', g.id); toast('Meta eliminada'); } catch (e) { toast('Error', { type: 'negative' }); } } }) }, html: icon('trash') }),
+        el('button', { class: 'icon-btn icon-btn--danger', 'aria-label': 'Eliminar', title: 'Eliminar', on: { click: () => confirmDialog({ title: 'Eliminar meta', message: `¿Eliminar "${g.name}"?`, onConfirm: () => guardedOp(() => dataService.remove('goals', g.id), 'Meta eliminada') }) }, html: icon('trash') }),
       ]),
     ]),
     el('div', { class: 'mt-4' }, [ProgressBar(st.pct, done ? '' : 'gold')]),

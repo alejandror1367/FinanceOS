@@ -21,20 +21,6 @@ import { newId } from '../utils/id.js';
 
 const SEED_FLAG = 'seed:v1';
 
-// Acciones de escritura del backend por colección.
-const WRITE = {
-  accounts:     { create: 'createAccount',     update: 'updateAccount',     remove: 'deleteAccount' },
-  transactions: { create: 'createTransaction', update: 'updateTransaction', remove: 'deleteTransaction' },
-  categories:   { create: 'createCategory',    update: 'updateCategory',    remove: 'deleteCategory' },
-  budgets:      { create: 'createBudget',      update: 'updateBudget',      remove: 'deleteBudget' },
-  goals:        { create: 'createGoal',        update: 'updateGoal',        remove: 'deleteGoal' },
-  investments:  { create: 'createInvestment',  update: 'updateInvestment',  remove: 'deleteInvestment' },
-  assets:       { create: 'createAsset',       update: 'updateAsset',       remove: 'deleteAsset' },
-  liabilities:  { create: 'createLiability',   update: 'updateLiability',   remove: 'deleteLiability' },
-  recurring:    { create: 'createRecurring',   update: 'updateRecurring',   remove: 'deleteRecurring' },
-  journal:      { create: 'createJournal',     update: 'updateJournal',     remove: 'deleteJournal' },
-};
-
 function stamp(record) {
   const ts = new Date().toISOString();
   return { createdAt: ts, updatedAt: ts, isDeleted: false, ...record };
@@ -232,7 +218,7 @@ export const dataService = {
     const record = stamp({ id: data.id || newId(), ...data });
     // TD-14: el dato y su operación de cola se escriben en UNA transacción atómica,
     // para que nunca quede un registro local sin su op de sync (o viceversa).
-    const op = syncQueue.makeRecord({ action: WRITE[coll].create, entity: cfg.entity, entityId: record.id, data: record });
+    const op = syncQueue.makeRecord({ action: ENTITIES[coll].create, entity: cfg.entity, entityId: record.id, data: record });
     await db.transact([cfg.store, 'syncQueue'], 'readwrite', (s) => {
       s[cfg.store].put(record);
       s.syncQueue.put(op);
@@ -249,7 +235,7 @@ export const dataService = {
     const current = await db.get(cfg.store, id);
     if (coll === 'transactions' && current) await this._adjustAccountBalances(current, -1);
     const record = { ...(current || { id }), ...patch, id, updatedAt: new Date().toISOString() };
-    const op = syncQueue.makeRecord({ action: WRITE[coll].update, entity: cfg.entity, entityId: id, data: { id, ...patch } });
+    const op = syncQueue.makeRecord({ action: ENTITIES[coll].update, entity: cfg.entity, entityId: id, data: { id, ...patch } });
     await db.transact([cfg.store, 'syncQueue'], 'readwrite', (s) => {   // TD-14: atómico
       s[cfg.store].put(record);
       s.syncQueue.put(op);
@@ -264,7 +250,7 @@ export const dataService = {
   async remove(coll, id) {
     const cfg = ENTITIES[coll];
     const existing = coll === 'transactions' ? await db.get(cfg.store, id) : null;
-    const op = syncQueue.makeRecord({ action: WRITE[coll].remove, entity: cfg.entity, entityId: id, data: { id } });
+    const op = syncQueue.makeRecord({ action: ENTITIES[coll].remove, entity: cfg.entity, entityId: id, data: { id } });
     await db.transact([cfg.store, 'syncQueue'], 'readwrite', (s) => {   // TD-14: atómico
       s[cfg.store].delete(id); // optimista: fuera de la caché local
       s.syncQueue.put(op);

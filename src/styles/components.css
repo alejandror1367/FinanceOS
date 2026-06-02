@@ -35,15 +35,13 @@
 .kpi__value--md { font-size: var(--fs-h2); }
 .kpi__foot { display: flex; align-items: center; gap: var(--space-2); font-size: var(--fs-caption); }
 
-/* Variantes de color de KPI icon */
-.kpi--accent  .kpi__icon { background: var(--accent-bg);   color: var(--accent); }
-.kpi--emerald .kpi__icon { background: var(--positive-bg); color: var(--positive); }
-.kpi--positive .kpi__icon { background: var(--positive-bg); color: var(--positive); }
-.kpi--gold    .kpi__icon { background: var(--gold-bg);     color: var(--gold); }
-.kpi--info    .kpi__icon { background: var(--info-bg);     color: var(--info); }
-.kpi--warning .kpi__icon { background: var(--warning-bg);  color: var(--warning); }
+/* Variantes de color de KPI icon — TD-30: kpi--emerald alias de kpi--positive; kpi--info alias de kpi--accent */
+.kpi--accent   .kpi__icon, .kpi--info    .kpi__icon { background: var(--accent-bg);   color: var(--accent); }
+.kpi--positive .kpi__icon, .kpi--emerald .kpi__icon { background: var(--positive-bg); color: var(--positive); }
+.kpi--gold     .kpi__icon { background: var(--gold-bg);     color: var(--gold); }
+.kpi--warning  .kpi__icon { background: var(--warning-bg);  color: var(--warning); }
 .kpi--negative .kpi__icon { background: var(--negative-bg); color: var(--negative); }
-.kpi--neutral .kpi__icon { background: var(--neutral-bg);  color: var(--neutral); }
+.kpi--neutral  .kpi__icon { background: var(--neutral-bg);  color: var(--neutral); }
 
 /* KPI héroe — Patrimonio Neto destacado */
 .kpi--hero {
@@ -279,11 +277,17 @@ select.input { appearance: none; cursor: pointer;
   .table tr:hover .row__actions,
   .card:hover .row__actions { opacity: 1; }
 }
+/* TD-29: sistema unificado de botones icono.
+   .btn--icon  (38px) → acciones de toolbar/cabecera (via Button component).
+   .icon-btn   (32px) → acciones inline en filas/tarjetas (más denso, fuera del toolbar).
+   Comparten: foco, transición y estados hover/danger. */
 .icon-btn {
   width: 32px; height: 32px; display: grid; place-items: center; border-radius: var(--radius-xs);
   color: var(--text-tertiary); transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+  border: 1px solid transparent;
 }
 .icon-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
+.icon-btn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
 .icon-btn--danger:hover { background: var(--negative-bg); color: var(--negative); }
 .icon-btn svg { width: 16px; height: 16px; }
 /* TD-18: áreas táctiles WCAG 2.5.8 — mínimo 24×24 CSS px, con padding para 44×44 hit area */

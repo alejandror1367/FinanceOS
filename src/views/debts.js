@@ -14,6 +14,7 @@ import { openLiabilityModal, LIABILITY_TYPE_LIST } from './networth.js';
 import { openTxModal } from './transactions.js';
 import { openAccountModal } from './accounts.js';
 import { toast } from '../services/toast.js';
+import { guardedOp, guardedSave } from '../components/crud.js';
 
 const pct = (n) => `${(Number(n) || 0).toFixed(1).replace(/\.0$/, '')}%`;
 
@@ -181,7 +182,7 @@ function openLiabilityAbono(d) {
     onSubmit: async () => {
       const amount = Number(amountEl.value) || 0;
       if (amount <= 0) { toast('El monto debe ser mayor a cero', { type: 'negative' }); return false; }
-      try {
+      return guardedSave(async () => {
         const acctId = acctEl.value;
         if (acctId) {
           const cat = resolveDebtCategory(s);
@@ -194,8 +195,7 @@ function openLiabilityAbono(d) {
         }
         const newBalance = Math.max(0, (d.raw.balance || 0) - amount);
         await dataService.update('liabilities', d.id, { balance: newBalance });
-        toast('Abono registrado');
-      } catch (e) { toast('Error al registrar el abono', { type: 'negative' }); return false; }
+      }, 'Abono registrado', 'Error al registrar el abono');
     },
   });
 }
@@ -278,7 +278,7 @@ function debtRow(d, rank, cur) {
   if (!isCard) {
     actions.push(el('button', {
       class: 'icon-btn icon-btn--danger', 'aria-label': 'Eliminar', title: 'Eliminar',
-      on: { click: () => confirmDialog({ title: 'Eliminar deuda', message: `¿Eliminar "${d.name}"?`, onConfirm: async () => { try { await dataService.remove('liabilities', d.id); toast('Deuda eliminada'); } catch (e) { toast('Error', { type: 'negative' }); } } }) },
+      on: { click: () => confirmDialog({ title: 'Eliminar deuda', message: `¿Eliminar "${d.name}"?`, onConfirm: () => guardedOp(() => dataService.remove('liabilities', d.id), 'Deuda eliminada') }) },
       html: icon('trash'),
     }));
   }

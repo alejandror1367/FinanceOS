@@ -10,6 +10,7 @@ import { Card, Badge, EmptyState, Button } from '../components/ui.js';
 import { openModal, confirmDialog } from '../components/modal.js';
 import { field, numberInput, textarea, select, segmented } from '../components/forms.js';
 import { toast } from '../services/toast.js';
+import { guardedOp, guardedSave } from '../components/crud.js';
 
 const FREQ = [
   { value: 'daily', label: 'Diaria' },
@@ -88,10 +89,10 @@ function openRecurringModal({ item = {}, mode = 'create' }) {
       if (!data.nextRunDate) { toast('Indica la próxima ejecución', { type: 'negative' }); return false; }
       if (data.type !== 'transfer' && !data.categoryId) { toast('Selecciona categoría', { type: 'negative' }); return false; }
       if (data.type === 'transfer' && (!data.toAccountId || data.toAccountId === data.accountId)) { toast('Cuentas destino inválida', { type: 'negative' }); return false; }
-      try {
-        if (mode === 'edit') { await dataService.update('recurring', item.id, data); toast('Recurrente actualizado'); }
-        else { await dataService.create('recurring', data); toast('Recurrente creado'); }
-      } catch (e) { toast('Error al guardar', { type: 'negative' }); return false; }
+      return guardedSave(
+        () => mode === 'edit' ? dataService.update('recurring', item.id, data) : dataService.create('recurring', data),
+        mode === 'edit' ? 'Recurrente actualizado' : 'Recurrente creado',
+      );
     },
   });
 }
@@ -115,7 +116,7 @@ export function renderRecurring() {
       el('div', { class: `row__amount tabular ${isIncome ? 'text-positive' : r.type === 'transfer' ? '' : 'text-negative'}`, text: `${sign}${formatMoney(r.amount, r.currency || cur)}` }),
       el('div', { class: 'row__actions' }, [
         el('button', { class: 'icon-btn', 'aria-label': 'Editar', title: 'Editar', on: { click: () => openRecurringModal({ item: r, mode: 'edit' }) }, html: icon('edit') }),
-        el('button', { class: 'icon-btn icon-btn--danger', 'aria-label': 'Eliminar', title: 'Eliminar', on: { click: () => confirmDialog({ title: 'Eliminar recurrente', message: `¿Eliminar "${r.description || 'este recurrente'}"?`, onConfirm: async () => { try { await dataService.remove('recurring', r.id); toast('Eliminado'); } catch (e) { toast('Error', { type: 'negative' }); } } }) }, html: icon('trash') }),
+        el('button', { class: 'icon-btn icon-btn--danger', 'aria-label': 'Eliminar', title: 'Eliminar', on: { click: () => confirmDialog({ title: 'Eliminar recurrente', message: `¿Eliminar "${r.description || 'este recurrente'}"?`, onConfirm: () => guardedOp(() => dataService.remove('recurring', r.id), 'Eliminado') }) }, html: icon('trash') }),
       ]),
     ]);
   });

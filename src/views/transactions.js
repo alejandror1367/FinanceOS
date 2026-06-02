@@ -10,6 +10,7 @@ import { Button, EmptyState } from '../components/ui.js';
 import { openModal, confirmDialog } from '../components/modal.js';
 import { field, textInput, numberInput, textarea, select, segmented } from '../components/forms.js';
 import { toast } from '../services/toast.js';
+import { guardedOp, guardedSave } from '../components/crud.js';
 
 // Estado de filtro a nivel de módulo (persiste entre re-renders).
 function currentMonth() { return new Date().toISOString().slice(0, 7); }
@@ -105,10 +106,10 @@ export function openTxModal({ tx = {}, mode = 'create' }) {
       const data = formCtl.getData();
       const err = validateTx(data);
       if (err) { toast(err, { type: 'negative' }); return false; }
-      try {
-        if (mode === 'edit') { await dataService.update('transactions', tx.id, data); toast('Transacción actualizada'); }
-        else { await dataService.create('transactions', data); toast('Transacción creada'); }
-      } catch (e) { toast('Error al guardar', { type: 'negative' }); return false; }
+      return guardedSave(
+        () => mode === 'edit' ? dataService.update('transactions', tx.id, data) : dataService.create('transactions', data),
+        mode === 'edit' ? 'Transacción actualizada' : 'Transacción creada',
+      );
     },
   });
 }
@@ -211,7 +212,7 @@ function txRow(t, m, cur) {
         class: 'icon-btn icon-btn--danger', 'aria-label': 'Eliminar', title: 'Eliminar',
         on: { click: () => confirmDialog({
           title: 'Eliminar transacción', message: '¿Eliminar esta transacción?',
-          onConfirm: async () => { try { await dataService.remove('transactions', t.id); toast('Transacción eliminada'); } catch (e) { toast('Error al eliminar', { type: 'negative' }); } },
+          onConfirm: () => guardedOp(() => dataService.remove('transactions', t.id), 'Transacción eliminada', 'Error al eliminar'),
         }) },
         html: icon('trash'),
       }),

@@ -11,6 +11,7 @@ import { Button, Badge, EmptyState, KpiCard } from '../components/ui.js';
 import { openModal, confirmDialog } from '../components/modal.js';
 import { field, textInput, numberInput, select } from '../components/forms.js';
 import { toast } from '../services/toast.js';
+import { guardedOp, guardedSave } from '../components/crud.js';
 
 const TYPES = [
   { value: 'cash',           label: 'Efectivo',          icon: 'wallet' },
@@ -141,10 +142,10 @@ export function openAccountModal(existing, { defaults = null } = {}) {
         data.totalDue     = Number(get('totalDue')?.value)     || 0;
       }
       if (!data.name) { toast('El nombre es obligatorio', { type: 'negative' }); return false; }
-      try {
-        if (existing) { await dataService.update('accounts', existing.id, data); toast('Cuenta actualizada'); }
-        else          { await dataService.create('accounts', data); toast('Cuenta creada'); }
-      } catch (e) { toast('Error al guardar', { type: 'negative' }); return false; }
+      return guardedSave(
+        () => existing ? dataService.update('accounts', existing.id, data) : dataService.create('accounts', data),
+        existing ? 'Cuenta actualizada' : 'Cuenta creada',
+      );
     },
   });
 }
@@ -177,18 +178,12 @@ function accountRow(a) {
         on: { click: () => confirmDialog({
           title: 'Archivar cuenta',
           message: `¿Archivar "${a.name}"? Sus transacciones se conservan.`,
-          onConfirm: async () => {
-            try { await dataService.update('accounts', a.id, { isArchived: true }); toast('Cuenta archivada'); }
-            catch (e) { toast('Error al archivar', { type: 'negative' }); }
-          },
+          onConfirm: () => guardedOp(() => dataService.update('accounts', a.id, { isArchived: true }), 'Cuenta archivada', 'Error al archivar'),
         }) }, html: icon('archive') }),
       el('button', { class: 'icon-btn icon-btn--danger', 'aria-label': 'Eliminar', title: 'Eliminar',
         on: { click: () => confirmDialog({
           title: 'Eliminar cuenta', message: `¿Eliminar "${a.name}"? Esta acción es permanente.`,
-          onConfirm: async () => {
-            try { await dataService.remove('accounts', a.id); toast('Cuenta eliminada'); }
-            catch (e) { toast('Error', { type: 'negative' }); }
-          },
+          onConfirm: () => guardedOp(() => dataService.remove('accounts', a.id), 'Cuenta eliminada'),
         }) }, html: icon('trash') }),
     ]),
   ]);

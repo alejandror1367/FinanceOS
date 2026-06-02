@@ -10,6 +10,7 @@ import { Card, Badge, EmptyState, Button } from '../components/ui.js';
 import { openModal, confirmDialog } from '../components/modal.js';
 import { field, textInput, textarea, select } from '../components/forms.js';
 import { toast } from '../services/toast.js';
+import { guardedOp, guardedSave } from '../components/crud.js';
 
 const CATEGORIES = [
   { value: 'reflection', label: 'Reflexión', icon: 'journal', variant: 'info' },
@@ -37,10 +38,10 @@ function openEntryModal({ entry = {}, mode = 'create' }) {
       const g = (n) => body.querySelector(`[name="${n}"]`).value;
       const data = { category: g('category'), date: g('date'), title: g('title').trim(), content: g('content').trim() };
       if (!data.title) { toast('El título es obligatorio', { type: 'negative' }); return false; }
-      try {
-        if (mode === 'edit') { await dataService.update('journal', entry.id, data); toast('Entrada actualizada'); }
-        else { await dataService.create('journal', data); toast('Entrada creada'); }
-      } catch (e) { toast('Error al guardar', { type: 'negative' }); return false; }
+      return guardedSave(
+        () => mode === 'edit' ? dataService.update('journal', entry.id, data) : dataService.create('journal', data),
+        mode === 'edit' ? 'Entrada actualizada' : 'Entrada creada',
+      );
     },
   });
 }
@@ -58,7 +59,7 @@ function entryCard(e) {
       ]),
       el('div', { class: 'row__actions' }, [
         el('button', { class: 'icon-btn', 'aria-label': 'Editar', title: 'Editar', on: { click: () => openEntryModal({ entry: e, mode: 'edit' }) }, html: icon('edit') }),
-        el('button', { class: 'icon-btn icon-btn--danger', 'aria-label': 'Eliminar', title: 'Eliminar', on: { click: () => confirmDialog({ title: 'Eliminar entrada', message: `¿Eliminar "${e.title}"?`, onConfirm: async () => { try { await dataService.remove('journal', e.id); toast('Entrada eliminada'); } catch (err) { toast('Error', { type: 'negative' }); } } }) }, html: icon('trash') }),
+        el('button', { class: 'icon-btn icon-btn--danger', 'aria-label': 'Eliminar', title: 'Eliminar', on: { click: () => confirmDialog({ title: 'Eliminar entrada', message: `¿Eliminar "${e.title}"?`, onConfirm: () => guardedOp(() => dataService.remove('journal', e.id), 'Entrada eliminada') }) }, html: icon('trash') }),
       ]),
     ]),
     e.content ? el('p', { class: 't-body text-secondary mt-4', style: { whiteSpace: 'pre-wrap' }, text: e.content }) : null,

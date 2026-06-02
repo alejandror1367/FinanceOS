@@ -13,6 +13,7 @@ import { Donut, Legend, CHART_PALETTE } from '../components/charts.js';
 import { openModal, confirmDialog } from '../components/modal.js';
 import { field, textInput, numberInput, select } from '../components/forms.js';
 import { toast } from '../services/toast.js';
+import { guardedOp, guardedSave } from '../components/crud.js';
 
 const ASSET_CATEGORIES = [
   { value: 'real_estate', label: 'Inmueble' },
@@ -60,10 +61,10 @@ function openAssetModal({ asset = {}, mode = 'create' }) {
         value: Number(body.querySelector('[name="value"]').value) || 0,
       };
       if (!data.name) { toast('El nombre es obligatorio', { type: 'negative' }); return false; }
-      try {
-        if (mode === 'edit') { await dataService.update('assets', asset.id, data); toast('Activo actualizado'); }
-        else { await dataService.create('assets', data); toast('Activo creado'); }
-      } catch (e) { toast('Error al guardar', { type: 'negative' }); return false; }
+      return guardedSave(
+        () => mode === 'edit' ? dataService.update('assets', asset.id, data) : dataService.create('assets', data),
+        mode === 'edit' ? 'Activo actualizado' : 'Activo creado',
+      );
     },
   });
 }
@@ -97,10 +98,10 @@ export function openLiabilityModal({ liability = {}, mode = 'create' }) {
         dueDate: body.querySelector('[name="dueDate"]').value,
       };
       if (!data.name) { toast('El nombre es obligatorio', { type: 'negative' }); return false; }
-      try {
-        if (mode === 'edit') { await dataService.update('liabilities', liability.id, data); toast('Deuda actualizada'); }
-        else { await dataService.create('liabilities', data); toast('Deuda creada'); }
-      } catch (e) { toast('Error al guardar', { type: 'negative' }); return false; }
+      return guardedSave(
+        () => mode === 'edit' ? dataService.update('liabilities', liability.id, data) : dataService.create('liabilities', data),
+        mode === 'edit' ? 'Deuda actualizada' : 'Deuda creada',
+      );
     },
   });
 }
@@ -126,8 +127,7 @@ function simpleRow(iconName, title, sub, amount, cls, actions) {
 
 async function doSaveSnapshot() {
   toast('Guardando snapshot…', { type: 'info' });
-  try { await dataService.saveSnapshot(); toast('Snapshot guardado'); }
-  catch (e) { toast(e.message || 'No se pudo guardar', { type: 'negative' }); }
+  await guardedOp(() => dataService.saveSnapshot(), 'Snapshot guardado', 'No se pudo guardar');
 }
 
 export function renderNetWorth() {
@@ -196,7 +196,7 @@ export function renderNetWorth() {
       const label = (ASSET_CATEGORIES.find((c) => c.value === a.category) || {}).label || a.category;
       assetItems.push(simpleRow('home', a.name, label, formatMoney(a.value, a.currency || cur), '',
         actionButtons(() => openAssetModal({ asset: a, mode: 'edit' }),
-          () => confirmDialog({ title: 'Eliminar activo', message: `¿Eliminar "${a.name}"?`, onConfirm: async () => { try { await dataService.remove('assets', a.id); toast('Activo eliminado'); } catch (e) { toast('Error', { type: 'negative' }); } } }))));
+          () => confirmDialog({ title: 'Eliminar activo', message: `¿Eliminar "${a.name}"?`, onConfirm: () => guardedOp(() => dataService.remove('assets', a.id), 'Activo eliminado') }))));
     });
 
     const assetsCard = Card({
@@ -215,7 +215,7 @@ export function renderNetWorth() {
             const sub = `${typeLabel} · ${l.interestRate || 0}%${l.dueDate ? ' · vence ' + formatDate(l.dueDate, 'short') : ''}`;
             return simpleRow('debts', l.name, sub, formatMoney(l.balance, l.currency || cur), 'text-negative',
               actionButtons(() => openLiabilityModal({ liability: l, mode: 'edit' }),
-                () => confirmDialog({ title: 'Eliminar deuda', message: `¿Eliminar "${l.name}"?`, onConfirm: async () => { try { await dataService.remove('liabilities', l.id); toast('Deuda eliminada'); } catch (e) { toast('Error', { type: 'negative' }); } } })));
+                () => confirmDialog({ title: 'Eliminar deuda', message: `¿Eliminar "${l.name}"?`, onConfirm: () => guardedOp(() => dataService.remove('liabilities', l.id), 'Deuda eliminada') })));
           })),
           ccDebtTotal > 0 ? el('p', { class: 't-caption text-secondary', style: 'padding:var(--space-3) var(--space-4) var(--space-2);margin:0' },
             [`Tarjetas de crédito (${formatMoney(ccDebtTotal, cur)}) incluidas en el KPI Pasivos — detalle en `

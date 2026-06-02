@@ -11,6 +11,7 @@ import { KpiCard, Badge, Trend, ProgressBar, EmptyState, Button } from '../compo
 import { openModal, confirmDialog } from '../components/modal.js';
 import { field, textInput, numberInput, select, segmented } from '../components/forms.js';
 import { toast } from '../services/toast.js';
+import { guardedOp, guardedSave } from '../components/crud.js';
 import { priceService } from '../services/priceService.js';
 
 // Brokers predefinidos que aparecen como quick-create si no existen como cuenta
@@ -103,12 +104,11 @@ function openSellModal(group, livePrice) {
       const soldDate  = dateEl.value;
       if (soldPrice <= 0) { toast('Ingresa el precio de venta', { type: 'negative' }); return false; }
       if (!soldDate)      { toast('Selecciona una fecha', { type: 'negative' }); return false; }
-      try {
+      return guardedSave(async () => {
         for (const p of purchases) {
           await dataService.update('investments', p.id, { ...p, soldPrice, soldDate, soldQuantity: Number(p.quantity) || 0 });
         }
-        toast(`Venta de ${symbol || name} registrada`);
-      } catch (e) { toast('Error: ' + e.message, { type: 'negative' }); return false; }
+      }, `Venta de ${symbol || name} registrada`, 'Error al registrar');
     },
   });
 }
@@ -247,10 +247,10 @@ function openPurchaseModal({ inv = null, defaultSymbol = '', defaultType = 'etf'
       }
       if (!data.name && !data.symbol) { toast('Ingresa nombre o ticker', { type: 'negative' }); return false; }
       if (data.quantity <= 0) { toast('Cantidad o monto mayor a 0', { type: 'negative' }); return false; }
-      try {
-        if (mode === 'edit' && inv) { await dataService.update('investments', inv.id, data); toast('Actualizado'); }
-        else { await dataService.create('investments', data); toast('Compra registrada'); }
-      } catch (e) { toast('Error: ' + e.message, { type: 'negative' }); return false; }
+      return guardedSave(
+        () => mode === 'edit' && inv ? dataService.update('investments', inv.id, data) : dataService.create('investments', data),
+        mode === 'edit' ? 'Actualizado' : 'Compra registrada',
+      );
     },
   });
 }
@@ -303,7 +303,7 @@ function purchasesTable(group, livePrice) {
       on: { click: () => openPurchaseModal({ inv: p }) }, html: icon('edit') }));
     actionsTd.appendChild(el('button', { class: 'icon-btn icon-btn--danger', title: 'Eliminar',
       on: { click: () => confirmDialog({ title: 'Eliminar compra', message: `¿Eliminar compra del ${p.purchaseDate}?`,
-        onConfirm: async () => { try { await dataService.remove('investments', p.id); toast('Eliminado'); } catch(e) { toast('Error', { type: 'negative' }); } }
+        onConfirm: () => guardedOp(() => dataService.remove('investments', p.id), 'Eliminado')
       }) }, html: icon('trash') }));
     tr.appendChild(actionsTd);
     tbody.appendChild(tr);
@@ -452,14 +452,11 @@ function openDividendModal(group) {
       if (amount <= 0) { toast('Ingresa el monto', { type: 'negative' }); return false; }
       const acctId = acctEl.value;
       if (!acctId) { toast('Selecciona una cuenta', { type: 'negative' }); return false; }
-      try {
-        await dataService.create('transactions', {
-          type: 'income', amount, date: dateEl.value, accountId: acctId,
-          categoryId: catEl.value || (incomeCats[0]?.id || ''),
-          description: `Dividendo ${symbol || name}`, currency,
-        });
-        toast('Dividendo registrado como ingreso');
-      } catch (e) { toast('Error: ' + e.message, { type: 'negative' }); return false; }
+      return guardedSave(() => dataService.create('transactions', {
+        type: 'income', amount, date: dateEl.value, accountId: acctId,
+        categoryId: catEl.value || (incomeCats[0]?.id || ''),
+        description: `Dividendo ${symbol || name}`, currency,
+      }), 'Dividendo registrado como ingreso');
     },
   });
 }
@@ -497,7 +494,7 @@ export function renderInvestments() {
       priceService.update(livePrices, fxRates);
       store.set({ _priceRevision: Date.now() }); // notifica a Dashboard y Patrimonio
       toast('Precios actualizados');
-    } catch (e) { toast('Error: ' + e.message, { type: 'warning' }); }
+    } catch (e) { toast('Error al actualizar precios: ' + e.message, { type: 'warning' }); }
     finally { refreshing = false; paint(false); }
   }
 
@@ -663,12 +660,7 @@ export function renderInvestments() {
             el('button', { class: 'icon-btn icon-btn--danger', 'aria-label': 'Eliminar registros', title: 'Eliminar registros de venta',
               on: { click: () => confirmDialog({ title: 'Eliminar operación cerrada',
                 message: `¿Eliminar todos los registros de ${g.symbol || g.name}?`,
-                onConfirm: async () => {
-                  try {
-                    for (const p of g.sold) await dataService.remove('investments', p.id);
-                    toast('Registros eliminados');
-                  } catch (e) { toast('Error', { type: 'negative' }); }
-                },
+                onConfirm: () => guardedOp(async () => { for (const p of g.sold) await dataService.remove('investments', p.id); }, 'Registros eliminados'),
               }) }, html: icon('trash') }),
           ]),
         ]);

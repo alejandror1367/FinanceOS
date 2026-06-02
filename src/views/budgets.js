@@ -11,6 +11,7 @@ import { Button, Badge, KpiCard, ProgressBar, EmptyState } from '../components/u
 import { openModal, confirmDialog } from '../components/modal.js';
 import { field, numberInput, select, segmented, textInput } from '../components/forms.js';
 import { toast } from '../services/toast.js';
+import { guardedOp, guardedSave } from '../components/crud.js';
 
 const now = new Date();
 const curMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -96,10 +97,10 @@ function openBudgetModal({ budget = {}, mode = 'create' }) {
       if (!data.categoryId) { toast('Selecciona una categoría', { type: 'negative' }); return false; }
       if (!data.amount || data.amount <= 0) { toast('El monto debe ser mayor a cero', { type: 'negative' }); return false; }
       if (!data.periodKey) { toast('Indica el periodo', { type: 'negative' }); return false; }
-      try {
-        if (mode === 'edit') { await dataService.update('budgets', budget.id, data); toast('Presupuesto actualizado'); }
-        else { await dataService.create('budgets', data); toast('Presupuesto creado'); }
-      } catch (e) { toast('Error al guardar', { type: 'negative' }); return false; }
+      return guardedSave(
+        () => mode === 'edit' ? dataService.update('budgets', budget.id, data) : dataService.create('budgets', data),
+        mode === 'edit' ? 'Presupuesto actualizado' : 'Presupuesto creado',
+      );
     },
   });
 }
@@ -125,7 +126,7 @@ function budgetCard(s, b, catMap, cur) {
         el('button', { class: 'icon-btn', 'aria-label': 'Editar', title: 'Editar', on: { click: () => openBudgetModal({ budget: b, mode: 'edit' }) }, html: icon('edit') }),
         el('button', {
           class: 'icon-btn icon-btn--danger', 'aria-label': 'Eliminar', title: 'Eliminar',
-          on: { click: () => confirmDialog({ title: 'Eliminar presupuesto', message: '¿Eliminar este presupuesto?', onConfirm: async () => { try { await dataService.remove('budgets', b.id); toast('Presupuesto eliminado'); } catch (e) { toast('Error al eliminar', { type: 'negative' }); } } }) },
+          on: { click: () => confirmDialog({ title: 'Eliminar presupuesto', message: '¿Eliminar este presupuesto?', onConfirm: () => guardedOp(() => dataService.remove('budgets', b.id), 'Presupuesto eliminado', 'Error al eliminar') }) },
           html: icon('trash'),
         }),
       ]),
