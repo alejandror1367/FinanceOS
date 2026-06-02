@@ -282,6 +282,104 @@ export const selectors = {
       .sort((a, b) => b.amount - a.amount);
   },
 
+  // ---- Vista Hoy: copiloto diario ----
+
+  // Semáforo de salud del día: green / yellow / red + razones legibles.
+  dailyHealth(s) {
+    const todayKey = new Date().toISOString().slice(0, 10);
+    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowKey = tomorrow.toISOString().slice(0, 10);
+    let status = 'green';
+    const reasons = [];
+
+    const urgent = (s.recurring || []).filter(
+      (r) => r.isActive && r.nextRunDate && r.nextRunDate.slice(0, 10) <= tomorrowKey
+    );
+    if (urgent.length) {
+      if (status === 'green') status = 'yellow';
+      reasons.push(`${urgent.length} pago${urgent.length > 1 ? 's' : ''} vence${urgent.length === 1 ? '' : 'n'} hoy/mañana`);
+    }
+
+    const now = new Date();
+    const curMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    for (const b of (s.budgets || [])) {
+      if (b.period !== 'monthly' || normPeriodKey(b.periodKey, 7) !== curMonthKey) continue;
+      const stats = selectors.budgetStats(s, b);
+      if (stats.pct >= 100) { status = 'red'; reasons.push(`${b.name || 'Presupuesto'} superado`); }
+      else if (stats.pct >= 80 && status !== 'red') { status = 'yellow'; reasons.push(`${b.name || 'Presupuesto'} al ${stats.pct.toFixed(0)}%`); }
+    }
+
+    const monthExp = selectors.monthlyExpense(s);
+    const liq = selectors.totalLiquidity(s);
+    if (monthExp > 0 && liq < monthExp * 0.5) { status = 'red'; reasons.push('Liquidez crítica'); }
+    else if (monthExp > 0 && liq < monthExp && status !== 'red') { status = 'yellow'; reasons.push('Liquidez baja'); }
+
+    return { status, reasons };
+  },
+
+  // Items accionables del día: pagos urgentes, presupuestos al límite, metas activas.
+  actionItems(s) {
+    const items = [];
+    const todayKey = new Date().toISOString().slice(0, 10);
+    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowKey = tomorrow.toISOString().slice(0, 10);
+
+    (s.recurring || [])
+      .filter((r) => r.isActive && r.nextRunDate && r.nextRunDate.slice(0, 10) <= tomorrowKey)
+      .sort((a, b) => a.nextRunDate.localeCompare(b.nextRunDate))
+      .forEach((r) => items.push({
+        type: 'payment', id: r.id,
+        title: r.description,
+        meta: r.nextRunDate.slice(0, 10) <= todayKey ? 'Vence hoy' : 'Vence mañana',
+        amount: r.amount, currency: r.currency, raw: r,
+      }));
+
+    const now = new Date();
+    const curMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    (s.budgets || [])
+      .filter((b) => b.period === 'monthly' && normPeriodKey(b.periodKey, 7) === curMonthKey)
+      .map((b) => ({ b, stats: selectors.budgetStats(s, b) }))
+      .filter(({ stats }) => stats.pct >= 80)
+      .sort((a, b) => b.stats.pct - a.stats.pct)
+      .forEach(({ b, stats }) => items.push({
+        type: 'budget', id: b.id, title: b.name,
+        meta: `${stats.pct.toFixed(0)}% del presupuesto`, pct: stats.pct, raw: b,
+      }));
+
+    (s.goals || [])
+      .filter((g) => g.status === 'active' && (g.targetAmount || 0) > (g.currentAmount || 0))
+      .sort((a, b) => new Date(a.targetDate || '2999') - new Date(b.targetDate || '2999'))
+      .slice(0, 2)
+      .forEach((g) => {
+        const pct = g.targetAmount ? Math.min(100, ((g.currentAmount || 0) / g.targetAmount) * 100) : 0;
+        items.push({
+          type: 'goal', id: g.id, title: g.name,
+          meta: `${pct.toFixed(0)}% completado`,
+          amount: (g.targetAmount || 0) - (g.currentAmount || 0),
+          currency: g.currency, raw: g,
+        });
+      });
+
+    return items;
+  },
+
+  // Progreso del mes: días transcurridos, gasto actual vs presupuesto total mensual.
+  monthProgress(s) {
+    const now = new Date();
+    const day = now.getDate();
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const curMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const totalBudget = (s.budgets || [])
+      .filter((b) => b.period === 'monthly' && normPeriodKey(b.periodKey, 7) === curMonthKey)
+      .reduce((sum, b) => sum + (b.amount || 0), 0);
+    return {
+      day, daysInMonth,
+      pct: (day / daysInMonth) * 100,
+      monthlyExpense: selectors.monthlyExpense(s),
+      totalBudget,
+    };
+  },
+
   // Detecta si hay entidades con divisas distintas a baseCurrency (TD-02).
   // Úsalo para mostrar un aviso en la UI antes de implementar conversión FX.
   hasMixedCurrencies(s) {

@@ -440,6 +440,15 @@ body.modal-open { overflow: hidden; }
 .mt-2 { margin-top: var(--space-2); }
 .mt-4 { margin-top: var(--space-4); }
 
+/* Vista Hoy — semáforo, insight y progreso del mes */
+.today-health-body { display: flex; flex-direction: column; gap: var(--space-3); }
+.today-health-icon { width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.today-health-icon svg { width: 16px; height: 16px; }
+.today-insight { font-size: var(--fs-caption); color: var(--text-secondary); line-height: var(--lh-snug); margin: 0; }
+.today-progress { display: flex; flex-direction: column; gap: var(--space-1); }
+.today-progress-label { color: var(--text-tertiary); }
+.btn--sm { font-size: var(--fs-caption); padding: var(--space-1) var(--space-2); height: auto; }
+
 /* Transacciones — encabezado de grupo por fecha */
 .tx-date-header { display: flex; align-items: center; justify-content: space-between; padding: var(--space-3) var(--space-2) var(--space-1); margin-top: var(--space-2); }
 .tx-date-header:first-child { margin-top: 0; padding-top: var(--space-1); }
