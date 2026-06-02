@@ -71,6 +71,15 @@ async function request(method, action, payload) {
 
 export const apiClient = {
   isConfigured,
-  get: (action, params) => request('GET', action, params),
+  // Retry automático en GET para absorber ERR_ABORTED del cold start de Apps Script
+  // (se manifiesta como TypeError: "Failed to fetch", no como AbortError de nuestro timeout).
+  get: async (action, params) => {
+    try {
+      return await request('GET', action, params);
+    } catch (err) {
+      if (err instanceof TypeError) return request('GET', action, params);
+      throw err;
+    }
+  },
   post: (action, data) => request('POST', action, data),
 };
