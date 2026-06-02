@@ -46,18 +46,19 @@ HECHO EN LA SESIÓN ANTERIOR (2026-06-02), todo commiteado y pusheado, HEAD = 13
 PENDIENTE (no abordado aún):
 - VERIFICAR EN VIVO (requiere login OAuth) que Presupuestos ahora muestra "May 2026"
   y consumido > $0. Hoy solo se verificó el código servido, no con datos reales tras login.
-- ✅ BACKEND: Code.gs + Reports.gs desplegados (Nueva versión) y confirmado en vivo
-  (la carga hace 1 sola petición getBootstrap, TD-15).
-- ⚠️ FALTA confirmar/desplegar los .gs del modelo de saldos (Accounts, Transactions,
-  Auth, Migration → TD-01) y luego Ajustes → Recalcular saldos. Hasta entonces las
-  transacciones no mueven saldos en Sheets.
-- ⚠️ Confirmar que el bypass de auditoría fue eliminado de Auth.gs en Apps Script.
+- ✅ BACKEND desplegado (Nueva versión): Code.gs + Reports.gs (getBootstrap/TD-15,
+  confirmado en vivo: 1 sola petición) y el modelo de saldos (Accounts/Transactions/
+  Migration → TD-01). El código del repo está verificado y sincronizado con GitHub.
+- ◻️ Opcional: Ajustes → Recalcular saldos si quieres que los saldos se recalculen
+  desde 0 sumando las transacciones (solo con histórico completo).
+- ✅ Auth.gs sin bypass de auth (verificado en el repo); confirmar que el editor de
+  Apps Script tiene esta misma versión limpia.
 - ✅ BUG-C1 (crítico) RESUELTO (`23009b0`+`98f8c19`): guard anti-signOut + warm-up + retry,
   y TD-15 (getBootstrap) cura la raíz. Happy-path CONFIRMADO en producción (1 getBootstrap).
 - BUG-A4 (alto): Deudas — KPI "Tarjetas de crédito" en $0 (consolidar credit_card + Liabilities).
-- ✅ TD-15 (getBootstrap, 12→1 request) HECHO (`98f8c19`); ✅ TD-16 (memoizar openById)
-  ya estaba HECHO (`47f91e1`, solo faltaba marcarlo). P1 restante: TD-13, TD-14, TD-10, TD-17, TD-18.
-  (Nota: `47f91e1` también dice corregir TD-17 — sin verificar esta sesión.)
+- ✅ TD-15 (getBootstrap, 12→1) HECHO (`98f8c19`); ✅ TD-16 (memoizar openById) y ✅ TD-17
+  (foco accesible) ya estaban HECHOS (`47f91e1`), verificados y marcados. P1 restante:
+  TD-13, TD-14, TD-10, TD-18.
 - Bugs medios: BUG-M1 (auto-load precios), BUG-M2 (purgar snapshots de test en Sheets),
   BUG-M3 (FX rate), BUG-M4 (dashboard usa snapshots reales).
 

@@ -62,7 +62,7 @@ La deuda se concentra en **tres temas de fondo**: (1) **modelo contable** (el le
 | TD-14 | **No-atomicidad entre escritura local y encolado** (`db.put` + `enqueue` separados) | F-9 | Si el proceso muere entre ambas, dato local **sin** sync → divergencia permanente | M | Transacción IndexedDB conjunta (store de datos + cola) o *outbox* atómico. |
 | TD-15 ✅ | **Carga de app = 12 requests** (sin `getBootstrap`) | GAS-C2 | Latencia alta y ×12 invocaciones por carga/refresh | M | **HECHO** (`98f8c19`): acción `getBootstrap` (`Reports.gs`) lee las 12 hojas en una ejecución; frontend `pullData()` la usa con fallback a `pullAll`. ✅ Desplegado y confirmado en producción (1 sola petición). |
 | TD-16 ✅ | **`SpreadsheetApp.openById` sin cachear** (5–8/req) | GAS-I1 | Aperturas repetidas caras por request | S | **HECHO** (`47f91e1`): `getDb_()` en `Utils.gs` memoiza el handle en `var _db`; todo acceso pasa por `getSheet_→getDb_()` → 1 `openById` por ejecución. (`Setup.gs` abre directo pero es setup manual, no per-request.) |
-| TD-17 | **Foco de input tenue** (`outline:none` + box-shadow `--accent-bg`) | I-6 / DS-I4 | Posible <3:1; foco poco visible (WCAG 2.4.11) | S | Usar `--focus-ring`/`--accent` sólido. |
+| TD-17 ✅ | **Foco de input tenue** (`outline:none` + box-shadow `--accent-bg`) | I-6 / DS-I4 | Posible <3:1; foco poco visible (WCAG 2.4.11) | S | **HECHO** (`47f91e1`): `base.css` `:focus-visible{outline:2px solid var(--focus-ring)}`; `.input:focus` usa borde `--accent` sólido + ring `--focus-ring` (0.45–0.55), ya no `--accent-bg`. |
 | TD-18 | **Touch targets densos** (`.icon-btn` 32px, gap 2px, 3 acciones/fila) | DS-I3 | Riesgo de *mis-tap* en móvil sobre acciones destructivas (WCAG 2.5.8) | S | Aumentar área/separación en táctil. |
 
 ---
