@@ -23,7 +23,7 @@ Centraliza: patrimonio neto, presupuestos, flujo de caja, inversiones, metas, de
 | PWA instalada en celular | ✅ Funcionando |
 | Google OAuth | ✅ Activo (`patitosalmir@gmail.com` + `alejandrorr1367@gmail.com`) |
 | Backend Apps Script | ✅ Desplegado y verificado en producción |
-| Tests financieros | ✅ 33/33 pasando |
+| Tests financieros | ✅ 35/35 pasando |
 | Modelo híbrido de saldos (TD-01) | ✅ Código + backend desplegados y verificados |
 | Deuda técnica P0 | ✅ Toda resuelta |
 | Deuda técnica P1 | 🟡 En progreso — hechos TD-13/14/15/16/17; pendientes TD-10, TD-18 |
@@ -127,7 +127,7 @@ FinanceOS/
 │   ├── Journal.gs          # CRUD diario financiero
 │   └── appsscript.json     # Runtime V8
 ├── tests/
-│   └── selectors.test.js   # 33 tests financieros (node --test)
+│   └── selectors.test.js   # 35 tests financieros (node --test)
 ├── docs/
 │   ├── PRD.md · Architecture.md · Database.md · Roadmap.md
 │   ├── Audit.md            # Auditoría de arquitectura
@@ -494,7 +494,7 @@ La app ya tiene `config.js` con las URLs reales commiteadas. Solo necesitas:
 ### En el nuevo equipo (una sola vez)
 - [ ] `git clone https://github.com/alejandror1367/FinanceOS.git`
 - [ ] `git config core.hooksPath .githooks` (activa auto-bump del SW)
-- [ ] `node --test tests/selectors.test.js` → debe dar 33/33 ✅
+- [ ] `node --test tests/selectors.test.js` → debe dar 35/35 ✅
 - [ ] `npx serve .` → verificar que carga en `localhost:3000`
 - [ ] Leer `CLAUDE.md` (reglas absolutas), `docs/TechnicalDebt.md` (trabajo pendiente)
 

@@ -18,7 +18,7 @@ LEE PRIMERO (en este orden):
 
 STACK (no romper invariantes): HTML+CSS+JS ES Modules sin build · Apps Script ·
 Google Sheets (13 hojas) · GitHub Pages · OAuth de Google (no token) · PWA offline-first.
-Tests: node --test tests/selectors.test.js (33/33, deben pasar). Local: npx serve . → :3000.
+Tests: node --test tests/selectors.test.js (35/35, deben pasar). Local: npx serve . → :3000.
 
 HECHO EN LA SESIÓN ANTERIOR (2026-06-02), HEAD = bccc956:
 1. TD-13 + TD-14 (bccc956), P1 de fiabilidad de sync:
@@ -49,8 +49,10 @@ ENTORNO DE DESARROLLO:
 - Node v24. Hook pre-commit activo (auto-bump del SW). git config core.hooksPath .githooks.
 
 PENDIENTE / SIGUIENTE:
-- VERIFICAR EN VIVO (requiere login OAuth) que Presupuestos muestra el período legible
-  (p. ej. "May 2026") y consumido > $0. Se verificó el código servido, no con datos reales.
+- Presupuestos (BUG-A1/BUG-C2): la LÓGICA ya está cubierta por tests de regresión
+  (periodKey como Date de Sheets → consumido > $0; periodLabel '2026-05' → "May 2026").
+  Falta solo el happy-path AUTENTICADO REAL tras login OAuth (lo confirma Alejo en vivo):
+  que con datos reales se vea el período legible y consumido > $0.
 - TD-10: dead-letter para errores de negocio en syncEngine.flush() (no bloquear la cola).
 - TD-18: aumentar área/separación de .icon-btn en táctil.
 - Bugs medios: BUG-M1 (auto-load precios), BUG-M2 (purgar snapshots de test en Sheets),
