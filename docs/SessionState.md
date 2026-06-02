@@ -1,5 +1,12 @@
 # FinanceOS — Estado del proyecto
 
+> ⚠️ **SUPERADO — documento histórico (snapshot 2026-05-31).** La fuente de verdad del
+> estado actual es **`PROJECT_HANDOFF.md`** (2026-06-02 en adelante). Este archivo es
+> anterior a la migración a **Google OAuth** (TD-09): sus referencias a un "token
+> público" / `FINANCEOS_API_TOKEN` como mecanismo de auth **ya no aplican** — la
+> autenticación es por OAuth restringida a `allowedEmails`. Se conserva como registro
+> del estado en esa fecha.
+
 _Última actualización: 2026-05-31_
 
 Resumen del estado actual del proyecto FinanceOS (sistema operativo financiero
