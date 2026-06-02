@@ -1,7 +1,8 @@
 # Auditoría de Producto — Dashboard · Hoy · Transacciones · Cuentas
 **Fecha:** 2026-06-02 | **Auditor:** Claude Sonnet 4.6 (Playwright MCP)  
 **Versión auditada:** v0.2.14 | **Commit base:** `5d73d5e`  
-**Sprint 1 ya aplicado:** commit `0d74646` — v0.2.15
+**Sprint 1 ya aplicado:** commit `0d74646` — v0.2.15  
+**Sprint 2 ya aplicado:** commit `55f024a` — v0.2.16
 
 > Auditoría de 7 fases realizada como Staff Frontend + QA + Product Designer + Financial Systems Architect.
 > Los fixes del Sprint 1 ya están en `main`. Los sprints 2–5 son la cola de trabajo.
@@ -16,12 +17,12 @@
 | F-C2 | Trend patrimonio hardcodeado a +4.2% | 1 | ✅ Resuelto `0d74646` |
 | F-C3 | "Mayo 2026" hardcodeado en KPI Ingresos | 1 | ✅ Resuelto `0d74646` |
 | F-C4 | Inversiones muestra −100% cuando `value=0` | 1 | ✅ Resuelto `0d74646` |
-| TX-1 | Agrupación por fecha + cabecera en Transacciones | 2 | ⏳ Pendiente |
-| TX-2 | Filtro de mes en Transacciones | 2 | ⏳ Pendiente |
-| TX-3 | Filtro de categoría en Transacciones | 2 | ⏳ Pendiente |
-| TX-4 | Totales en resultado de filtro | 2 | ⏳ Pendiente |
-| TX-5 | Cuenta destino visible en fila de transferencia | 2 | ⏳ Pendiente |
-| TX-6 | `accountOpts` del filtro stale (capturado al mount) | 2 | ⏳ Pendiente |
+| TX-1 | Agrupación por fecha + cabecera en Transacciones | 2 | ✅ Resuelto `55f024a` |
+| TX-2 | Filtro de mes en Transacciones | 2 | ✅ Resuelto `55f024a` |
+| TX-3 | Filtro de categoría en Transacciones | 2 | ✅ Resuelto `55f024a` |
+| TX-4 | Totales en resultado de filtro | 2 | ✅ Resuelto `55f024a` |
+| TX-5 | Cuenta destino visible en fila de transferencia | 2 | ✅ Resuelto `55f024a` |
+| TX-6 | `accountOpts` del filtro stale (capturado al mount) | 2 | ✅ Resuelto `55f024a` |
 | HOY-1 | Panel "Para hoy" con items accionables | 3 | ⏳ Pendiente |
 | HOY-2 | Señal de salud financiera del día | 3 | ⏳ Pendiente |
 | HOY-3 | Insight diario automático | 3 | ⏳ Pendiente |
@@ -289,7 +290,7 @@ const PRESETS = [
 
 ---
 
-### Sprint 2 — Transacciones completas
+### Sprint 2 — Transacciones completas ✅ COMPLETADO (`55f024a` · v0.2.16)
 
 **Objetivo:** que Transacciones sea útil para 12+ meses de historia financiera.
 

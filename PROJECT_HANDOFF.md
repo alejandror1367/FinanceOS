@@ -564,20 +564,21 @@ La app ya tiene `config.js` con las URLs reales commiteadas. Solo necesitas:
 
 ## 18. Próximos pasos recomendados
 
-> El **paso 1 es la verificación visual en vivo** (requiere reiniciar Claude Code para el
-> MCP de Playwright). El prompt completo de continuación está en **§19**.
-
 **Hecho (ya no son pendientes):** backend de saldos + `getBootstrap` desplegados y verificados;
 bypass de auditoría eliminado; auditoría funcional 2026-06-02 (`docs/Audit-Funcional-2026-06-02.md`).
 Bugs resueltos: **BUG-C1** (`23009b0`+`98f8c19`), **BUG-C2** + **BUG-A1**/TD-12 (`8d8d4d9`),
 **BUG-A3**/TD-31 (`8d8d4d9`), **BUG-A4** (`fe961a8`). Deuda P1: TD-10/11/12/13/14/15/16/17 ✅.
+**Sprint 1** (`0d74646`): bugs financieros críticos Dashboard. **Sprint 2** (`55f024a` · v0.2.16):
+Transacciones completas — agrupación fecha, filtros mes/categoría, totales, cuenta destino TX-1..TX-6.
 
 **Siguiente (en orden):**
-1. **Verificación visual en vivo** (Playwright, tras reiniciar) de **Deudas** y **Presupuestos** — ver §19.
-2. **TD-18** (único P1): touch targets de `.icon-btn` en táctil (WCAG 2.5.8).
-3. Menor: alinear `src/core/config.js` `version` (`'0.2.6'`) con el SW (`v0.2.13`) — BUG-B1 follow-up.
-4. Bugs medios BUG-M1..M4 (auto-load precios, purgar snapshots de test, FX rate, dashboard con snapshots reales).
-5. P2 (`docs/TechnicalDebt.md`): TD-19 factorías CRUD · TD-21/22 precisión monetaria ·
+1. **TD-18** (único P1): touch targets de `.icon-btn` en táctil (WCAG 2.5.8).
+2. Menor: alinear `src/core/config.js` `version` (`'0.2.6'`) con el SW (`v0.2.16`) — BUG-B1 follow-up.
+3. **Sprint 3** (Hoy como copiloto): `store.subscribe`, panel "Para hoy", semáforo de salud, insight diario — ver auditoría `docs/Audit-Dashboard-Hoy-Tx-Cuentas-2026-06-02.md`.
+4. **Sprint 4** (Cuentas como ecosistema): agrupación por tipo, KPI summary, CC en negativo/rojo, quick presets.
+5. **Sprint 5** (Dashboard premium): `store.subscribe`, score financiero, alertas inline en KPIs.
+6. Bugs medios BUG-M1..M4 (auto-load precios, purgar snapshots de test, FX rate, dashboard con snapshots reales).
+7. P2 (`docs/TechnicalDebt.md`): TD-19 factorías CRUD · TD-21/22 precisión monetaria ·
    TD-23 amortización real Snowball/Avalanche · TD-24/25/27/28 backend.
 
 ---
