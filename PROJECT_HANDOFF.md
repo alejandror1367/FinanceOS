@@ -1,5 +1,5 @@
 # PROJECT_HANDOFF.md — FinanceOS
-**Fecha de generación:** 2026-06-01  
+**Fecha de generación:** 2026-06-02 (actualizado post-auditoría)
 **Para:** nueva sesión de Claude Code en otro equipo  
 **Estado del repo:** `main` · `origin/main` · up to date
 
@@ -370,6 +370,22 @@ Los hooks `UserPromptSubmit`/`PreToolUse`/`PostToolUse` de `accessibility-agents
 
 ---
 
+## 14c. Cambios — sesión 2026-06-02 (auditoría)
+
+### Auditoría funcional completa con Playwright MCP
+- Recorridas las 15 rutas de la app (14 documentadas + `#/import` nuevo)
+- Informe completo en `docs/Audit-Funcional-2026-06-02.md`
+- Se descubrió módulo nuevo `#/import` — importación de extractos bancarios con IA (Gemini)
+- Plugin de GitHub MCP eliminado de `~/.claude/plugins/installed_plugins.json` (fallaba con HTTP 400)
+- Plugins instalados: `playwright` (scope project), `code-simplifier` (scope project)
+
+### Bypass temporal de auth (ya revertido)
+Para la auditoría se agregó un bypass temporal en `backend/Auth.gs` que aceptaba el token `financeos-audit-2026-06-02`. **Este bypass fue eliminado del repo local.** El usuario debe haber deployado la versión sin bypass a Apps Script.
+
+⚠️ Si `Auth.gs` en Apps Script todavía tiene las líneas del bypass, eliminarlas y publicar nueva versión antes de continuar desarrollo.
+
+---
+
 ## 14. Últimos cambios importantes (sesión 2026-06-01)
 
 ### Deuda técnica P0 implementada
@@ -505,17 +521,28 @@ La app ya tiene `config.js` con las URLs reales commiteadas. Solo necesitas:
 **Inmediato (antes de cualquier desarrollo):**
 1. Subir los 5 archivos .gs al backend y publicar Nueva versión
 2. Ejecutar "Recalcular saldos" desde la app
+3. ⚠️ Verificar que el bypass de auditoría fue eliminado de Auth.gs (ver §14b)
 
-**Sprint de quick wins P1 (~1 día):**
-- TD-11: Fix `syncEngine.js:84` — `state: pending > 0 ? 'pending' : 'idle'` (1 línea)
-- TD-12: Fix `sameMonth()` en `selectors.js` — usar `String(iso).slice(0,7)` (1 línea)
-- TD-16: Cachear `openById` en `Utils.gs` — `var _ss; function getDb_(){ return _ss || (_ss = SpreadsheetApp.openById(...)); }` (3 líneas)
-- TD-17: `.input:focus` — usar `--focus-ring` en lugar de `--accent-bg` (1 línea en `components.css`)
+**Auditoría funcional completada (2026-06-02):**
+Ver `docs/Audit-Funcional-2026-06-02.md` para el informe completo con bugs priorizados.
 
-**Sprint de fiabilidad P1 (~3 días):**
-- TD-10: Dead-letter en `syncEngine` para ops que fallan por error de negocio
-- TD-13: Hacer `flush()` antes de `pullAll()` en el botón "Actualizar"
-- TD-15: Acción `getBootstrap` en backend que devuelve todos los datos en 1 request
+Bugs más urgentes identificados en la auditoría:
+- **BUG-C1** (Crítico): Cold start — todos los KPIs en $0 hasta hacer click en "Actualizar"
+- **BUG-C2** (Crítico): Presupuestos — fecha del período renderiza como `Date.toString()` crudo
+- **BUG-A1** (Alto): Presupuestos — consumido siempre $0 (confirma TD-12, fix = 1 línea)
+- **BUG-A3** (Alto): Botón "Buscar" en topbar no hace nada (confirma TD-31)
+- **BUG-A4** (Alto): Deudas — KPI "Tarjetas de crédito" muestra $0 aunque hay $3.83M
+
+**Sprint de quick wins (~1-2 horas):**
+- BUG-C2: Fecha presupuestos — `formatDate(budget.startDate)` en `src/views/budgets.js`
+- BUG-A1/TD-12: `sameMonth()` con `slice(0,7)` en `src/store/selectors.js` (1 línea)
+- BUG-A3/TD-31: Quitar botón "Buscar" de `src/components/shell.js`
+- BUG-B1: Versión `config.js` → `'0.2.6'`
+- TD-11: `syncEngine.js:84` — `'pending'` en lugar de `'idle'` (1 línea)
+
+**Sprint BUG-C1 (cold start auth):**
+- Investigar en `src/core/app.js` por qué el primer pullAll() siempre falla
+- Posible fix: retry automático si todas las entidades fallan simultáneamente
 
 ---
 

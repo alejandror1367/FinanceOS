@@ -1,1 +1,6 @@
-﻿skills/
+skills/
+.playwright-mcp/
+audit-*.png
+*.png
+!assets/*.svg
+.claude/
