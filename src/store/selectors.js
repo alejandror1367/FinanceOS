@@ -33,7 +33,7 @@ function lastMonths(n) {
 
 export const selectors = {
   liquidAccounts(s) {
-    return s.accounts.filter((a) => !a.isArchived && a.type !== 'investment');
+    return s.accounts.filter((a) => !a.isArchived && a.type !== 'investment' && a.type !== 'credit_card');
   },
 
   totalLiquidity(s) {

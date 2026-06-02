@@ -22,17 +22,35 @@ export function renderDashboard(s) {
   const invValue = selectors.investmentsValue(s);
   const invReturn = selectors.investmentsReturnPct(s);
 
+  // Trend patrimonio calculado desde snapshots reales (último vs penúltimo).
+  const snapsForTrend = [...(s.netWorthSnapshots || [])].sort((a, b) => (a.date < b.date ? -1 : 1));
+  const prevSnap = snapsForTrend.at(-2);
+  const netWorthTrend = prevSnap && prevSnap.netWorth
+    ? ((netWorth - prevSnap.netWorth) / Math.abs(prevSnap.netWorth)) * 100
+    : null;
+
+  // Mes actual formateado dinámicamente.
+  const currentMonthLabel = (() => {
+    const s2 = new Intl.DateTimeFormat('es-CO', { month: 'long', year: 'numeric' }).format(new Date());
+    return s2.charAt(0).toUpperCase() + s2.slice(1);
+  })();
+
   // --- KPIs ---
   const kpis = el('div', { class: 'grid grid--kpi' }, [
     // Patrimonio Neto: color principal (periwinkle), tratamiento héroe.
     KpiCard({
       label: 'Patrimonio neto', value: formatMoney(netWorth, cur), iconName: 'networth', variant: 'accent', hero: true,
-      foot: [Trend(4.2), el('span', { class: 't-caption', text: 'vs. mes anterior' })],
+      foot: [
+        netWorthTrend !== null ? Trend(netWorthTrend) : null,
+        el('span', { class: 't-caption', text: netWorthTrend !== null ? 'vs. snapshot anterior' : 'sin comparativa aún' }),
+      ].filter(Boolean),
     }),
-    // Inversiones: emerald.
+    // Inversiones: emerald. Guard: si value=0 con cost>0 no mostramos −100%.
     KpiCard({
       label: 'Inversiones', value: formatMoney(invValue, cur), iconName: 'investments', variant: 'emerald',
-      foot: [Trend(invReturn), el('span', { class: 't-caption', text: 'rentabilidad' })],
+      foot: invValue > 0
+        ? [Trend(invReturn), el('span', { class: 't-caption', text: 'rentabilidad' })]
+        : [el('span', { class: 't-caption', text: 'sin posiciones activas' })],
     }),
     // Gastos: neutro (sin alarma; el dato manda).
     KpiCard({
@@ -42,7 +60,7 @@ export function renderDashboard(s) {
     // Ingresos, ahorro y liquidez: neutros; los deltas portan el color.
     KpiCard({
       label: 'Ingresos del mes', value: formatMoney(income, cur), iconName: 'arrowUp', variant: 'neutral',
-      foot: [el('span', { class: 't-caption', text: 'Mayo 2026' })],
+      foot: [el('span', { class: 't-caption', text: currentMonthLabel })],
     }),
     KpiCard({
       label: 'Ahorro del mes', value: formatMoney(savings, cur), iconName: 'wallet', variant: 'neutral',

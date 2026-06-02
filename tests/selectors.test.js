@@ -141,6 +141,17 @@ describe('totalLiquidity', () => {
     });
     assert.equal(selectors.totalLiquidity(s), 1_000_000);
   });
+
+  test('excluye tarjetas de crédito (deuda no es liquidez)', () => {
+    const s = mkState({
+      accounts: [
+        acc('1', 4_250_000, 'bank'),
+        acc('2', 200_000, 'cash'),
+        acc('3', 3_409_196, 'credit_card'),
+      ],
+    });
+    assert.equal(selectors.totalLiquidity(s), 4_450_000);
+  });
 });
 
 // ── investmentsValue / investmentsCost / investmentsReturnPct ─────────────────
