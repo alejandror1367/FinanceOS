@@ -114,7 +114,7 @@ export function renderImport() {
     fileInput.addEventListener('change', () => { if (fileInput.files[0]) onFile(fileInput.files[0]); });
 
     const zone = el('label', { class: 'drop-zone', for: 'import-file-input' });
-    zone.appendChild(el('div', { class: 'drop-zone__icon' }, [icon('importFile')]));
+    zone.appendChild(el('div', { class: 'drop-zone__icon', html: icon('importFile') }));
     zone.appendChild(el('p', { class: 'drop-zone__title' }, ['Arrastra tu extracto aquí']));
     zone.appendChild(el('p', { class: 'drop-zone__sub' }, ['o haz clic para seleccionar']));
     zone.appendChild(el('p', { class: 'drop-zone__formats' }, ['CSV · Excel (.xlsx) · PDF']));
@@ -206,8 +206,7 @@ Extrae TODAS las transacciones sin omitir ninguna.`;
     pre.textContent = CLAUDE_PROMPT;
     promptCard.appendChild(pre);
 
-    const copyBtn = Button({
-      label: 'Copiar prompt',
+    const copyBtn = Button('Copiar prompt', {
       variant: 'outline',
       onClick: () => {
         navigator.clipboard.writeText(CLAUDE_PROMPT).then(() => {
@@ -220,7 +219,7 @@ Extrae TODAS las transacciones sin omitir ninguna.`;
     promptCard.appendChild(copyBtn);
     wrap.appendChild(promptCard);
 
-    const backBtn = Button({ label: '← Volver', variant: 'ghost', onClick: () => { state.phase = 'idle'; state.file = null; render(); } });
+    const backBtn = Button('← Volver', { variant: 'ghost', onClick: () => { state.phase = 'idle'; state.file = null; render(); } });
     backBtn.style.marginTop = '8px';
     wrap.appendChild(backBtn);
 
@@ -237,7 +236,7 @@ Extrae TODAS las transacciones sin omitir ninguna.`;
     const step = STEPS[state.progress] || STEPS.reading;
 
     const wrap = el('div', { class: 'import-analyzing' });
-    wrap.appendChild(el('div', { class: 'import-analyzing__icon' }, [icon('importFile')]));
+    wrap.appendChild(el('div', { class: 'import-analyzing__icon', html: icon('importFile') }));
     wrap.appendChild(el('p', { class: 'import-analyzing__file' }, [state.file?.name || '']));
     wrap.appendChild(el('div', { class: 'import-spinner' }));
     wrap.appendChild(el('p', { class: 'import-analyzing__label' }, [step.label]));
@@ -276,7 +275,7 @@ Extrae TODAS las transacciones sin omitir ninguna.`;
     if (state.dupIndices.size > 0) {
       const n = state.dupIndices.size;
       const warn = el('div', { class: 'import-warning' });
-      warn.appendChild(icon('bell'));
+      warn.appendChild(el('span', { html: icon('bell') }));
       warn.appendChild(el('span', {}, [
         `${n} posible${n > 1 ? 's' : ''} duplicado${n > 1 ? 's' : ''} detectado${n > 1 ? 's' : ''} y deseleccionado${n > 1 ? 's' : ''} automáticamente.`,
       ]));
@@ -286,7 +285,7 @@ Extrae TODAS las transacciones sin omitir ninguna.`;
     // Advertencia inversiones
     if (isInvestment) {
       const warn = el('div', { class: 'import-warning import-warning--info' });
-      warn.appendChild(icon('investments'));
+      warn.appendChild(el('span', { html: icon('investments') }));
       warn.appendChild(el('span', {}, [
         'Archivo de broker detectado. Se importarán como transacciones. Actualiza posiciones en Inversiones.',
       ]));
@@ -398,7 +397,7 @@ Extrae TODAS las transacciones sin omitir ninguna.`;
     updateBtn();
     importBtn.addEventListener('click', doImport);
 
-    const cancelBtn = Button({ label: 'Cancelar', variant: 'ghost', onClick: () => {
+    const cancelBtn = Button('Cancelar', { variant: 'ghost', onClick: () => {
       state.phase = 'idle'; state.file = null; state.result = null; render();
     }});
 
@@ -425,7 +424,7 @@ Extrae TODAS las transacciones sin omitir ninguna.`;
             );
             if (match) categoryId = match.id;
           }
-          await dataService.mutate('transactions', 'create', {
+          await dataService.create('transactions', {
             date: item.date,
             description: item.description || item.symbol || '',
             amount: Number(item.amount) || 0,
@@ -463,8 +462,7 @@ Extrae TODAS las transacciones sin omitir ninguna.`;
   // ---------- Done ----------
   function buildDone() {
     const wrap = el('div', { class: 'import-done' });
-    const iconWrap = el('div', { class: 'import-done__icon' });
-    iconWrap.appendChild(icon('check'));
+    const iconWrap = el('div', { class: 'import-done__icon', html: icon('check') });
     wrap.appendChild(iconWrap);
     wrap.appendChild(el('h2', { class: 'import-done__title' }, [
       `${state.imported} transacción${state.imported !== 1 ? 'es' : ''} importada${state.imported !== 1 ? 's' : ''}`,
@@ -472,13 +470,11 @@ Extrae TODAS las transacciones sin omitir ninguna.`;
     wrap.appendChild(el('p', { class: 'import-done__sub' }, ['Los saldos se actualizarán al sincronizar.']));
 
     const actions = el('div', { class: 'import-done__actions' });
-    actions.appendChild(Button({
-      label: 'Importar otro',
+    actions.appendChild(Button('Importar otro', {
       variant: 'outline',
       onClick: () => { state.phase = 'idle'; state.file = null; state.result = null; render(); },
     }));
-    actions.appendChild(Button({
-      label: 'Ver transacciones',
+    actions.appendChild(Button('Ver transacciones', {
       onClick: () => { location.hash = '#/transactions'; },
     }));
     wrap.appendChild(actions);
