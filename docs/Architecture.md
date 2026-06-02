@@ -12,7 +12,7 @@ Versión 1.0 · Fase 0 (Documentación fundacional)
 1. **Separación estricta de responsabilidades.** Nunca mezclar UI, lógica financiera, persistencia y sincronización.
 2. **Frontend agnóstico de la base de datos.** El frontend no conoce Google Sheets; toda interacción ocurre vía API de Apps Script. Esto permite migrar de BD sin reescribir el frontend.
 3. **Offline-first.** Las acciones se aplican primero localmente (Optimistic UI) y luego se sincronizan.
-4. **Vanilla y sin build.** HTML + CSS + JavaScript con ES Modules, ejecutándose directamente en el navegador. Sin frameworks, sin TypeScript, sin bundlers, sin dependencias npm en runtime.
+4. **Vanilla y sin build.** HTML + CSS + JavaScript con ES Modules, ejecutándose directamente en el navegador. El artefacto servido no se transpila ni se empaqueta: sin frameworks que requieran compilación, sin TypeScript-con-transpile, sin bundlers, sin dependencias npm en el runtime del cliente. Se permite type-checking opcional vía JSDoc + `tsc --checkJs --noEmit` como herramienta de dev/CI (no emite código). Ver `CLAUDE.md` → "Invariantes no negociables".
 5. **Modularidad.** Código organizado por capas con contratos claros entre ellas.
 
 ---
