@@ -41,11 +41,17 @@ Se descubrió un **módulo nuevo no documentado**: `#/import` — importación d
 
 ### 🔴 Crítico
 
-**BUG-C1 — Cold start: todos los pulls fallan con "No autorizado"**
+**BUG-C1 — Cold start: todos los pulls fallan con "No autorizado"** — ✅ RESUELTO (commits `23009b0` + `98f8c19`)
 - **Síntoma:** En cada primera carga, los 12 pulls devuelven "No autorizado". Todos los KPIs muestran $0. Se resuelve con click en "Actualizar".
-- **Causa probable:** Race condition en el bootstrap de `app.js` entre la inicialización del token OAuth y el `pullAll()`. El ciclo `auth.signOut() → location.reload()` deja el store vacío en la segunda carga.
-- **Archivos:** `src/services/dataService.js`, `src/core/app.js`, `src/services/apiClient.js:53`
+- **Causa raíz:** Las 12 verificaciones de token concurrentes contra Google `tokeninfo` (estampida) provocaban rechazos transitorios; y `apiClient` reaccionaba al primer `"No autorizado."` con `auth.signOut() → location.reload()`, destruyendo una sesión válida y dejando el store vacío.
+- **Archivos:** `src/services/dataService.js`, `src/services/apiClient.js`
 - **Reproducción:** Abrir la app en un tab nuevo o en modo incógnito.
+- **Fix aplicado:**
+  1. `apiClient`: solo hace `signOut()` si el token local realmente expiró/falta (`!auth.getToken()`); un `"No autorizado."` con token válido se trata como transitorio.
+  2. `dataService.pullAll()`: warm-up secuencial (1 petición con reintentos) antes de la ráfaga, para cachear la verificación del token en el backend.
+  3. `dataService.init()`: reintenta una vez si `pulled===0`.
+  4. **TD-15 (`getBootstrap`)**: cura estructural — 1 sola petición de arranque elimina la estampida. Requiere desplegar el backend.
+- **Verificación:** Playwright con token de prueba contra el backend real — sin `signOut` destructivo, sin loop a login, warm-up + retry operando. Happy-path pendiente de confirmar tras desplegar el backend.
 
 **BUG-C2 — Presupuestos: fecha del período renderiza como `Date.toString()` crudo**
 - **Síntoma:** Las fechas se muestran como `FRI MAY 01 2026 00:00:00 GMT` en lugar de `"Mayo 2026"`.
@@ -168,7 +174,7 @@ Todas en la raíz del proyecto (generadas por Playwright MCP):
 
 | Prioridad | ID | Fix | Esfuerzo |
 |-----------|----|-----|----------|
-| 🔴 Crítico | BUG-C1 | Cold start auth — retry automático en pullAll | M |
+| ✅ Hecho | BUG-C1 | Cold start auth — guard signOut + warm-up + retry; raíz curada por TD-15 | M |
 | 🔴 Crítico | BUG-C2 | Fecha presupuestos — formatDate() | S (1 línea) |
 | 🟠 Alto | BUG-A1 | sameMonth() con slice(0,7) — TD-12 | S (1 línea) |
 | 🟠 Alto | BUG-A2 | Label mes KPI Ingresos | S |

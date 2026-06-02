@@ -527,7 +527,7 @@ La app ya tiene `config.js` con las URLs reales commiteadas. Solo necesitas:
 Ver `docs/Audit-Funcional-2026-06-02.md` para el informe completo con bugs priorizados.
 
 Bugs más urgentes identificados en la auditoría:
-- **BUG-C1** (Crítico): Cold start — todos los KPIs en $0 hasta hacer click en "Actualizar"
+- **BUG-C1** (Crítico): Cold start — todos los KPIs en $0 hasta hacer click en "Actualizar" — ✅ RESUELTO (`23009b0`+`98f8c19`); happy-path pendiente de confirmar tras desplegar backend
 - **BUG-C2** (Crítico): Presupuestos — fecha del período renderiza como `Date.toString()` crudo
 - **BUG-A1** (Alto): Presupuestos — consumido siempre $0 (confirma TD-12, fix = 1 línea)
 - **BUG-A3** (Alto): Botón "Buscar" en topbar no hace nada (confirma TD-31)
@@ -540,9 +540,12 @@ Bugs más urgentes identificados en la auditoría:
 - BUG-B1: Versión `config.js` → `'0.2.6'`
 - TD-11: `syncEngine.js:84` — `'pending'` en lugar de `'idle'` (1 línea)
 
-**Sprint BUG-C1 (cold start auth):**
-- Investigar en `src/core/app.js` por qué el primer pullAll() siempre falla
-- Posible fix: retry automático si todas las entidades fallan simultáneamente
+**Sprint BUG-C1 (cold start auth) — ✅ HECHO:**
+- `apiClient`: guard contra `signOut()` destructivo si el token local sigue válido (`23009b0`).
+- `dataService`: warm-up secuencial + retry en `init()` (`23009b0`).
+- **TD-15 `getBootstrap`** (`98f8c19`): 12 colecciones en 1 request (frontend con fallback +
+  backend `Code.gs`/`Reports.gs`). Cura la raíz (la estampida de verificación de token).
+  ⚠️ Requiere desplegar el backend para activar la ruta de 1 request y confirmar el happy-path.
 
 ---
 

@@ -47,13 +47,14 @@ PENDIENTE (no abordado aún):
 - VERIFICAR EN VIVO (requiere login OAuth) que Presupuestos ahora muestra "May 2026"
   y consumido > $0. Hoy solo se verificó el código servido, no con datos reales tras login.
 - ⚠️ BACKEND Apps Script sin actualizar: subir Accounts.gs, Transactions.gs, Code.gs,
-  Auth.gs, Migration.gs → publicar Nueva versión → Ajustes → Recalcular saldos
-  (modelo híbrido de saldos, TD-01). Hasta entonces las transacciones no mueven saldos en Sheets.
+  Auth.gs, Migration.gs, **Reports.gs (nuevo getBootstrap, TD-15)** → publicar Nueva versión →
+  Ajustes → Recalcular saldos (modelo híbrido de saldos, TD-01). Hasta entonces las
+  transacciones no mueven saldos en Sheets y la carga usa el fallback de 12 requests.
 - ⚠️ Confirmar que el bypass de auditoría fue eliminado de Auth.gs en Apps Script.
-- BUG-C1 (crítico): cold start — los 12 pulls fallan con "No autorizado" hasta dar
-  "Actualizar". Investigar race condition en src/core/app.js / apiClient.js.
+- ✅ BUG-C1 (crítico) RESUELTO (`23009b0`+`98f8c19`): guard anti-signOut + warm-up + retry,
+  y TD-15 (getBootstrap) cura la raíz. Pendiente confirmar happy-path en vivo tras desplegar backend.
 - BUG-A4 (alto): Deudas — KPI "Tarjetas de crédito" en $0 (consolidar credit_card + Liabilities).
-- P1 restante: TD-15 (getBootstrap, 12→1 request), TD-13, TD-14, TD-10, TD-16, TD-17, TD-18.
+- ✅ TD-15 (getBootstrap, 12→1 request) HECHO (`98f8c19`). P1 restante: TD-13, TD-14, TD-10, TD-16, TD-17, TD-18.
 - Bugs medios: BUG-M1 (auto-load precios), BUG-M2 (purgar snapshots de test en Sheets),
   BUG-M3 (FX rate), BUG-M4 (dashboard usa snapshots reales).
 
