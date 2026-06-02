@@ -19,6 +19,7 @@ export const syncQueue = {
       createdAt: new Date().toISOString(),
       attempts: 0,
       lastError: '',
+      dead: false, // TD-10: true = en dead-letter (no se reintenta ni bloquea la cola)
     };
   },
 
@@ -28,9 +29,16 @@ export const syncQueue = {
     return record;
   },
 
+  // Cola ACTIVA (excluye dead-letter): la que flush() procesa y reconcileAndHydrate reaplica.
   async all() {
     const ops = await db.getAll(STORE);
-    return ops.sort((a, b) => a.seq - b.seq);
+    return ops.filter((o) => !o.dead).sort((a, b) => a.seq - b.seq);
+  },
+
+  // TD-10: operaciones que agotaron reintentos o fallaron por error de negocio (4xx).
+  async deadLetters() {
+    const ops = await db.getAll(STORE);
+    return ops.filter((o) => o.dead).sort((a, b) => a.seq - b.seq);
   },
 
   async remove(seq) {
@@ -45,8 +53,30 @@ export const syncQueue = {
     return next;
   },
 
-  count() {
-    return db.count(STORE);
+  // TD-10: mueve una op a dead-letter. Deja de reintentarse y no bloquea la cola;
+  // queda visible en Ajustes para reintentar o descartar.
+  markDead(seq, error) {
+    return this.update(seq, { dead: true, lastError: String(error || ''), failedAt: new Date().toISOString() });
+  },
+
+  // Re-encola una op de dead-letter para volver a intentarla desde cero.
+  requeue(seq) {
+    return this.update(seq, { dead: false, attempts: 0, lastError: '' });
+  },
+
+  discard(seq) {
+    return db.delete(STORE, seq);
+  },
+
+  // Cuenta solo operaciones ACTIVAS (pendientes), excluyendo dead-letter.
+  async count() {
+    const ops = await db.getAll(STORE);
+    return ops.filter((o) => !o.dead).length;
+  },
+
+  async deadCount() {
+    const ops = await db.getAll(STORE);
+    return ops.filter((o) => o.dead).length;
   },
 
   clear() {

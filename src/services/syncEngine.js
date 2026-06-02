@@ -23,11 +23,25 @@ function setStatus(patch) {
 async function refreshPending() {
   try {
     const n = await syncQueue.count();
-    setStatus({ pending: n });
+    const failed = await syncQueue.deadCount();
+    setStatus({ pending: n, failed });
     return n;
   } catch (e) {
     return 0;
   }
+}
+
+// TD-10: distingue un error TRANSITORIO (sin red, timeout, 5xx, token frío) —que
+// conviene reintentar— de un error de NEGOCIO (4xx, validación) —que no se resolverá
+// reintentando y debe ir a dead-letter para no bloquear la cola (head-of-line blocking)—.
+function isTransient(err) {
+  if (!navigator.onLine) return true;
+  if (err && err.name === 'AbortError') return true;                 // timeout del cliente
+  const msg = String((err && err.message) || err || '');
+  if (/Failed to fetch|NetworkError|load failed|ERR_NETWORK|network/i.test(msg)) return true;
+  if (/HTTP 5\d\d/.test(msg)) return true;                            // error del servidor
+  if (/No autorizado/i.test(msg)) return true;                       // token frío en cold start
+  return false;                                                       // 4xx / validación / negocio
 }
 
 // Reemplaza la colección de un store en memoria desde IndexedDB.
@@ -70,18 +84,26 @@ async function flush() {
         await reconcile(op, record);
         await syncQueue.remove(op.seq);
       } catch (err) {
-        const attempts = (op.attempts || 0) + 1;
-        await syncQueue.update(op.seq, { attempts: attempts, lastError: String(err && err.message || err) });
-        if (attempts >= MAX_ATTEMPTS) {
-          // Operación en error persistente: se deja en la cola y se marca.
-          setStatus({ state: 'error' });
+        const msg = String(err && err.message || err);
+        if (!isTransient(err)) {
+          // Error de negocio (4xx/validación): no se arregla reintentando. A dead-letter
+          // y seguimos con el resto de la cola — sin bloqueo head-of-line (TD-10).
+          await syncQueue.markDead(op.seq, msg);
           continue;
         }
-        break; // probablemente sin conexión: reintentar en el próximo ciclo
+        const attempts = (op.attempts || 0) + 1;
+        await syncQueue.update(op.seq, { attempts: attempts, lastError: msg });
+        if (attempts >= MAX_ATTEMPTS) {
+          // Reintentos agotados: a dead-letter y seguimos con las demás (TD-10).
+          await syncQueue.markDead(op.seq, msg);
+          continue;
+        }
+        break; // transitorio (probable falta de red): reintentar en el próximo ciclo
       }
     }
     const pending = await refreshPending();
-    setStatus({ state: pending > 0 ? 'pending' : 'idle', lastSync: new Date().toISOString() });
+    const failed = (store.get().sync || {}).failed || 0;
+    setStatus({ state: failed > 0 ? 'error' : (pending > 0 ? 'pending' : 'idle'), lastSync: new Date().toISOString() });
   } finally {
     running = false;
   }
@@ -90,6 +112,20 @@ async function flush() {
 export const syncEngine = {
   flush,
   refreshPending,
+
+  // TD-10: gestión de dead-letter desde Ajustes.
+  listFailed() { return syncQueue.deadLetters(); },
+  async retryFailed() {
+    const dead = await syncQueue.deadLetters();
+    for (const op of dead) await syncQueue.requeue(op.seq);
+    await refreshPending();
+    await flush();
+  },
+  async discardFailed() {
+    const dead = await syncQueue.deadLetters();
+    for (const op of dead) await syncQueue.discard(op.seq);
+    await refreshPending();
+  },
 
   start() {
     setStatus({ online: navigator.onLine, state: 'idle' });

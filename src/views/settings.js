@@ -8,6 +8,7 @@ import { store } from '../store/store.js';
 import { theme } from '../services/theme.js';
 import { dataService } from '../services/dataService.js';
 import { apiClient } from '../services/apiClient.js';
+import { syncEngine } from '../services/syncEngine.js';
 import { Card, Badge, Button } from '../components/ui.js';
 import { segmented } from '../components/forms.js';
 import { confirmDialog } from '../components/modal.js';
@@ -43,13 +44,30 @@ export function renderSettings() {
   // Datos y sincronización
   const syncState = s.sync || {};
   const stateBadge = !syncState.online ? Badge('Sin conexión', 'negative')
-    : syncState.pending > 0 ? Badge(`Pendientes: ${syncState.pending}`, 'warning')
-      : Badge('Sincronizado', 'positive');
+    : syncState.failed > 0 ? Badge(`Fallidas: ${syncState.failed}`, 'negative')
+      : syncState.pending > 0 ? Badge(`Pendientes: ${syncState.pending}`, 'warning')
+        : Badge('Sincronizado', 'positive');
 
   const dataCard = Card({
     title: 'Datos y sincronización',
     body: el('div', { class: 'row-list' }, [
       settingRow('Estado', s.baseCurrency ? `Moneda base: ${s.baseCurrency}` : null, stateBadge),
+      // TD-10: operaciones que no se pudieron sincronizar (error de negocio o reintentos agotados).
+      syncState.failed > 0 ? settingRow(
+        'Cambios sin sincronizar',
+        `${syncState.failed} operación(es) fallaron al guardar en el backend. Reintenta o descártalas.`,
+        el('div', { class: 'row-flex', style: { gap: '8px' } }, [
+          Button('Reintentar', { variant: 'ghost', iconName: 'refresh', onClick: async () => {
+            toast('Reintentando…', { type: 'info' });
+            try { await syncEngine.retryFailed(); toast('Reintento enviado'); } catch (e) { toast('No se pudo reintentar', { type: 'negative' }); }
+          } }),
+          Button('Descartar', { variant: 'ghost', iconName: 'trash', onClick: () => confirmDialog({
+            title: 'Descartar cambios fallidos',
+            message: 'Se eliminarán de la cola las operaciones que no se pudieron sincronizar. Esta acción no se puede deshacer.',
+            confirmLabel: 'Descartar', onConfirm: async () => { try { await syncEngine.discardFailed(); toast('Cambios descartados'); } catch (e) { toast('Error', { type: 'negative' }); } },
+          }) }),
+        ]),
+      ) : null,
       settingRow('Actualizar desde el backend', 'Vuelve a descargar tus datos', Button('Actualizar', { variant: 'ghost', iconName: 'refresh', onClick: async () => {
         if (!connected) { toast('Modo local: sin backend', { type: 'info' }); return; }
         toast('Actualizando…', { type: 'info' });
