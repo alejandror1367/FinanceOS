@@ -5,7 +5,7 @@
    Rutas relativas para funcionar en GitHub Pages bajo subdirectorio.
 */
 
-const VERSION = 'financeos-v0.2.4';
+const VERSION = 'financeos-v0.2.5';
 const SHELL_CACHE = `${VERSION}-shell`;
 
 // Resuelto contra el scope del SW (directorio de registro).
@@ -120,17 +120,17 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Recursos del shell: cache-first con relleno perezoso.
+  // Recursos del shell: network-first para recibir actualizaciones al recargar,
+  // con fallback a caché cuando está offline.
   event.respondWith(
-    caches.match(request).then((cached) => {
-      if (cached) return cached;
-      return fetch(request).then((res) => {
+    fetch(request)
+      .then((res) => {
         if (res.ok && res.type === 'basic') {
           const copy = res.clone();
           caches.open(SHELL_CACHE).then((c) => c.put(request, copy));
         }
         return res;
-      }).catch(() => cached);
-    }),
+      })
+      .catch(() => caches.match(request).then((cached) => cached || Response.error())),
   );
 });
