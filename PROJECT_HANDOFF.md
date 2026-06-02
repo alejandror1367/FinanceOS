@@ -22,11 +22,11 @@ Centraliza: patrimonio neto, presupuestos, flujo de caja, inversiones, metas, de
 | Roadmap fases 0–12 | ✅ Completadas y en producción |
 | PWA instalada en celular | ✅ Funcionando |
 | Google OAuth | ✅ Activo (`patitosalmir@gmail.com` + `alejandrorr1367@gmail.com`) |
-| Backend Apps Script | ✅ Desplegado · **⚠️ requiere un nuevo deploy manual** (ver §11) |
+| Backend Apps Script | ✅ Desplegado y verificado en producción |
 | Tests financieros | ✅ 33/33 pasando |
-| Modelo híbrido de saldos (TD-01) | ✅ Código listo · **⚠️ backend pendiente de subir** |
-| Deuda técnica P0 | ✅ Toda resuelta en esta sesión |
-| Deuda técnica P1 | 🔴 Pendiente (9 ítems) |
+| Modelo híbrido de saldos (TD-01) | ✅ Código + backend desplegados y verificados |
+| Deuda técnica P0 | ✅ Toda resuelta |
+| Deuda técnica P1 | 🟡 En progreso — hechos TD-13/14/15/16/17; pendientes TD-10, TD-18 |
 | Deuda técnica P2 | 🔴 Pendiente (14 ítems) |
 
 ---
@@ -157,14 +157,17 @@ FinanceOS/
 | Tests | `node:test` (nativo Node 18+) | Sin jest, sin mocha |
 | Tipografía | Inter (Google Fonts, cacheada por SW) | |
 
-### Reglas absolutas (no romper nunca)
-1. Sin frameworks frontend (React, Vue, Angular, Svelte…)
-2. Sin TypeScript — todo JavaScript vanilla
-3. Sin build systems (Vite, Webpack, Parcel…)
-4. Sin dependencias npm en runtime
-5. Base de datos: solo Google Sheets
-6. Backend: solo Google Apps Script
-7. Trabajar por fases pequeñas y verificables
+### Invariantes no negociables (ver `CLAUDE.md` para el detalle)
+1. El artefacto servido es JS ejecutable en el navegador **sin build step** (sin
+   frameworks que compilen: React/Vue/Angular/Svelte; sin bundlers: Vite/Webpack/Parcel).
+2. Sin `.ts` con transpilación en lo servido. *Sí* se permite type-checking de dev vía
+   **JSDoc + `tsc --checkJs --noEmit`** (no emite código; el artefacto sigue siendo JS plano).
+3. Cero dependencias npm en el runtime del cliente (las libs de dev/test viven solo en dev).
+4. El frontend no conoce la fuente de datos: todo pasa por `src/services/`.
+5. Offline-first y exportabilidad total son requisitos, no opcionales.
+6. Stack recomendado por defecto: Apps Script + Google Sheets + GitHub Pages (alternativas
+   permitidas si respetan los invariantes; ver "Herramientas permitidas" en `CLAUDE.md`).
+7. Trabajar por fases pequeñas y verificables.
 
 ---
 
@@ -256,34 +259,28 @@ googleClientId: '444939967819-uv535tm5fg5glrj2fqc4l3llrqmhvqbb.apps.googleuserco
 
 ## 10. Trabajo pendiente organizado por prioridad
 
-### 🔴 ACCIÓN MANUAL URGENTE (antes de usar el modelo de saldos)
+### ✅ Modelo híbrido de saldos — DESPLEGADO
 
-El código del modelo híbrido de saldos está en el repo pero el **backend de Apps Script necesita ser actualizado manualmente**. Hasta hacerlo:
-- Las transacciones NO mueven saldos en Sheets (solo en local IndexedDB)
-- El botón "Recalcular saldos" en Ajustes fallará
-
-**Archivos a subir a Apps Script:**
-1. `backend/Accounts.gs` — añade `adjustBalance_` y `applyTxBalanceDelta_`
-2. `backend/Transactions.gs` — create/update/delete ajustan saldos
-3. `backend/Code.gs` — ruta `recalculateBalances` añadida
-4. `backend/Auth.gs` — fix `aud` check con `indexOf`
-5. `backend/Migration.gs` — nuevo archivo, `recalculateAccountBalances_`
-
-Luego publicar **Nueva versión** y ejecutar **Ajustes → Recalcular saldos** para migrar los saldos existentes.
+El backend de Apps Script ya tiene el modelo híbrido de saldos desplegado y verificado en
+producción (commits `2a407b1`/`75eacca`): `Accounts.gs` (`adjustBalance_`/`applyTxBalanceDelta_`),
+`Transactions.gs` (create/update/delete ajustan saldos), `Code.gs` (ruta `recalculateBalances`),
+`Auth.gs` (sin bypass, `aud` con `indexOf`) y `Migration.gs` (`recalculateAccountBalances_`).
+Las transacciones mueven saldos end-to-end. **Opcional:** ejecutar una vez **Ajustes →
+Recalcular saldos** si se quiere recalcular desde 0 sumando el histórico completo.
 
 ### P1 — Alta prioridad (ver `docs/TechnicalDebt.md`)
 
-| ID | Descripción | Esfuerzo |
+| ID | Descripción | Estado |
 |---|---|---|
-| TD-11 | **Bug: sync state siempre `'idle'`** — `syncEngine.js:84` tiene `pending>0 ? 'idle' : 'idle'` | S (1 línea) |
-| TD-12 | **Timezone bucketing** — `sameMonth()` usa `Date` local, genera drift vs `slice(0,7)` | S (1 línea) |
-| TD-16 | **`openById` sin cachear** — 5–8 aperturas del spreadsheet por request en Apps Script | S |
-| TD-17 | **Foco de input tenue** — `.input:focus` usa `--accent-bg` (14% opacidad), puede fallar WCAG 2.4.11 | S |
-| TD-18 | **Touch targets densos** — `.icon-btn` 32px con gap 2px, 3 acciones/fila | S |
-| TD-13 | `refresh()` no hace flush antes de pullAll → creates pendientes desaparecen | M |
-| TD-14 | No-atomicidad `db.put` + `enqueue` — divergencia si el proceso muere entre ambas | M |
-| TD-10 | Head-of-line blocking en `syncEngine.flush()` — op con error de negocio bloquea cola para siempre | M |
-| TD-15 | 12 requests en carga inicial — implementar `getBootstrap` para 1 solo request | M |
+| TD-11 | Bug: sync state siempre `'idle'` — `syncEngine.js` | ✅ Hecho |
+| TD-12 | Timezone bucketing — `sameMonth()` usa `Date` local vs `slice(0,7)` | ✅ Hecho (`8d8d4d9`) |
+| TD-15 | 12 requests en carga inicial → `getBootstrap` (1 request) | ✅ Hecho (`98f8c19`) |
+| TD-16 | `openById` sin cachear — 5–8 aperturas/request | ✅ Hecho (`47f91e1`) |
+| TD-17 | Foco de input tenue — posible fallo WCAG 2.4.11 | ✅ Hecho (`47f91e1`) |
+| TD-13 | `refresh()` no hace flush antes de pull → creates pendientes desaparecen | ✅ Hecho (`bccc956`) |
+| TD-14 | No-atomicidad `db.put` + `enqueue` — divergencia si el proceso muere | ✅ Hecho (`bccc956`) |
+| TD-10 | Head-of-line blocking en `syncEngine.flush()` — op con error de negocio bloquea cola | 🔴 Pendiente (M) |
+| TD-18 | Touch targets densos — `.icon-btn` 32px, gap 2px, 3 acciones/fila | 🔴 Pendiente (S) |
 
 ### P2 — Media prioridad
 
@@ -303,10 +300,10 @@ Luego publicar **Nueva versión** y ejecutar **Ajustes → Recalcular saldos** p
 
 | Bug | Archivo | Severidad | Descripción |
 |---|---|---|---|
-| Sync state siempre idle | `src/services/syncEngine.js:84` | Media | `state: pending > 0 ? 'idle' : 'idle'` — la píldora nunca muestra "Pendiente" |
-| Timezone en bucketing de meses | `src/store/selectors.js` — `sameMonth()` | Media | Transacciones del día 1 del mes pueden caer en el mes anterior en Colombia (UTC-5) |
-| Carga inicial = 12 requests | `src/services/dataService.js` — `pullAll()` | Baja | Sin `getBootstrap`, 12 round-trips HTTP en cada carga |
-| Snowball/Avalanche sin amortización | `src/views/debts.js` | Baja | Solo ordena, no calcula cronograma de pago ni intereses ahorrados |
+| ✅ ~~Sync state siempre idle~~ | `src/services/syncEngine.js` | — | RESUELTO (TD-11) |
+| ✅ ~~Timezone en bucketing de meses~~ | `src/store/selectors.js` — `sameMonth()` | — | RESUELTO (TD-12, `8d8d4d9`) |
+| ✅ ~~Carga inicial = 12 requests~~ | `src/services/dataService.js` | — | RESUELTO (TD-15 `getBootstrap`, `98f8c19`) — 1 request |
+| Snowball/Avalanche sin amortización | `src/views/debts.js` | Baja | Solo ordena, no calcula cronograma de pago ni intereses ahorrados (TD-23) |
 
 ---
 
@@ -376,8 +373,10 @@ Los hooks `UserPromptSubmit`/`PreToolUse`/`PostToolUse` de `accessibility-agents
 - Recorridas las 15 rutas de la app (14 documentadas + `#/import` nuevo)
 - Informe completo en `docs/Audit-Funcional-2026-06-02.md`
 - Se descubrió módulo nuevo `#/import` — importación de extractos bancarios con IA (Gemini)
-- Plugin de GitHub MCP eliminado de `~/.claude/plugins/installed_plugins.json` (fallaba con HTTP 400)
-- Plugins instalados: `playwright` (scope project), `code-simplifier` (scope project)
+- Plugins habilitados (`.claude/settings.json`): `playwright`, `context7`, `code-simplifier`
+- MCPs (`claude mcp list` 2026-06-02): `github` ✓, `playwright` ✓, `context7` ✓ — los tres
+  conectan. El GitHub MCP ahora funciona vía HTTP (`api.githubcopilot.com/mcp/`) con
+  `GITHUB_PERSONAL_ACCESS_TOKEN` configurada
 
 ### Bypass temporal de auth (ya revertido)
 Para la auditoría se agregó un bypass temporal en `backend/Auth.gs` que aceptaba el token `financeos-audit-2026-06-02`. **Este bypass fue eliminado del repo local.** El usuario debe haber deployado la versión sin bypass a Apps Script.
@@ -430,21 +429,21 @@ Para la auditoría se agregó un bypass temporal en `backend/Auth.gs` que acepta
 ```
 Rama:    main
 Remote:  https://github.com/alejandror1367/FinanceOS.git
-HEAD:    8756d4c  fix(investments): eliminar freeze + dashboard con precios reales via priceService
-Status:  limpio · sincronizado con origin/main
-SW:      v0.2.6
+HEAD:    bccc956  fix: TD-13 flush antes de pull + TD-14 escritura atómica dato+cola
+SW:      v0.2.11 (auto-bump del pre-commit)
 ```
 
 ### Commits recientes
 ```
-8756d4c fix(investments): eliminar freeze + dashboard con precios reales via priceService
-0f193fd fix(investments): eliminar bucle infinito al entrar a Inversiones + SW auto-update
-851fd02 fix(dashboard): inversiones con precios en vivo en todas las vistas + conversión multimoneda
-20ffeb3 fix(sw): network-first para assets JS/CSS — F5 ya obtiene la versión más reciente
-d070a2c fix(investments): precios persisten en F5 via localStorage + auto-refresh al entrar + brokers XTB/ARQ
-84ab7f0 fix(investments): precios persisten entre re-renders usando caché a nivel de módulo
-5f2ecaa fix(investments): sin precio muestra '— sin precio —' en lugar de $0/-100%
-ebbee77 fix: datos que desaparecen (TD-13), sync pill, enum credit_card, campos nuevos backend
+bccc956 fix: TD-13 flush antes de pull + TD-14 escritura atómica dato+cola
+75eacca docs: marcar TD-17 hecho y confirmar backend de saldos desplegado/verificado
+2a407b1 docs: confirmar en vivo BUG-C1 + TD-15 tras desplegar backend
+8082e22 docs: marcar TD-16 hecho (memoización de openById ya estaba en 47f91e1)
+56d0290 docs: marcar BUG-A4 resuelto
+fe961a8 fix: BUG-A4 Deudas — KPI "Tarjetas de crédito" consolida liabilities credit_card
+617821c docs: marcar BUG-C1 resuelto y TD-15 hecho
+98f8c19 feat: TD-15 getBootstrap — cargar las 12 colecciones en 1 request
+23009b0 fix: BUG-C1 cold start auth — warm-up + reintento, no destruir sesión válida
 ```
 
 ---
@@ -551,6 +550,9 @@ Bugs más urgentes identificados en la auditoría:
 
 ## 19. Prompt de continuación para nueva sesión de Claude Code
 
+> ⚠️ El bloque de abajo es **histórico** (2026-06-01). El prompt de continuación
+> vigente está en **`docs/NEXT_SESSION.md`**, regenerado al estado actual.
+
 Copia este prompt al iniciar una nueva sesión:
 
 ---
@@ -604,4 +606,5 @@ Para servidor local: npx serve . → http://localhost:3000
 
 ---
 
-*Actualizado el 2026-06-01 (sesión tarde) por Claude Sonnet 4.6.*
+*Actualizado el 2026-06-02 por Claude Opus 4.8: TD-13/TD-14 hechos (`bccc956`), estado de
+git/SW/MCP/backend sincronizado, invariantes alineados con `CLAUDE.md`.*
