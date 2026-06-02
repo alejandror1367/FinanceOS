@@ -386,11 +386,6 @@ export function renderInvestments() {
   let fxRates    = { ..._fxCache };
   let refreshing = false;
 
-  // Si ya hay precios cacheados (de localStorage o sesión anterior),
-  // parchear el store inmediatamente para que el dashboard los refleje.
-  if (_lastFetchAt && Object.keys(_priceCache).length) {
-    _applyPricesToStore(_priceCache, _fxCache);
-  }
 
   function buildFxRates() {
     const r = {};

@@ -66,9 +66,14 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(SHELL_CACHE)
       .then((cache) => cache.addAll(SHELL_ASSETS))
-      .then(() => self.skipWaiting())
       .catch((err) => console.warn('[sw] precache parcial:', err)),
   );
+  // No skipWaiting aquí: esperamos al mensaje del cliente para activar.
+});
+
+// El cliente envía SKIP_WAITING cuando detecta que hay una versión nueva lista.
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {

@@ -108,12 +108,21 @@ async function registerSW() {
   if (!('serviceWorker' in navigator)) return;
   try {
     const reg = await navigator.serviceWorker.register('sw.js', { scope: './' });
+
+    // Cuando el SW nuevo activa, recarga la página automáticamente.
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      window.location.reload();
+    });
+
     reg.addEventListener('updatefound', () => {
       const sw = reg.installing;
       if (!sw) return;
       sw.addEventListener('statechange', () => {
+        // SW nuevo instalado y listo: hay un controlador previo (no es la primera carga).
         if (sw.state === 'installed' && navigator.serviceWorker.controller) {
-          toast('Nueva versión disponible. Recarga para actualizar.', { type: 'info', timeout: 6000 });
+          toast('Actualizando a la nueva versión…', { type: 'info', timeout: 3000 });
+          // Decirle al SW nuevo que tome el control ya (dispara controllerchange arriba).
+          sw.postMessage({ type: 'SKIP_WAITING' });
         }
       });
     });
