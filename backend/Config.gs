@@ -28,11 +28,17 @@ var SCHEMAS = {
   Accounts: [
     { key: 'id', type: 's' },
     { key: 'name', type: 's' },
-    { key: 'type', type: 's' },          // cash|bank|savings|investment|digital_wallet
+    { key: 'type', type: 's' },          // cash|bank|savings|investment|digital_wallet|credit_card
     { key: 'currency', type: 's' },
     { key: 'balance', type: 'n' },
     { key: 'institution', type: 's' },
     { key: 'isArchived', type: 'b' },
+    { key: 'creditLimit', type: 'n' },
+    { key: 'interestRate', type: 'n' },
+    { key: 'cutoffDay', type: 'n' },
+    { key: 'paymentDay', type: 'n' },
+    { key: 'minPayment', type: 'n' },
+    { key: 'totalDue', type: 'n' },
     { key: 'isDeleted', type: 'b' },
     { key: 'createdAt', type: 'ts' },
     { key: 'updatedAt', type: 'ts' },
@@ -95,8 +101,13 @@ var SCHEMAS = {
     { key: 'symbol', type: 's' },
     { key: 'accountId', type: 's' },
     { key: 'quantity', type: 'n' },
-    { key: 'avgCost', type: 'n' },
+    { key: 'avgCost', type: 'n' },        // legacy, reemplazado por purchasePrice
+    { key: 'purchasePrice', type: 'n' }, // precio por unidad al momento de la compra
+    { key: 'purchaseDate', type: 'd' },  // fecha de la compra
     { key: 'currentPrice', type: 'n' },
+    { key: 'currentValue', type: 'n' },  // valor actual manual (fondos FIC)
+    { key: 'interestRate', type: 'n' },  // tasa EA% (CDT)
+    { key: 'maturityDate', type: 'd' },  // fecha vencimiento (CDT)
     { key: 'currency', type: 's' },
     { key: 'isDeleted', type: 'b' },
     { key: 'createdAt', type: 'ts' },
@@ -188,7 +199,7 @@ var SHEET_NAMES = [
 
 // Enums permitidos (validación autoritativa).
 var ENUMS = {
-  accountType: ['cash', 'bank', 'savings', 'investment', 'digital_wallet'],
+  accountType: ['cash', 'bank', 'savings', 'investment', 'digital_wallet', 'credit_card'],
   txType: ['income', 'expense', 'transfer'],
   categoryKind: ['income', 'expense'],
   budgetPeriod: ['monthly', 'annual'],

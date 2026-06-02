@@ -19,6 +19,12 @@ function createAccount_(d) {
     balance: toAmount_(d.balance || 0, 'balance'),
     institution: sanitizeString_(d.institution || '', 80),
     isArchived: d.isArchived === true,
+    creditLimit:  toAmount_(d.creditLimit  || 0, 'creditLimit'),
+    interestRate: toAmount_(d.interestRate || 0, 'interestRate'),
+    cutoffDay:    toAmount_(d.cutoffDay    || 0, 'cutoffDay'),
+    paymentDay:   toAmount_(d.paymentDay   || 0, 'paymentDay'),
+    minPayment:   toAmount_(d.minPayment   || 0, 'minPayment'),
+    totalDue:     toAmount_(d.totalDue     || 0, 'totalDue'),
   });
   logAudit_('create', 'Accounts', rec.id, 'Cuenta creada: ' + rec.name);
   return rec;
@@ -33,7 +39,13 @@ function updateAccount_(d) {
   if (d.currency !== undefined) patch.currency = sanitizeString_(d.currency, 3);
   if (d.balance !== undefined) patch.balance = toAmount_(d.balance, 'balance');
   if (d.institution !== undefined) patch.institution = sanitizeString_(d.institution, 80);
-  if (d.isArchived !== undefined) patch.isArchived = d.isArchived === true;
+  if (d.isArchived    !== undefined) patch.isArchived    = d.isArchived === true;
+  if (d.creditLimit   !== undefined) patch.creditLimit   = toAmount_(d.creditLimit,  'creditLimit');
+  if (d.interestRate  !== undefined) patch.interestRate  = toAmount_(d.interestRate, 'interestRate');
+  if (d.cutoffDay     !== undefined) patch.cutoffDay     = toAmount_(d.cutoffDay,    'cutoffDay');
+  if (d.paymentDay    !== undefined) patch.paymentDay    = toAmount_(d.paymentDay,   'paymentDay');
+  if (d.minPayment    !== undefined) patch.minPayment    = toAmount_(d.minPayment,   'minPayment');
+  if (d.totalDue      !== undefined) patch.totalDue      = toAmount_(d.totalDue,     'totalDue');
   var rec = repoUpdate_('Accounts', d.id, patch);
   logAudit_('update', 'Accounts', rec.id, 'Cuenta actualizada: ' + rec.name);
   return rec;

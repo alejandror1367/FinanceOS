@@ -402,6 +402,18 @@ body.modal-open { overflow: hidden; }
 .inv-summary-table th { text-align: left; padding: var(--space-2) var(--space-2); color: var(--text-tertiary); font-weight: var(--fw-medium); border-bottom: 1px solid var(--border); }
 .inv-summary-table td { padding: var(--space-2) var(--space-2); border-bottom: 1px solid var(--border-subtle); vertical-align: middle; }
 .inv-summary-total td { border-top: 2px solid var(--border); border-bottom: none; font-weight: var(--fw-semibold); font-size: var(--fs-body); padding-top: var(--space-3); }
+.inv-purchases { margin-top: var(--space-2); border-top: 1px solid var(--border-subtle); }
+.inv-purchases__head, .inv-purchases__row { display: grid; grid-template-columns: 90px 70px 1fr 1fr 1fr 1fr 56px; gap: var(--space-2); padding: var(--space-2) 0; align-items: center; }
+.inv-purchases__head { font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: var(--text-tertiary); font-weight: var(--fw-medium); border-bottom: 1px solid var(--border-subtle); }
+.inv-purchases__row { font-size: var(--fs-caption); border-bottom: 1px solid var(--border-subtle); }
+.inv-purchases__row:last-child { border-bottom: none; }
+.inv-purchases__col { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.inv-purchases__actions { display: flex; gap: 2px; justify-content: flex-end; }
+@media (max-width: 600px) {
+  .inv-purchases__head, .inv-purchases__row { grid-template-columns: 80px 60px 1fr 1fr 56px; }
+  .inv-purchases__head .inv-purchases__col:nth-child(4),
+  .inv-purchases__row .inv-purchases__col:nth-child(4) { display: none; }
+}
 .mb-2 { margin-bottom: var(--space-2); }
 .mb-3 { margin-bottom: var(--space-3); }
 .mt-3 { margin-top: var(--space-3); }

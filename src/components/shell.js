@@ -35,11 +35,12 @@ export function Sidebar({ activeId, onNavigate }) {
 }
 
 export function SyncPill(sync) {
-  const online = sync ? sync.online : (typeof navigator !== 'undefined' ? navigator.onLine : true);
-  const pending = sync ? sync.pending : 0;
-  const syncing = sync && sync.state === 'syncing';
-  const state = !online ? 'offline' : (syncing || pending > 0 ? 'pending' : 'synced');
-  const label = !online ? 'Sin conexión' : (pending > 0 ? ('Sincronizando ' + pending) : 'Sincronizado');
+  const online   = sync ? sync.online : (typeof navigator !== 'undefined' ? navigator.onLine : true);
+  const pending  = sync ? (sync.pending || 0) : 0;
+  const syncing  = sync && sync.state === 'syncing';
+  const hasError = sync && sync.state === 'error';
+  const state    = !online ? 'offline' : hasError ? 'error' : syncing ? 'syncing' : pending > 0 ? 'pending' : 'synced';
+  const label    = !online ? 'Sin conexión' : hasError ? 'Error de sync' : syncing ? `Sincronizando ${pending}` : pending > 0 ? `Pendiente (${pending})` : 'Sincronizado';
   return el('div', { class: 'sync-pill sync-pill--' + state, id: 'sync-pill', title: 'Estado de sincronización' }, [
     el('span', { class: 'sync-pill__dot' }),
     el('span', { class: 'sync-pill__label', text: label }),

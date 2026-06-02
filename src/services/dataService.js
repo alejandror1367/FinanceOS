@@ -68,8 +68,8 @@ async function seedMockIfNeeded() {
 }
 
 // Descarga todas las colecciones del backend y refresca caché + store.
-// Resiliente: si una acción falla (p. ej. backend sin actualizar), esa
-// colección conserva su caché local y las demás sí se refrescan.
+// TD-13 fix: re-aplica operaciones pendientes de la cola después de pull,
+// para que los creates/updates locales no se pierdan hasta ser confirmados.
 async function pullAll() {
   const colls = Object.keys(ENTITIES);
   const results = await Promise.allSettled(colls.map((c) => apiClient.get(ENTITIES[c].read)));
@@ -85,10 +85,35 @@ async function pullAll() {
       patch[c] = rows;
       ok++;
     } else {
-      patch[c] = await db.getAll(ENTITIES[c].store); // conserva caché
+      patch[c] = await db.getAll(ENTITIES[c].store);
       console.warn(`[dataService] pull "${c}" falló:`, res.reason && res.reason.message);
     }
   }
+
+  // Re-aplicar operaciones pendientes para que no se pierdan antes de sincronizar
+  try {
+    const { ENTITY_TO_STORE } = await import('./entities.js');
+    const pending = await syncQueue.all();
+    for (const op of pending) {
+      const storeName = ENTITY_TO_STORE[op.entity];
+      if (!storeName) continue;
+      const coll = colls.find((c) => ENTITIES[c].store === storeName);
+      if (op.action.includes('delete') && op.entityId) {
+        await db.delete(storeName, op.entityId);
+        if (patch[coll]) patch[coll] = patch[coll].filter((r) => r.id !== op.entityId);
+      } else if (op.data && op.data.id) {
+        await db.put(storeName, op.data);
+        if (patch[coll]) {
+          const idx = patch[coll].findIndex((r) => r.id === op.data.id);
+          if (idx >= 0) patch[coll][idx] = op.data;
+          else patch[coll].push(op.data);
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('[dataService] re-apply queue falló:', e.message);
+  }
+
   patch.netWorthSeries = mockData.netWorthSeries;
   patch.baseCurrency = baseCurrencyFrom(patch.settings);
   store.hydrate(patch);
