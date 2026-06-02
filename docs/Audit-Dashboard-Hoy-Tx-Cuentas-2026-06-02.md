@@ -3,7 +3,8 @@
 **Versión auditada:** v0.2.14 | **Commit base:** `5d73d5e`  
 **Sprint 1 ya aplicado:** commit `0d74646` — v0.2.15  
 **Sprint 2 ya aplicado:** commit `55f024a` — v0.2.16  
-**Sprint 3 ya aplicado:** commit `a3d8208` — v0.2.17
+**Sprint 3 ya aplicado:** commit `a3d8208` — v0.2.17  
+**Sprint 4 ya aplicado:** commit `5d351a2` — v0.2.18
 
 > Auditoría de 7 fases realizada como Staff Frontend + QA + Product Designer + Financial Systems Architect.
 > Los fixes del Sprint 1 ya están en `main`. Los sprints 2–5 son la cola de trabajo.
@@ -28,10 +29,10 @@
 | HOY-2 | Señal de salud financiera del día | 3 | ✅ Resuelto `a3d8208` |
 | HOY-3 | Insight diario automático | 3 | ✅ Resuelto `a3d8208` |
 | HOY-4 | Vista Hoy no reactiva (`store.subscribe`) | 3 | ✅ Resuelto `a3d8208` |
-| CTA-1 | Agrupación de Cuentas por tipo | 4 | ⏳ Pendiente |
-| CTA-2 | KPI summary en Cuentas | 4 | ⏳ Pendiente |
-| CTA-3 | Quick presets bancos colombianos | 4 | ⏳ Pendiente |
-| CTA-4 | Balance CC en rojo/negativo en Cuentas | 4 | ⏳ Pendiente |
+| CTA-1 | Agrupación de Cuentas por tipo | 4 | ✅ Resuelto `5d351a2` |
+| CTA-2 | KPI summary en Cuentas | 4 | ✅ Resuelto `5d351a2` |
+| CTA-3 | Quick presets bancos colombianos | 4 | ✅ Resuelto `5d351a2` |
+| CTA-4 | Balance CC en rojo/negativo en Cuentas | 4 | ✅ Resuelto `5d351a2` |
 | DB-1 | Dashboard no reactivo (`store.subscribe`) | 5 | ⏳ Pendiente |
 | DB-2 | Score financiero mensual | 5 | ⏳ Pendiente |
 | DB-3 | Alertas inline en KPIs | 5 | ⏳ Pendiente |
@@ -330,7 +331,7 @@ const PRESETS = [
 
 ---
 
-### Sprint 4 — Cuentas como ecosistema
+### Sprint 4 — Cuentas como ecosistema ✅ COMPLETADO (`5d351a2` · v0.2.18)
 
 **Objetivo:** que Cuentas refleje el ecosistema financiero real de Alejo.
 
