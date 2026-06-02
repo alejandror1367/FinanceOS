@@ -286,6 +286,35 @@ describe('presupuestos', () => {
     const st = selectors.budgetStats(s, budget);
     assert.equal(st.pct, 0);
   });
+
+  // Regresión BUG-A1/TD-12: Google Sheets auto-convierte 'YYYY-MM' en un objeto Date.
+  // normPeriodKey debe normalizarlo a 'YYYY-MM' para que el consumido NO sea $0.
+  test('budgetConsumed: periodKey como Date (auto-conversión de Sheets) → consumido > 0', () => {
+    const s = mkState({
+      transactions: [
+        tx('1', 'expense', 200_000, '2026-05-10', { categoryId: 'cat1' }),
+        tx('2', 'expense', 150_000, '2026-05-20', { categoryId: 'cat1' }),
+        tx('3', 'expense', 100_000, '2026-04-10', { categoryId: 'cat1' }), // mes distinto
+      ],
+    });
+    // Lo que llega del backend cuando Sheets coaccionó '2026-05' a fecha:
+    const budget = { categoryId: 'cat1', period: 'monthly', periodKey: new Date(Date.UTC(2026, 4, 1)), amount: 500_000 };
+    assert.equal(selectors.budgetConsumed(s, budget), 350_000);
+    assert.equal(selectors.budgetStats(s, budget).consumed, 350_000);
+  });
+
+  // Anual con periodKey como Date → debe bucketizar por año ('YYYY').
+  test('budgetConsumed: anual con periodKey Date agrupa por año', () => {
+    const s = mkState({
+      transactions: [
+        tx('1', 'expense', 200_000, '2026-03-10', { categoryId: 'cat1' }),
+        tx('2', 'expense', 150_000, '2026-09-20', { categoryId: 'cat1' }),
+        tx('3', 'expense', 100_000, '2025-12-10', { categoryId: 'cat1' }), // año distinto
+      ],
+    });
+    const budget = { categoryId: 'cat1', period: 'annual', periodKey: new Date(Date.UTC(2026, 0, 1)), amount: 1_000_000 };
+    assert.equal(selectors.budgetConsumed(s, budget), 350_000);
+  });
 });
 
 // ── hasMixedCurrencies (TD-02) ────────────────────────────────────────────────
