@@ -527,7 +527,7 @@ La app ya tiene `config.js` con las URLs reales commiteadas. Solo necesitas:
 Ver `docs/Audit-Funcional-2026-06-02.md` para el informe completo con bugs priorizados.
 
 Bugs más urgentes identificados en la auditoría:
-- **BUG-C1** (Crítico): Cold start — todos los KPIs en $0 hasta hacer click en "Actualizar" — ✅ RESUELTO (`23009b0`+`98f8c19`); happy-path pendiente de confirmar tras desplegar backend
+- **BUG-C1** (Crítico): Cold start — todos los KPIs en $0 hasta hacer click en "Actualizar" — ✅ RESUELTO (`23009b0`+`98f8c19`); happy-path **confirmado en producción**: la primera carga hace 1 sola petición `getBootstrap`, sin "No autorizado"
 - **BUG-C2** (Crítico): Presupuestos — fecha del período renderiza como `Date.toString()` crudo
 - **BUG-A1** (Alto): Presupuestos — consumido siempre $0 (confirma TD-12, fix = 1 línea)
 - **BUG-A3** (Alto): Botón "Buscar" en topbar no hace nada (confirma TD-31)
@@ -545,7 +545,7 @@ Bugs más urgentes identificados en la auditoría:
 - `dataService`: warm-up secuencial + retry en `init()` (`23009b0`).
 - **TD-15 `getBootstrap`** (`98f8c19`): 12 colecciones en 1 request (frontend con fallback +
   backend `Code.gs`/`Reports.gs`). Cura la raíz (la estampida de verificación de token).
-  ⚠️ Requiere desplegar el backend para activar la ruta de 1 request y confirmar el happy-path.
+  ✅ Backend desplegado y **confirmado en producción**: la carga hace 1 sola petición `getBootstrap`.
 
 ---
 

@@ -46,13 +46,14 @@ HECHO EN LA SESIÓN ANTERIOR (2026-06-02), todo commiteado y pusheado, HEAD = 13
 PENDIENTE (no abordado aún):
 - VERIFICAR EN VIVO (requiere login OAuth) que Presupuestos ahora muestra "May 2026"
   y consumido > $0. Hoy solo se verificó el código servido, no con datos reales tras login.
-- ⚠️ BACKEND Apps Script sin actualizar: subir Accounts.gs, Transactions.gs, Code.gs,
-  Auth.gs, Migration.gs, **Reports.gs (nuevo getBootstrap, TD-15)** → publicar Nueva versión →
-  Ajustes → Recalcular saldos (modelo híbrido de saldos, TD-01). Hasta entonces las
-  transacciones no mueven saldos en Sheets y la carga usa el fallback de 12 requests.
+- ✅ BACKEND: Code.gs + Reports.gs desplegados (Nueva versión) y confirmado en vivo
+  (la carga hace 1 sola petición getBootstrap, TD-15).
+- ⚠️ FALTA confirmar/desplegar los .gs del modelo de saldos (Accounts, Transactions,
+  Auth, Migration → TD-01) y luego Ajustes → Recalcular saldos. Hasta entonces las
+  transacciones no mueven saldos en Sheets.
 - ⚠️ Confirmar que el bypass de auditoría fue eliminado de Auth.gs en Apps Script.
 - ✅ BUG-C1 (crítico) RESUELTO (`23009b0`+`98f8c19`): guard anti-signOut + warm-up + retry,
-  y TD-15 (getBootstrap) cura la raíz. Pendiente confirmar happy-path en vivo tras desplegar backend.
+  y TD-15 (getBootstrap) cura la raíz. Happy-path CONFIRMADO en producción (1 getBootstrap).
 - BUG-A4 (alto): Deudas — KPI "Tarjetas de crédito" en $0 (consolidar credit_card + Liabilities).
 - ✅ TD-15 (getBootstrap, 12→1 request) HECHO (`98f8c19`); ✅ TD-16 (memoizar openById)
   ya estaba HECHO (`47f91e1`, solo faltaba marcarlo). P1 restante: TD-13, TD-14, TD-10, TD-17, TD-18.

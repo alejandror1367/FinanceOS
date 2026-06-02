@@ -51,7 +51,7 @@ Se descubrió un **módulo nuevo no documentado**: `#/import` — importación d
   2. `dataService.pullAll()`: warm-up secuencial (1 petición con reintentos) antes de la ráfaga, para cachear la verificación del token en el backend.
   3. `dataService.init()`: reintenta una vez si `pulled===0`.
   4. **TD-15 (`getBootstrap`)**: cura estructural — 1 sola petición de arranque elimina la estampida. Requiere desplegar el backend.
-- **Verificación:** Playwright con token de prueba contra el backend real — sin `signOut` destructivo, sin loop a login, warm-up + retry operando. Happy-path pendiente de confirmar tras desplegar el backend.
+- **Verificación:** Playwright con token de prueba contra el backend real — sin `signOut` destructivo, sin loop a login, warm-up + retry operando. **Happy-path confirmado en producción** tras desplegar el backend: la primera carga hace 1 sola petición `getBootstrap`.
 
 **BUG-C2 — Presupuestos: fecha del período renderiza como `Date.toString()` crudo**
 - **Síntoma:** Las fechas se muestran como `FRI MAY 01 2026 00:00:00 GMT` en lugar de `"Mayo 2026"`.
