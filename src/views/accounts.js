@@ -68,10 +68,15 @@ function accountForm(existing) {
   ]);
 }
 
-export function openAccountModal(existing) {
-  const body = accountForm(existing);
+export function openAccountModal(existing, { defaults = null } = {}) {
+  const prefill = existing || defaults;
+  const isCC = prefill?.type === 'credit_card';
+  const body = accountForm(prefill);
+  const title = existing
+    ? (isCC ? 'Editar tarjeta' : 'Editar cuenta')
+    : (isCC ? 'Nueva tarjeta' : 'Nueva cuenta');
   openModal({
-    title: existing ? 'Editar cuenta' : 'Nueva cuenta',
+    title,
     body,
     submitLabel: existing ? 'Guardar' : 'Crear',
     onSubmit: async () => {

@@ -230,7 +230,10 @@ export function renderDebts() {
     // Panel de tarjetas (estado detallado).
     if (ccAccounts.length) {
       children.push(el('div', { class: 'section' }, [
-        el('h3', { class: 't-h2 mb-4', text: 'Tarjetas de crédito' }),
+        el('div', { class: 'row-flex between mb-4' }, [
+          el('h3', { class: 't-h2', text: 'Tarjetas de crédito' }),
+          Button('Nueva tarjeta', { variant: 'ghost', iconName: 'plus', onClick: () => openAccountModal(null, { defaults: { type: 'credit_card' } }) }),
+        ]),
         el('div', { class: 'cc-panels-grid' }, ccAccounts.map((a) => creditCardPanel(a, cur))),
       ]));
     }

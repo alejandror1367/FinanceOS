@@ -7,7 +7,7 @@ import { store } from '../store/store.js';
 import { selectors } from '../store/selectors.js';
 import { dataService } from '../services/dataService.js';
 import { formatMoney } from '../utils/format.js';
-import { Button, Badge, ProgressBar, EmptyState } from '../components/ui.js';
+import { Button, Badge, KpiCard, ProgressBar, EmptyState } from '../components/ui.js';
 import { openModal, confirmDialog } from '../components/modal.js';
 import { field, numberInput, select, segmented, textInput } from '../components/forms.js';
 import { toast } from '../services/toast.js';
@@ -142,31 +142,54 @@ function budgetCard(s, b, catMap, cur) {
 }
 
 export function renderBudgets() {
-  const s = store.get();
-  const cur = s.baseCurrency;
-  const catMap = {}; (s.categories || []).forEach((c) => { catMap[c.id] = c; });
-  const budgets = [...(s.budgets || [])];
-  // Orden: mensual del mes actual primero, luego por consumo descendente.
-  budgets.sort((a, b) => selectors.budgetStats(s, b).pct - selectors.budgetStats(s, a).pct);
+  const root = el('div');
 
-  const totalBudget = budgets.reduce((sum, b) => sum + (b.amount || 0), 0);
-  const totalConsumed = budgets.reduce((sum, b) => sum + selectors.budgetConsumed(s, b), 0);
+  function repaint() {
+    const s = store.get();
+    const cur = s.baseCurrency;
+    const catMap = {}; (s.categories || []).forEach((c) => { catMap[c.id] = c; });
+    const budgets = [...(s.budgets || [])];
+    budgets.sort((a, b) => selectors.budgetStats(s, b).pct - selectors.budgetStats(s, a).pct);
 
-  return el('div', {}, [
-    el('div', { class: 'page-header' }, [
+    const totalBudget = budgets.reduce((sum, b) => sum + (b.amount || 0), 0);
+    const totalConsumed = budgets.reduce((sum, b) => sum + selectors.budgetConsumed(s, b), 0);
+    const available = Math.max(0, totalBudget - totalConsumed);
+    const consumedPct = totalBudget ? Math.round(totalConsumed / totalBudget * 100) : 0;
+    const kpiVariant = consumedPct >= 100 ? 'negative' : consumedPct >= 80 ? 'warning' : 'emerald';
+
+    const header = el('div', { class: 'page-header' }, [
       el('div', { class: 'row-flex between' }, [
         el('div', {}, [
           el('h2', { class: 't-h1', text: 'Presupuestos' }),
-          el('p', { class: 'page-header__sub', text: budgets.length ? `${formatMoney(totalConsumed, cur)} de ${formatMoney(totalBudget, cur)} consumido` : 'Define límites por categoría.' }),
+          el('p', { class: 'page-header__sub', text: budgets.length ? `${budgets.length} presupuesto${budgets.length !== 1 ? 's' : ''} · ${curMonthKey.slice(0, 7)}` : 'Define límites por categoría.' }),
         ]),
         Button('Nuevo presupuesto', { variant: 'primary', iconName: 'plus', onClick: () => openBudgetModal({ mode: 'create' }) }),
       ]),
-    ]),
-    budgets.length
-      ? el('div', { class: 'grid grid--2' }, budgets.map((b) => budgetCard(s, b, catMap, cur)))
-      : el('div', { class: 'card' }, [EmptyState({
-          title: 'Sin presupuestos', message: 'Crea tu primer presupuesto mensual o anual.', iconName: 'budgets',
-          action: Button('Nuevo presupuesto', { variant: 'primary', iconName: 'plus', onClick: () => openBudgetModal({ mode: 'create' }) }),
-        })]),
-  ]);
+    ]);
+
+    const children = [header];
+
+    if (budgets.length) {
+      children.push(el('div', { class: 'grid grid--kpi' }, [
+        KpiCard({ label: 'Total presupuestado', value: formatMoney(totalBudget, cur), iconName: 'budgets', variant: 'accent' }),
+        KpiCard({ label: 'Consumido', value: formatMoney(totalConsumed, cur), iconName: 'analytics', variant: kpiVariant,
+          foot: [el('span', { class: 't-caption', text: `${consumedPct}% del total` })] }),
+        KpiCard({ label: 'Disponible', value: formatMoney(available, cur), iconName: 'accounts', variant: 'emerald' }),
+        KpiCard({ label: 'Presupuestos activos', value: String(budgets.length), iconName: 'recurring', variant: 'neutral',
+          foot: [el('span', { class: 't-caption', text: `${budgets.filter((b) => { const st = selectors.budgetStats(s, b); return st.pct >= 80; }).length} cerca del límite` })] }),
+      ]));
+      children.push(el('div', { class: 'grid grid--2 mt-4' }, budgets.map((b) => budgetCard(s, b, catMap, cur))));
+    } else {
+      children.push(el('div', { class: 'card' }, [EmptyState({
+        title: 'Sin presupuestos', message: 'Crea tu primer presupuesto mensual o anual.', iconName: 'budgets',
+        action: Button('Nuevo presupuesto', { variant: 'primary', iconName: 'plus', onClick: () => openBudgetModal({ mode: 'create' }) }),
+      })]));
+    }
+
+    root.replaceChildren(...children);
+  }
+
+  repaint();
+  store.subscribe(() => { if (root.isConnected) repaint(); });
+  return root;
 }

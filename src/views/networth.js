@@ -77,8 +77,8 @@ export function openLiabilityModal({ liability = {}, mode = 'create' }) {
       field('Saldo', numberInput({ name: 'balance', value: liability.balance ?? '' })),
     ]),
     el('div', { class: 'field-row' }, [
-      field('Tasa anual (%)', numberInput({ name: 'interestRate', value: liability.interestRate ?? '' })),
-      field('Cuota mínima', numberInput({ name: 'minimumPayment', value: liability.minimumPayment ?? '' })),
+      field('Tasa E.A. (%)', numberInput({ name: 'interestRate', value: liability.interestRate ?? '' })),
+      field('Cuota mínima ($)', numberInput({ name: 'minimumPayment', value: liability.minimumPayment ?? '' })),
     ]),
     field('Vencimiento', textInput({ name: 'dueDate', value: (liability.dueDate || '').slice(0, 10), type: 'date' })),
   ]);

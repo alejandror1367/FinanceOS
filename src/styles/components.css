@@ -252,11 +252,14 @@ select.input { appearance: none; cursor: pointer;
   background: var(--bg-elevated); border: 1px solid var(--border);
   border-radius: var(--radius-xl); box-shadow: var(--shadow-lg);
   animation: modal-pop var(--dur-base) var(--ease-out);
+  max-height: calc(100dvh - 6vh - 4rem);
+  display: flex; flex-direction: column;
 }
-.modal__head { display: flex; align-items: center; justify-content: space-between; padding: var(--space-5) var(--space-5) var(--space-3); }
+.modal__head { display: flex; align-items: center; justify-content: space-between; padding: var(--space-5) var(--space-5) var(--space-3); flex-shrink: 0; }
 .modal__title { font-size: var(--fs-h3); font-weight: var(--fw-semibold); }
-.modal__body { padding: 0 var(--space-5) var(--space-2); }
-.modal__foot { display: flex; gap: var(--space-3); justify-content: flex-end; padding: var(--space-4) var(--space-5) var(--space-5); }
+.modal__form { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.modal__body { padding: 0 var(--space-5) var(--space-2); overflow-y: auto; flex: 1; min-height: 0; }
+.modal__foot { display: flex; gap: var(--space-3); justify-content: flex-end; padding: var(--space-4) var(--space-5) var(--space-5); flex-shrink: 0; border-top: 1px solid var(--border-subtle); }
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes modal-pop { from { opacity: 0; transform: translateY(12px) scale(.98); } to { opacity: 1; transform: none; } }
 
