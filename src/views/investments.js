@@ -12,6 +12,10 @@ import { openModal, confirmDialog } from '../components/modal.js';
 import { field, textInput, numberInput, select, segmented } from '../components/forms.js';
 import { toast } from '../services/toast.js';
 
+// Caché de precios a nivel de módulo — persiste cuando el router re-renderiza la vista.
+let _priceCache = {};
+let _fxCache    = {};
+
 const ASSET_TYPES = [
   { value: 'etf',    label: 'ETF',             section: 'mkt'    },
   { value: 'stock',  label: 'Acción',           section: 'mkt'    },
@@ -327,8 +331,9 @@ function positionCard(group, livePrice, fxRates, baseCur) {
 export function renderInvestments() {
   const root = el('div');
   const bodyMount = el('div');
-  let livePrices = {};
-  let fxRates    = {};
+  // Inicializar desde la caché del módulo para sobrevivir re-renders del router
+  let livePrices = { ..._priceCache };
+  let fxRates    = { ..._fxCache };
   let refreshing = false;
 
   function buildFxRates() {
@@ -346,8 +351,11 @@ export function renderInvestments() {
     refreshing = true; paint(true);
     try {
       const quotes = await apiClient.get('getQuotes', { tickers: all.join(',') });
-      Object.entries(quotes || {}).forEach(([tk, q]) => { if (q && !q.error) livePrices[tk] = q; });
+      Object.entries(quotes || {}).forEach(([tk, q]) => {
+        if (q && !q.error) { livePrices[tk] = q; _priceCache[tk] = q; }
+      });
       fxRates = buildFxRates();
+      _fxCache = { ...fxRates };
       toast('Precios actualizados');
     } catch (e) { toast('Error: ' + e.message, { type: 'warning' }); }
     finally { refreshing = false; paint(false); }
