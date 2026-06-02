@@ -196,7 +196,7 @@ export function renderGoals() {
     const goals = [...(s.goals || [])].sort((a, b) => goalStats(b).pct - goalStats(a).pct);
     const totalTarget = goals.reduce((sum, g) => sum + (g.targetAmount || 0), 0);
     const totalCurrent = goals.reduce((sum, g) => sum + (g.currentAmount || 0), 0);
-    const monthlySavings = selectors.monthlySavings(s);
+    const monthlySavings = selectors.monthlySavingsAvg(s, 3);
 
     mount(root,
       el('div', {}, [

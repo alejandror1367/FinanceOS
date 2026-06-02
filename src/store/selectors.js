@@ -113,6 +113,13 @@ export const selectors = {
     return selectors.monthlyIncome(s, ref) - selectors.monthlyExpense(s, ref);
   },
 
+  // Promedio de ahorro de los últimos n meses completos (excluye el mes en curso).
+  monthlySavingsAvg(s, n = 3) {
+    const cf = selectors.cashflow(s, n + 1).slice(0, n); // n meses completos, sin el actual
+    if (!cf.length) return 0;
+    return cf.reduce((sum, m) => sum + m.savings, 0) / cf.length;
+  },
+
   savingsRate(s, ref) {
     const inc = selectors.monthlyIncome(s, ref);
     if (!inc) return 0;

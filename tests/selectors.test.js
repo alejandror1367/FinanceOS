@@ -434,6 +434,53 @@ describe('deudas', () => {
   });
 });
 
+// ── monthlySavingsAvg ────────────────────────────────────────────────────────
+
+describe('monthlySavingsAvg', () => {
+  function monthAgo(n) {
+    const d = new Date();
+    d.setDate(1);
+    d.setMonth(d.getMonth() - n);
+    return d.toISOString().slice(0, 7) + '-15'; // 15th of that month
+  }
+
+  test('devuelve 0 sin transacciones', () => {
+    assert.equal(selectors.monthlySavingsAvg(mkState()), 0);
+  });
+
+  test('promedio de 3 meses completos — excluye mes actual', () => {
+    const s = mkState({
+      transactions: [
+        // 3 meses atrás: ahorro 300k
+        tx('t1', 'income',  500_000, monthAgo(3)),
+        tx('t2', 'expense', 200_000, monthAgo(3)),
+        // 2 meses atrás: ahorro 200k
+        tx('t3', 'income',  400_000, monthAgo(2)),
+        tx('t4', 'expense', 200_000, monthAgo(2)),
+        // 1 mes atrás: ahorro 100k
+        tx('t5', 'income',  300_000, monthAgo(1)),
+        tx('t6', 'expense', 200_000, monthAgo(1)),
+        // mes actual — NO debe incluirse
+        tx('t7', 'income', 1_000_000, monthAgo(0)),
+      ],
+    });
+    // avg(300k, 200k, 100k) = 200k
+    assert.equal(selectors.monthlySavingsAvg(s, 3), 200_000);
+  });
+
+  test('meses con ahorro negativo bajan el promedio', () => {
+    const s = mkState({
+      transactions: [
+        tx('t1', 'income',  100_000, monthAgo(2)),
+        tx('t2', 'expense', 300_000, monthAgo(2)), // -200k
+        tx('t3', 'income',  400_000, monthAgo(1)), // +400k
+      ],
+    });
+    // avg(-200k, 400k) con n=2
+    assert.equal(selectors.monthlySavingsAvg(s, 2), 100_000);
+  });
+});
+
 // ── upcomingPayments ─────────────────────────────────────────────────────────
 
 describe('upcomingPayments', () => {
