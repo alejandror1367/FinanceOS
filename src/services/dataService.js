@@ -230,10 +230,15 @@ export const dataService = {
   async create(coll, data) {
     const cfg = ENTITIES[coll];
     const record = stamp({ id: data.id || newId(), ...data });
-    await db.put(cfg.store, record);
+    // TD-14: el dato y su operación de cola se escriben en UNA transacción atómica,
+    // para que nunca quede un registro local sin su op de sync (o viceversa).
+    const op = syncQueue.makeRecord({ action: WRITE[coll].create, entity: cfg.entity, entityId: record.id, data: record });
+    await db.transact([cfg.store, 'syncQueue'], 'readwrite', (s) => {
+      s[cfg.store].put(record);
+      s.syncQueue.put(op);
+    });
     await this._refreshStore(coll);
     if (coll === 'transactions') await this._adjustAccountBalances(record, +1);
-    await syncQueue.enqueue({ action: WRITE[coll].create, entity: cfg.entity, entityId: record.id, data: record });
     await syncEngine.refreshPending();
     syncEngine.flush();
     return record;
@@ -244,10 +249,13 @@ export const dataService = {
     const current = await db.get(cfg.store, id);
     if (coll === 'transactions' && current) await this._adjustAccountBalances(current, -1);
     const record = { ...(current || { id }), ...patch, id, updatedAt: new Date().toISOString() };
-    await db.put(cfg.store, record);
+    const op = syncQueue.makeRecord({ action: WRITE[coll].update, entity: cfg.entity, entityId: id, data: { id, ...patch } });
+    await db.transact([cfg.store, 'syncQueue'], 'readwrite', (s) => {   // TD-14: atómico
+      s[cfg.store].put(record);
+      s.syncQueue.put(op);
+    });
     await this._refreshStore(coll);
     if (coll === 'transactions') await this._adjustAccountBalances(record, +1);
-    await syncQueue.enqueue({ action: WRITE[coll].update, entity: cfg.entity, entityId: id, data: { id, ...patch } });
     await syncEngine.refreshPending();
     syncEngine.flush();
     return record;
@@ -256,10 +264,13 @@ export const dataService = {
   async remove(coll, id) {
     const cfg = ENTITIES[coll];
     const existing = coll === 'transactions' ? await db.get(cfg.store, id) : null;
-    await db.delete(cfg.store, id); // optimista: fuera de la caché local
+    const op = syncQueue.makeRecord({ action: WRITE[coll].remove, entity: cfg.entity, entityId: id, data: { id } });
+    await db.transact([cfg.store, 'syncQueue'], 'readwrite', (s) => {   // TD-14: atómico
+      s[cfg.store].delete(id); // optimista: fuera de la caché local
+      s.syncQueue.put(op);
+    });
     await this._refreshStore(coll);
     if (existing) await this._adjustAccountBalances(existing, -1);
-    await syncQueue.enqueue({ action: WRITE[coll].remove, entity: cfg.entity, entityId: id, data: { id } });
     await syncEngine.refreshPending();
     syncEngine.flush();
     return { id, deleted: true };
@@ -275,6 +286,10 @@ export const dataService = {
   // Fuerza una descarga manual (botón "Actualizar").
   async refresh() {
     if (!apiClient.isConfigured()) return { refreshed: false };
+    // TD-13: vaciar la cola pendiente ANTES de descargar, para que el pull
+    // (clear+replace) no compita con creates/updates locales sin sincronizar.
+    // Lo que quede pendiente lo recupera reconcileAndHydrate tras el pull.
+    try { await syncEngine.flush(); } catch (e) { /* offline: se reintenta luego */ }
     await pullData();
     return { refreshed: true };
   },

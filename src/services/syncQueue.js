@@ -8,8 +8,10 @@ import { db } from './db.js';
 const STORE = 'syncQueue';
 
 export const syncQueue = {
-  async enqueue(op) {
-    const record = {
+  // Construye el registro de cola (sin persistir). Compartido por enqueue() y por
+  // la escritura atómica dato+cola de dataService (TD-14), para una forma única.
+  makeRecord(op) {
+    return {
       action: op.action,
       entity: op.entity,
       entityId: op.entityId || null,
@@ -18,6 +20,10 @@ export const syncQueue = {
       attempts: 0,
       lastError: '',
     };
+  },
+
+  async enqueue(op) {
+    const record = this.makeRecord(op);
     await db.put(STORE, record); // seq autoincremental
     return record;
   },

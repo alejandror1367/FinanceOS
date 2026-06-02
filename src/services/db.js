@@ -85,6 +85,30 @@ export const db = {
     const os = await tx(store);
     return reqToPromise(os.count());
   },
+  // Ejecuta varias operaciones IDB sobre múltiples stores en UNA sola transacción
+  // atómica (TD-14): o se aplican todas o ninguna. `work(stores)` recibe
+  // { [storeName]: objectStore } y debe encolar requests IDB de forma SÍNCRONA
+  // (no await de promesas externas dentro, o la transacción se autocierra).
+  transact(storeNames, mode, work) {
+    return openDB().then((database) => new Promise((resolve, reject) => {
+      let t;
+      try {
+        t = database.transaction(storeNames, mode);
+      } catch (e) { reject(e); return; }
+      let result;
+      t.oncomplete = () => resolve(result);
+      t.onerror = () => reject(t.error);
+      t.onabort = () => reject(t.error || new Error('IndexedDB transaction aborted'));
+      try {
+        const stores = {};
+        storeNames.forEach((n) => { stores[n] = t.objectStore(n); });
+        result = work(stores);
+      } catch (e) {
+        try { t.abort(); } catch (_) { /* ya abortada */ }
+        reject(e);
+      }
+    }));
+  },
   // kv helpers (banderas locales: seed, etc.)
   async kvGet(k) {
     const os = await tx('kv');
