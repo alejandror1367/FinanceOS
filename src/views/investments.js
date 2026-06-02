@@ -405,6 +405,8 @@ function positionCard(group, livePrice, fxRates, baseCur) {
       actions.appendChild(Button('Vender', { variant: 'outline', size: 'sm',
         onClick: () => openSellModal(group, livePrice) }));
     }
+    actions.appendChild(Button('Dividendo', { variant: 'ghost', size: 'sm',
+      onClick: () => openDividendModal(group) }));
   }
   if (assetType === 'fund') {
     actions.appendChild(Button('Actualizar valor', { variant: 'outline', size: 'sm',
@@ -413,6 +415,53 @@ function positionCard(group, livePrice, fxRates, baseCur) {
   card.appendChild(actions);
   renderPurchases();
   return card;
+}
+
+// ─── Modal de dividendo ───────────────────────────────────────────────────────
+// Registra un dividendo como transacción de ingreso en la cuenta del broker.
+function openDividendModal(group) {
+  const { symbol, name, currency, purchases } = group;
+  const s = store.get();
+  const accountId = purchases[0]?.accountId || '';
+  const accts = (s.accounts || []).filter((a) => !a.isArchived);
+  const acctOpts = accts.map((a) => ({ value: a.id, label: a.name }));
+  // Buscar o crear categoría "Dividendos"
+  const divCat = (s.categories || []).find((c) => /dividend|divid/i.test(c.name || '') && c.kind === 'income');
+  const incomeCats = (s.categories || []).filter((c) => c.kind === 'income');
+  const catOpts = incomeCats.map((c) => ({ value: c.id, label: c.name }));
+
+  const amountEl = numberInput({ name: 'amount', value: '', placeholder: 'Monto recibido' });
+  const dateEl   = textInput({ name: 'date', value: today(), type: 'date' });
+  const acctEl   = el('select', { class: 'input', name: 'acct' });
+  acctOpts.forEach((o) => acctEl.appendChild(el('option', { value: o.value, text: o.label, selected: o.value === accountId ? true : null })));
+  const catEl = el('select', { class: 'input', name: 'cat' });
+  catOpts.forEach((o) => catEl.appendChild(el('option', { value: o.value, text: o.label, selected: o.value === divCat?.id ? true : null })));
+
+  const body = el('div', {}, [
+    field('Monto del dividendo', amountEl),
+    el('div', { class: 'field-row' }, [field('Fecha', dateEl), field('Cuenta de acreditación', acctEl)]),
+    catOpts.length ? field('Categoría de ingreso', catEl) : el('p', { class: 't-caption text-secondary', text: 'Crea categorías de tipo "ingreso" para clasificar el dividendo.' }),
+  ]);
+
+  openModal({
+    title: `Dividendo — ${symbol || name}`,
+    body,
+    submitLabel: 'Registrar dividendo',
+    onSubmit: async () => {
+      const amount = Number(amountEl.value) || 0;
+      if (amount <= 0) { toast('Ingresa el monto', { type: 'negative' }); return false; }
+      const acctId = acctEl.value;
+      if (!acctId) { toast('Selecciona una cuenta', { type: 'negative' }); return false; }
+      try {
+        await dataService.create('transactions', {
+          type: 'income', amount, date: dateEl.value, accountId: acctId,
+          categoryId: catEl.value || (incomeCats[0]?.id || ''),
+          description: `Dividendo ${symbol || name}`, currency,
+        });
+        toast('Dividendo registrado como ingreso');
+      } catch (e) { toast('Error: ' + e.message, { type: 'negative' }); return false; }
+    },
+  });
 }
 
 // ─── Render principal ──────────────────────────────────────────────────────

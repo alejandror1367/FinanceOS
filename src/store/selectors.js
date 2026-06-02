@@ -118,7 +118,11 @@ export const selectors = {
 
   recentTransactions(s, n = 6) {
     return [...s.transactions]
-      .sort((a, b) => new Date(b.date) - new Date(a.date))
+      .sort((a, b) => {
+        if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+        // Tiebreaker estable por createdAt o id (evita reordenamiento aleatorio el mismo día).
+        return (a.createdAt || a.id || '') < (b.createdAt || b.id || '') ? 1 : -1;
+      })
       .slice(0, n);
   },
 
