@@ -1,5 +1,7 @@
-// store/selectors.js — derivaciones financieras puras sobre el estado.
+// store/selectors.js — derivaciones financieras sobre el estado.
 // Los valores derivados NO se persisten (docs/Database.md §5): se calculan aquí.
+
+import { priceService } from '../services/priceService.js';
 
 function sameMonth(iso, ref = new Date()) {
   const refKey = `${ref.getFullYear()}-${String(ref.getMonth() + 1).padStart(2, '0')}`;
@@ -28,10 +30,12 @@ export const selectors = {
   },
 
   investmentsValue(s) {
-    const fx   = s.fxRates || {};
+    const fx   = priceService.fxRates;
     const base = s.baseCurrency || 'COP';
     return s.investments.filter((i) => !i.isDeleted).reduce((sum, i) => {
-      const native = (i.quantity || 0) * (i.currentPrice || 0);
+      const lp    = priceService.priceFor(i.symbol);
+      const price = lp?.price || i.currentPrice || 0;
+      const native = (i.quantity || 0) * price;
       if (!native) return sum;
       const cur = i.currency || base;
       if (cur === base) return sum + native;
@@ -40,7 +44,7 @@ export const selectors = {
   },
 
   investmentsCost(s) {
-    const fx   = s.fxRates || {};
+    const fx   = priceService.fxRates;
     const base = s.baseCurrency || 'COP';
     return s.investments.filter((i) => !i.isDeleted).reduce((sum, i) => {
       const native = (i.quantity || 0) * (i.avgCost || i.purchasePrice || 0);

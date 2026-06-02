@@ -11,26 +11,7 @@ import { KpiCard, Badge, Trend, ProgressBar, EmptyState, Button } from '../compo
 import { openModal, confirmDialog } from '../components/modal.js';
 import { field, textInput, numberInput, select, segmented } from '../components/forms.js';
 import { toast } from '../services/toast.js';
-
-// Caché de precios — persiste entre re-renders del router Y entre recargas (F5) via localStorage.
-const PRICE_TTL   = 15 * 60_000; // 15 min (igual que CacheService de Apps Script)
-const LS_PRICES   = 'financeOS:inv:prices';
-const LS_FX       = 'financeOS:inv:fx';
-const LS_FETCH_AT = 'financeOS:inv:fetchAt';
-
-let _priceCache  = {};
-let _fxCache     = {};
-let _lastFetchAt = 0;
-
-// Restaurar desde localStorage si el TTL no expiró
-try {
-  const ts = Number(localStorage.getItem(LS_FETCH_AT) || 0);
-  if (ts && Date.now() - ts < PRICE_TTL) {
-    _priceCache  = JSON.parse(localStorage.getItem(LS_PRICES) || '{}');
-    _fxCache     = JSON.parse(localStorage.getItem(LS_FX)     || '{}');
-    _lastFetchAt = ts;
-  }
-} catch (_) { /* localStorage no disponible */ }
+import { priceService } from '../services/priceService.js';
 
 // Brokers predefinidos que aparecen como quick-create si no existen como cuenta
 const DEFAULT_BROKERS = [
@@ -366,26 +347,15 @@ function positionCard(group, livePrice, fxRates, baseCur) {
   return card;
 }
 
-// ─── Parcha el store en memoria con precios en vivo (sin tocar IndexedDB) ─────
-// Permite que el dashboard y otras vistas usen currentPrice real sin depender
-// de que el usuario haya visitado Inversiones primero.
-function _applyPricesToStore(priceCache, fxRates) {
-  const invs = store.get().investments.map((inv) => {
-    const lp = priceCache[(inv.symbol || '').toUpperCase()];
-    return lp?.price ? { ...inv, currentPrice: lp.price } : inv;
-  });
-  store.set({ investments: invs, fxRates });
-}
-
 // ─── Render principal ──────────────────────────────────────────────────────
 export function renderInvestments() {
   const root = el('div');
   const bodyMount = el('div');
-  // Inicializar desde la caché del módulo para sobrevivir re-renders del router
-  let livePrices = { ..._priceCache };
-  let fxRates    = { ..._fxCache };
   let refreshing = false;
 
+  // livePrices y fxRates son vistas locales sobre priceService — se actualizan tras el fetch.
+  let livePrices = { ...priceService.prices };
+  let fxRates    = { ...priceService.fxRates };
 
   function buildFxRates() {
     const r = {};
@@ -403,18 +373,11 @@ export function renderInvestments() {
     try {
       const quotes = await apiClient.get('getQuotes', { tickers: all.join(',') });
       Object.entries(quotes || {}).forEach(([tk, q]) => {
-        if (q && !q.error) { livePrices[tk] = q; _priceCache[tk] = q; }
+        if (q && !q.error) livePrices[tk] = q;
       });
       fxRates = buildFxRates();
-      _fxCache = { ...fxRates };
-      _lastFetchAt = Date.now();
-      try {
-        localStorage.setItem(LS_FETCH_AT, String(_lastFetchAt));
-        localStorage.setItem(LS_PRICES,   JSON.stringify(_priceCache));
-        localStorage.setItem(LS_FX,       JSON.stringify(_fxCache));
-      } catch (_) { /* quota o modo privado */ }
-      // Parchear el store para que dashboard/patrimonio/etc. reflejen precios reales
-      _applyPricesToStore(_priceCache, fxRates);
+      // Persiste en priceService (localStorage + memoria compartida con selectors)
+      priceService.update(livePrices, fxRates);
       toast('Precios actualizados');
     } catch (e) { toast('Error: ' + e.message, { type: 'warning' }); }
     finally { refreshing = false; paint(false); }
@@ -566,9 +529,10 @@ export function renderInvestments() {
     bodyMount,
   );
 
-  store.subscribe(() => paint());
+  // Guard: si bodyMount ya no está en el DOM (render anterior), ignorar cambios del store.
+  store.subscribe(() => { if (bodyMount.isConnected) paint(); });
   paint();
-  // Auto-refresh al entrar a la vista si el TTL expiró o nunca se cargaron precios
-  if (!_lastFetchAt || Date.now() - _lastFetchAt > PRICE_TTL) refreshPrices();
+  // Auto-refresh si el servicio de precios está desactualizado
+  if (priceService.isStale) refreshPrices();
   return root;
 }
