@@ -28,11 +28,27 @@ export const selectors = {
   },
 
   investmentsValue(s) {
-    return s.investments.reduce((sum, i) => sum + (i.quantity || 0) * (i.currentPrice || 0), 0);
+    const fx   = s.fxRates || {};
+    const base = s.baseCurrency || 'COP';
+    return s.investments.filter((i) => !i.isDeleted).reduce((sum, i) => {
+      const native = (i.quantity || 0) * (i.currentPrice || 0);
+      if (!native) return sum;
+      const cur = i.currency || base;
+      if (cur === base) return sum + native;
+      return fx[cur] ? sum + native * fx[cur] : sum + native;
+    }, 0);
   },
 
   investmentsCost(s) {
-    return s.investments.reduce((sum, i) => sum + (i.quantity || 0) * (i.avgCost || 0), 0);
+    const fx   = s.fxRates || {};
+    const base = s.baseCurrency || 'COP';
+    return s.investments.filter((i) => !i.isDeleted).reduce((sum, i) => {
+      const native = (i.quantity || 0) * (i.avgCost || i.purchasePrice || 0);
+      if (!native) return sum;
+      const cur = i.currency || base;
+      if (cur === base) return sum + native;
+      return fx[cur] ? sum + native * fx[cur] : sum + native;
+    }, 0);
   },
 
   investmentsReturnPct(s) {

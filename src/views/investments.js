@@ -366,6 +366,17 @@ function positionCard(group, livePrice, fxRates, baseCur) {
   return card;
 }
 
+// ─── Parcha el store en memoria con precios en vivo (sin tocar IndexedDB) ─────
+// Permite que el dashboard y otras vistas usen currentPrice real sin depender
+// de que el usuario haya visitado Inversiones primero.
+function _applyPricesToStore(priceCache, fxRates) {
+  const invs = store.get().investments.map((inv) => {
+    const lp = priceCache[(inv.symbol || '').toUpperCase()];
+    return lp?.price ? { ...inv, currentPrice: lp.price } : inv;
+  });
+  store.set({ investments: invs, fxRates });
+}
+
 // ─── Render principal ──────────────────────────────────────────────────────
 export function renderInvestments() {
   const root = el('div');
@@ -374,6 +385,12 @@ export function renderInvestments() {
   let livePrices = { ..._priceCache };
   let fxRates    = { ..._fxCache };
   let refreshing = false;
+
+  // Si ya hay precios cacheados (de localStorage o sesión anterior),
+  // parchear el store inmediatamente para que el dashboard los refleje.
+  if (_lastFetchAt && Object.keys(_priceCache).length) {
+    _applyPricesToStore(_priceCache, _fxCache);
+  }
 
   function buildFxRates() {
     const r = {};
@@ -401,6 +418,8 @@ export function renderInvestments() {
         localStorage.setItem(LS_PRICES,   JSON.stringify(_priceCache));
         localStorage.setItem(LS_FX,       JSON.stringify(_fxCache));
       } catch (_) { /* quota o modo privado */ }
+      // Parchear el store para que dashboard/patrimonio/etc. reflejen precios reales
+      _applyPricesToStore(_priceCache, fxRates);
       toast('Precios actualizados');
     } catch (e) { toast('Error: ' + e.message, { type: 'warning' }); }
     finally { refreshing = false; paint(false); }
