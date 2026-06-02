@@ -4,7 +4,8 @@
 **Sprint 1 ya aplicado:** commit `0d74646` — v0.2.15  
 **Sprint 2 ya aplicado:** commit `55f024a` — v0.2.16  
 **Sprint 3 ya aplicado:** commit `a3d8208` — v0.2.17  
-**Sprint 4 ya aplicado:** commit `5d351a2` — v0.2.18
+**Sprint 4 ya aplicado:** commit `5d351a2` — v0.2.18  
+**Sprint 5 ya aplicado:** commit `ed9146f` — v0.2.19
 
 > Auditoría de 7 fases realizada como Staff Frontend + QA + Product Designer + Financial Systems Architect.
 > Los fixes del Sprint 1 ya están en `main`. Los sprints 2–5 son la cola de trabajo.
@@ -33,9 +34,9 @@
 | CTA-2 | KPI summary en Cuentas | 4 | ✅ Resuelto `5d351a2` |
 | CTA-3 | Quick presets bancos colombianos | 4 | ✅ Resuelto `5d351a2` |
 | CTA-4 | Balance CC en rojo/negativo en Cuentas | 4 | ✅ Resuelto `5d351a2` |
-| DB-1 | Dashboard no reactivo (`store.subscribe`) | 5 | ⏳ Pendiente |
-| DB-2 | Score financiero mensual | 5 | ⏳ Pendiente |
-| DB-3 | Alertas inline en KPIs | 5 | ⏳ Pendiente |
+| DB-1 | Dashboard no reactivo (`store.subscribe`) | 5 | ✅ Resuelto `ed9146f` |
+| DB-2 | Score financiero mensual | 5 | ✅ Resuelto `ed9146f` |
+| DB-3 | Alertas inline en KPIs | 5 | ✅ Resuelto `ed9146f` |
 
 ---
 
@@ -349,7 +350,7 @@ const PRESETS = [
 
 ---
 
-### Sprint 5 — Dashboard premium
+### Sprint 5 — Dashboard premium ✅ COMPLETADO (`ed9146f` · v0.2.19)
 
 **Objetivo:** que el Dashboard sea el centro de comando financiero real.
 
