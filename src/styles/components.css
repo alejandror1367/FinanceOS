@@ -440,6 +440,17 @@ body.modal-open { overflow: hidden; }
 .mt-2 { margin-top: var(--space-2); }
 .mt-4 { margin-top: var(--space-4); }
 
+/* Cuentas — agrupación por tipo */
+.acct-group { display: flex; flex-direction: column; gap: var(--space-2); }
+.acct-group__header { display: flex; align-items: center; justify-content: space-between; padding: 0 var(--space-1); }
+.acct-group__label { font-size: var(--fs-caption); font-weight: var(--fw-semibold); color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
+.acct-group__total { font-size: var(--fs-caption); color: var(--text-secondary); }
+
+/* Cuentas — chips de presets en modal "Nueva cuenta" */
+.preset-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); padding-bottom: var(--space-4); border-bottom: 1px solid var(--border-subtle); margin-bottom: var(--space-4); }
+.preset-chip { font-size: var(--fs-caption); font-weight: var(--fw-medium); padding: var(--space-1) var(--space-3); border-radius: var(--radius-full); border: 1px solid var(--border); background: var(--bg-surface); color: var(--text-secondary); cursor: pointer; transition: background var(--dur-fast), color var(--dur-fast), border-color var(--dur-fast); white-space: nowrap; }
+.preset-chip:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+
 /* Vista Hoy — semáforo, insight y progreso del mes */
 .today-health-body { display: flex; flex-direction: column; gap: var(--space-3); }
 .today-health-icon { width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
