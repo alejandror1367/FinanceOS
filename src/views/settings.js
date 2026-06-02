@@ -79,6 +79,11 @@ export function renderSettings() {
         message: 'Se ignorarán los saldos declarados. Cada cuenta quedará en la suma neta de sus transacciones registradas (desde 0). Úsalo solo si tienes todo el historial registrado.',
         confirmLabel: 'Recalcular', onConfirm: () => guardedOp(() => dataService.recalculateBalances(), 'Saldos recalculados correctamente', 'Error al recalcular'),
       }) })),
+      settingRow('Purgar eliminados', 'Borra físicamente los registros soft-deleted de la base de datos (Sheets)', Button('Purgar', { variant: 'ghost', iconName: 'trash', onClick: () => confirmDialog({
+        title: 'Purgar registros eliminados',
+        message: 'Se borrarán de forma permanente todas las filas marcadas como eliminadas en la base de datos. Esta acción no se puede deshacer.',
+        confirmLabel: 'Purgar', onConfirm: () => guardedOp(() => dataService.purgeDeleted(), 'Registros purgados correctamente', 'Error al purgar'),
+      }) })),
       settingRow('Vaciar caché local', 'Borra los datos locales y vuelve a cargar', Button('Vaciar', { variant: 'ghost', iconName: 'trash', onClick: () => confirmDialog({
         title: 'Vaciar caché local',
         message: 'Se borrarán los datos guardados en este dispositivo y se recargará la app desde el backend. No afecta tu base de datos.',

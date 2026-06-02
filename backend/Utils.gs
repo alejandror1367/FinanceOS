@@ -85,15 +85,20 @@ function rowToObject_(schema, headers, row) {
 
 // ---------- Repositorio genérico ----------
 
+// TD-25: usa rango explícito en lugar de getDataRange() para saltar la fila de
+// cabecera y leer solo las columnas definidas en el schema (más rápido en tablas grandes).
 function repoReadAll_(entity, includeDeleted) {
   var schema = SCHEMAS[entity];
   var sh = getSheet_(entity);
-  var values = sh.getDataRange().getValues();
-  if (values.length < 2) return [];
-  var headers = values[0];
+  var lastRow = sh.getLastRow();
+  if (lastRow < 2) return [];
+  var rows = sh.getRange(2, 1, lastRow - 1, schema.length).getValues();
   var out = [];
-  for (var r = 1; r < values.length; r++) {
-    var obj = rowToObject_(schema, headers, values[r]);
+  for (var r = 0; r < rows.length; r++) {
+    var obj = {};
+    for (var c = 0; c < schema.length; c++) {
+      obj[schema[c].key] = coerce_(rows[r][c], schema[c].type);
+    }
     if (!includeDeleted && obj.isDeleted === true) continue;
     out.push(obj);
   }
@@ -136,12 +141,19 @@ function repoCreate_(entity, data) {
   return record;
 }
 
+// TD-24: lee la fila directamente por índice tras localizarla; evita el segundo O(n)
+// de repoGet_ (que relería toda la hoja con getDataRange).
 function repoUpdate_(entity, id, patch) {
   var schema = SCHEMAS[entity];
   var sh = getSheet_(entity);
   var rowIndex = repoFindRowIndex_(entity, id);
   if (rowIndex < 0) throw new Error(entity + ' no encontrado: ' + id);
-  var current = repoGet_(entity, id);
+  // Lectura puntual: 1 fila × schema.length columnas (1 operación Sheets, no O(n)).
+  var rawRow = sh.getRange(rowIndex, 1, 1, schema.length).getValues()[0];
+  var current = {};
+  for (var c = 0; c < schema.length; c++) {
+    current[schema[c].key] = coerce_(rawRow[c], schema[c].type);
+  }
   schema.forEach(function (col) {
     if (patch[col.key] !== undefined && col.key !== 'id' && col.key !== 'createdAt') {
       current[col.key] = patch[col.key];
@@ -158,6 +170,35 @@ function repoSoftDelete_(entity, id) {
 
 function hasKey_(schema, key) {
   return schema.some(function (c) { return c.key === key; });
+}
+
+// TD-28: elimina físicamente las filas marcadas como isDeleted en todas las entidades.
+// Se llama vía acción admin 'purgeDeleted' (solo escrituras POST autorizadas).
+function purgeDeleted_() {
+  var entities = Object.keys(SCHEMAS);
+  var summary = {};
+  entities.forEach(function (entity) {
+    var schema = SCHEMAS[entity];
+    if (!hasKey_(schema, 'isDeleted')) return;
+    var sh = getSheet_(entity);
+    var lastRow = sh.getLastRow();
+    if (lastRow < 2) return;
+    // Recorre en orden inverso para no desplazar índices al borrar filas.
+    var rows = sh.getRange(2, 1, lastRow - 1, schema.length).getValues();
+    var deleted = 0;
+    for (var r = rows.length - 1; r >= 0; r--) {
+      var obj = {};
+      for (var c = 0; c < schema.length; c++) {
+        obj[schema[c].key] = coerce_(rows[r][c], schema[c].type);
+      }
+      if (obj.isDeleted === true) {
+        sh.deleteRow(r + 2); // +2: fila 1 = cabecera, índice 0-based → 1-based
+        deleted++;
+      }
+    }
+    if (deleted > 0) summary[entity] = deleted;
+  });
+  return { purged: summary };
 }
 
 // ---------- Validación / sanitización ----------

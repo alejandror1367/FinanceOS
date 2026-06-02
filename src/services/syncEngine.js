@@ -66,8 +66,26 @@ async function reconcile(op, record) {
   await reloadCollection(storeName);
 }
 
-// Procesa la cola completa. Se detiene ante el primer fallo de red para
-// reintentar más tarde (preserva el orden de las operaciones).
+// TD-26: intenta enviar N ops en 1 request batchWrite; si falla (backend sin batchWrite
+// o error de red), hace fallback a envío individual op por op.
+async function flushBatch(ops) {
+  const payload = ops.map((op) => ({ action: op.action, data: op.data, entityId: op.entityId }));
+  const { results } = await apiClient.post('batchWrite', { ops: payload });
+  for (let i = 0; i < ops.length; i++) {
+    const op = ops[i];
+    const res = results[i] || { ok: false, error: 'sin resultado' };
+    if (res.ok) {
+      await reconcile(op, res.data);
+      await syncQueue.remove(op.seq);
+    } else {
+      await syncQueue.markDead(op.seq, res.error || 'error en batchWrite');
+    }
+  }
+}
+
+// Procesa la cola completa. Usa batchWrite cuando hay ≥2 ops pendientes;
+// si el backend no lo soporta, hace fallback a envío individual.
+// Se detiene ante el primer fallo de red para reintentar más tarde.
 async function flush() {
   if (running) return;
   if (!apiClient.isConfigured() || !navigator.onLine) {
@@ -78,34 +96,43 @@ async function flush() {
   setStatus({ state: 'syncing' });
   try {
     const ops = await syncQueue.all();
-    for (const op of ops) {
+    if (ops.length >= 2) {
       try {
-        const record = await apiClient.post(op.action, op.data);
-        await reconcile(op, record);
-        await syncQueue.remove(op.seq);
-      } catch (err) {
-        const msg = String(err && err.message || err);
-        if (!isTransient(err)) {
-          // Error de negocio (4xx/validación): no se arregla reintentando. A dead-letter
-          // y seguimos con el resto de la cola — sin bloqueo head-of-line (TD-10).
-          await syncQueue.markDead(op.seq, msg);
-          continue;
+        await flushBatch(ops);
+      } catch (batchErr) {
+        if (!isTransient(batchErr)) {
+          // El backend rechazó el lote como negocio: procesa op a op
+          for (const op of ops) await flushSingle(op);
         }
-        const attempts = (op.attempts || 0) + 1;
-        await syncQueue.update(op.seq, { attempts: attempts, lastError: msg });
-        if (attempts >= MAX_ATTEMPTS) {
-          // Reintentos agotados: a dead-letter y seguimos con las demás (TD-10).
-          await syncQueue.markDead(op.seq, msg);
-          continue;
-        }
-        break; // transitorio (probable falta de red): reintentar en el próximo ciclo
+        // Error de red: deja la cola intacta y reintenta en el próximo ciclo
       }
+    } else {
+      for (const op of ops) await flushSingle(op);
     }
     const pending = await refreshPending();
     const failed = (store.get().sync || {}).failed || 0;
     setStatus({ state: failed > 0 ? 'error' : (pending > 0 ? 'pending' : 'idle'), lastSync: new Date().toISOString() });
   } finally {
     running = false;
+  }
+}
+
+async function flushSingle(op) {
+  try {
+    const record = await apiClient.post(op.action, op.data);
+    await reconcile(op, record);
+    await syncQueue.remove(op.seq);
+  } catch (err) {
+    const msg = String(err && err.message || err);
+    if (!isTransient(err)) {
+      await syncQueue.markDead(op.seq, msg);
+      return;
+    }
+    const attempts = (op.attempts || 0) + 1;
+    await syncQueue.update(op.seq, { attempts: attempts, lastError: msg });
+    if (attempts >= MAX_ATTEMPTS) {
+      await syncQueue.markDead(op.seq, msg);
+    }
   }
 }
 

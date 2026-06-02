@@ -97,6 +97,31 @@ var ROUTES = {
   // Import (proxy Gemini API)
   parseStatement: function (d) { return parseStatement_(d); },
 
+  // TD-28: purga física de filas soft-deleted (acción de administración).
+  purgeDeleted: function () { return purgeDeleted_(); },
+
+  // TD-26: escritura por lotes — N ops en 1 request, reduciendo invocaciones para colas offline.
+  // Formato: { ops: [{ action, data, entityId? }, ...] }. Devuelve { results: [...] }.
+  batchWrite: function (d) {
+    var ops = Array.isArray(d.ops) ? d.ops : [];
+    var results = [];
+    for (var i = 0; i < ops.length; i++) {
+      var op = ops[i];
+      var handler = ROUTES[op.action];
+      if (!handler || READ_ACTIONS[op.action]) {
+        results.push({ action: op.action, entityId: op.entityId, ok: false, error: 'Acción no permitida en batchWrite: ' + op.action });
+        continue;
+      }
+      try {
+        var result = handler(op.data || {});
+        results.push({ action: op.action, entityId: op.entityId, ok: true, data: result });
+      } catch (err) {
+        results.push({ action: op.action, entityId: op.entityId, ok: false, error: err.message || String(err) });
+      }
+    }
+    return { results: results };
+  },
+
   // Meta
   ping: function () { return { pong: true, app: APP.name, apiVersion: APP.apiVersion, time: nowIso_() }; },
 };
@@ -125,7 +150,15 @@ function doGet(e) {
   }
 }
 
+// TD-27: LockService garantiza exclusión mutua en escrituras (multi-dispositivo / reintentos).
+// El lock abarca toda la ejecución del handler para evitar carreras entre dispositivos.
 function doPost(e) {
+  var lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(30000); // espera hasta 30 s; lanza si no puede adquirir
+  } catch (lockErr) {
+    return jsonErr_(new Error('Servidor ocupado. Intenta de nuevo en unos segundos.'));
+  }
   try {
     var body = parseBody_(e);
     var action = body.action;
@@ -137,6 +170,8 @@ function doPost(e) {
     return jsonOut_({ success: true, data: result });
   } catch (err) {
     return jsonErr_(err);
+  } finally {
+    lock.releaseLock();
   }
 }
 

@@ -326,6 +326,15 @@ export const dataService = {
     return result;
   },
 
+  // TD-28: purga física de soft-deletes en el backend + refresca caché local.
+  async purgeDeleted() {
+    if (!apiClient.isConfigured()) throw new Error('Sin backend configurado.');
+    if (!navigator.onLine) throw new Error('Sin conexión.');
+    const result = await apiClient.post('purgeDeleted', {});
+    await dataService.refresh();
+    return result;
+  },
+
   // Utilidad de desarrollo: limpia caché local y re-inicializa.
   async reset() {
     if (!db.available()) return;
