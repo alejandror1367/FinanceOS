@@ -9,6 +9,7 @@ import { selectors } from '../store/selectors.js';
 import { dataService } from '../services/dataService.js';
 import { formatMoney, formatDate } from '../utils/format.js';
 import { Card, KpiCard, Badge, BarChart, EmptyState, Button } from '../components/ui.js';
+import { Donut, Legend, CHART_PALETTE } from '../components/charts.js';
 import { openModal, confirmDialog } from '../components/modal.js';
 import { field, textInput, numberInput, select } from '../components/forms.js';
 import { toast } from '../services/toast.js';
@@ -151,6 +152,31 @@ export function renderNetWorth() {
       KpiCard({ label: 'Pasivos', value: formatMoney(totalLiabilities, cur), iconName: 'debts', variant: totalLiabilities > 0 ? 'negative' : 'neutral' }),
     ]);
 
+    // ── Composición del patrimonio (Asset Allocation) ────────────────────────
+    const physicalValue = (s.assets || []).reduce((sum, a) => sum + (a.value || 0), 0);
+    const allocSegments = [
+      { label: 'Activos líquidos', value: accountsValue, color: CHART_PALETTE[0] },
+      { label: 'Inversiones',      value: invValue,      color: CHART_PALETTE[1] },
+      { label: 'Activos físicos',  value: physicalValue, color: CHART_PALETTE[2] },
+    ].filter((s) => s.value > 0);
+
+    const allocationCard = allocSegments.length >= 1
+      ? Card({
+          title: 'Composición del patrimonio',
+          body: el('div', { class: 'row-flex', style: 'align-items:center;gap:var(--space-6);flex-wrap:wrap' }, [
+            Donut(allocSegments, {
+              centerTop: formatMoney(netWorth, cur, { compact: true }),
+              centerSub: 'neto',
+              ariaLabel: `Composición: ${allocSegments.map((s) => `${s.label} ${formatMoney(s.value, cur, { compact: true })}`).join(', ')}`,
+            }),
+            Legend(allocSegments.map((seg) => ({
+              ...seg,
+              value: totalAssets > 0 ? `${((seg.value / totalAssets) * 100).toFixed(1)}%` : '—',
+            }))),
+          ]),
+        })
+      : null;
+
     // Evolución (snapshots reales)
     const snaps = [...(s.netWorthSnapshots || [])].sort((a, b) => (a.date < b.date ? -1 : 1)).slice(-8);
     const evolution = Card({
@@ -181,18 +207,31 @@ export function renderNetWorth() {
 
     // Pasivos
     const liabs = s.liabilities || [];
-    const liabsCard = Card({
-      title: 'Pasivos',
-      action: Button('Nueva deuda', { variant: 'ghost', iconName: 'plus', onClick: () => openLiabilityModal({ mode: 'create' }) }),
-      body: liabs.length
-        ? el('div', { class: 'row-list' }, liabs.map((l) => {
+    const ccDebtTotal = selectors.creditCardAccounts(s).reduce((sum, a) => sum + Math.abs(a.balance || 0), 0);
+    const liabsBody = liabs.length
+      ? el('div', {}, [
+          el('div', { class: 'row-list' }, liabs.map((l) => {
             const typeLabel = (LIABILITY_TYPES.find((t) => t.value === l.type) || {}).label || l.type;
             const sub = `${typeLabel} · ${l.interestRate || 0}%${l.dueDate ? ' · vence ' + formatDate(l.dueDate, 'short') : ''}`;
             return simpleRow('debts', l.name, sub, formatMoney(l.balance, l.currency || cur), 'text-negative',
               actionButtons(() => openLiabilityModal({ liability: l, mode: 'edit' }),
                 () => confirmDialog({ title: 'Eliminar deuda', message: `¿Eliminar "${l.name}"?`, onConfirm: async () => { try { await dataService.remove('liabilities', l.id); toast('Deuda eliminada'); } catch (e) { toast('Error', { type: 'negative' }); } } })));
-          }))
-        : EmptyState({ title: 'Sin deudas', message: 'Registra tus pasivos para un patrimonio preciso.', iconName: 'debts' }),
+          })),
+          ccDebtTotal > 0 ? el('p', { class: 't-caption text-secondary', style: 'padding:var(--space-3) var(--space-4) var(--space-2);margin:0' },
+            [`Tarjetas de crédito (${formatMoney(ccDebtTotal, cur)}) incluidas en el KPI Pasivos — detalle en `
+              , el('a', { href: '#/debts', style: 'color:var(--accent)' }, ['Deudas']), '.']) : null,
+        ].filter(Boolean))
+      : el('div', {}, [
+          EmptyState({ title: 'Sin otros pasivos', message: 'Registra hipotecas, créditos u otros pasivos.', iconName: 'debts' }),
+          ccDebtTotal > 0 ? el('p', { class: 't-caption text-secondary mt-2', style: 'text-align:center;padding-bottom:var(--space-3)' },
+            [`Tarjetas de crédito: ${formatMoney(ccDebtTotal, cur)} — ver `
+              , el('a', { href: '#/debts', style: 'color:var(--accent)' }, ['Deudas']), '.']) : null,
+        ].filter(Boolean));
+
+    const liabsCard = Card({
+      title: 'Pasivos',
+      action: Button('Nueva deuda', { variant: 'ghost', iconName: 'plus', onClick: () => openLiabilityModal({ mode: 'create' }) }),
+      body: liabsBody,
     });
 
     mount(root,
@@ -207,6 +246,7 @@ export function renderNetWorth() {
           ]),
         ]),
         kpis,
+        allocationCard ? el('div', { class: 'section' }, [allocationCard]) : null,
         el('div', { class: 'section' }, [evolution]),
         el('div', { class: 'grid grid--2 section' }, [assetsCard, liabsCard]),
       ])

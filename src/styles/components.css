@@ -286,6 +286,11 @@ select.input { appearance: none; cursor: pointer;
 .icon-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
 .icon-btn--danger:hover { background: var(--negative-bg); color: var(--negative); }
 .icon-btn svg { width: 16px; height: 16px; }
+/* TD-18: áreas táctiles WCAG 2.5.8 — mínimo 24×24 CSS px, con padding para 44×44 hit area */
+@media (pointer: coarse) {
+  .icon-btn { min-width: 44px; min-height: 44px; }
+  .row__actions { gap: var(--space-1); }
+}
 
 body.modal-open { overflow: hidden; }
 

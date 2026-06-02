@@ -59,7 +59,8 @@ function priceAgeLabel() {
 function groupByTicker(investments) {
   const map = {};
   (investments || []).filter((inv) => !inv.isDeleted).forEach((inv) => {
-    const key = ((inv.symbol || inv.name) || inv.id).toUpperCase();
+    // Fondos y CDTs sin símbolo real no se agrupan entre sí (cada registro es una posición independiente).
+    const key = isTrivial(inv.assetType) && !inv.symbol ? inv.id : ((inv.symbol || inv.name) || inv.id).toUpperCase();
     if (!map[key]) map[key] = { key, symbol: inv.symbol, name: inv.name, assetType: inv.assetType, currency: inv.currency || 'USD', purchases: [] };
     map[key].purchases.push(inv);
     if (inv.name)     map[key].name     = inv.name;
@@ -303,11 +304,11 @@ function positionCard(group, livePrice, fxRates, baseCur) {
 
   const valWrap = el('div', { class: 'inv-card__value-wrap' });
   if (hasPrice && nativeValue !== null) {
-    valWrap.appendChild(el('div', { class: 'inv-card__value tabular' }, [formatMoney(nativeValue, currency)]));
+    valWrap.appendChild(el('div', { class: 'inv-card__value tabular' }, [fmtI(nativeValue, currency)]));
     if (gain !== null) {
       const isPos = gain >= 0;
       valWrap.appendChild(el('div', { class: `inv-card__gain ${isPos ? 'text-positive' : 'text-negative'}` },
-        [`${isPos ? '+' : ''}${formatMoney(gain, currency)}  ${pctFmt(gainPct)}`]));
+        [`${isPos ? '+' : ''}${fmtI(Math.abs(gain), currency)}  ${pctFmt(gainPct)}`]));
     }
     if (livePrice?.changePct !== undefined) {
       valWrap.appendChild(el('div', { class: `t-caption ${livePrice.changePct >= 0 ? 'text-positive' : 'text-negative'}` },

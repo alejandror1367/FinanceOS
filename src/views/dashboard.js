@@ -107,7 +107,8 @@ export function renderDashboard() {
         label: 'Liquidez disponible', value: formatMoney(liquidity, cur), iconName: 'accounts', variant: 'neutral',
         foot: [
           liquidityAlert,
-          liquidityAlert ? null : el('span', { class: 't-caption', text: `${selectors.liquidAccounts(s).length} cuentas` }),
+          liquidityAlert ? null : el('span', { class: 't-caption', text:
+            `${selectors.liquidAccounts(s).length} cuentas${expense > 0 ? ` · ${(liquidity / expense).toFixed(1)} meses` : ''}` }),
         ].filter(Boolean),
       }),
     ]);

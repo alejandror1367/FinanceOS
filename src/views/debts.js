@@ -107,8 +107,9 @@ function projectionCard(debtList, cur) {
     ]));
   }
   if (hasInfinity) {
-    footer.appendChild(el('span', { class: 't-caption text-negative' }, [
-      '⚠ La cuota mínima no cubre los intereses en alguna deuda.',
+    footer.appendChild(el('span', { class: 't-caption' }, [
+      Badge('Atención', 'negative'),
+      ' La cuota mínima no cubre los intereses en alguna deuda.',
     ]));
   }
   card.appendChild(footer);
@@ -229,11 +230,16 @@ function creditCardPanel(a, cur) {
   card.appendChild(barWrap);
 
   const grid = el('div', { class: 'cc-panel__grid' });
+  // sub puede ser string o elemento DOM (para badges accesibles).
   const metric = (label, value, sub) => {
     const m = el('div', { class: 'cc-metric' });
     m.appendChild(el('span', { class: 'cc-metric__label', text: label }));
     m.appendChild(el('span', { class: 'cc-metric__value tabular', text: value }));
-    if (sub) m.appendChild(el('span', { class: 'cc-metric__sub', text: sub }));
+    if (sub) {
+      const subEl = el('span', { class: 'cc-metric__sub' });
+      subEl.append(sub.nodeType ? sub : document.createTextNode(String(sub)));
+      m.appendChild(subEl);
+    }
     return m;
   };
 
@@ -241,7 +247,13 @@ function creditCardPanel(a, cur) {
   if (totalDue)  grid.appendChild(metric('Total a pagar', formatMoney(totalDue, a.currency || cur), 'este corte'));
   if (minPay)    grid.appendChild(metric('Pago mínimo', formatMoney(minPay, a.currency || cur), 'según extracto'));
   grid.appendChild(metric('Próximo corte', corteFecha ? formatDate(corteFecha, 'short') : '—', diasCorte !== null ? `en ${diasCorte} días` : ''));
-  grid.appendChild(metric('Fecha de pago', pagoFecha ? formatDate(pagoFecha, 'short') : '—', diasPago !== null ? (diasPago <= 5 ? `⚠ ${diasPago} días` : `en ${diasPago} días`) : ''));
+  // WCAG 1.3.3: urgencia comunicada con Badge semántico, no solo el símbolo ⚠.
+  const pagoSub = diasPago !== null
+    ? (diasPago <= 0 ? Badge('Vence hoy', 'negative')
+      : diasPago <= 5 ? Badge(`${diasPago} días`, 'warning')
+      : `en ${diasPago} días`)
+    : '';
+  grid.appendChild(metric('Fecha de pago', pagoFecha ? formatDate(pagoFecha, 'short') : '—', pagoSub));
   if (a.interestRate) grid.appendChild(metric('Tasa E.A.', pct(a.interestRate), 'interés anual'));
   if (limit) grid.appendChild(metric('Cupo total', formatMoney(limit, a.currency || cur), `${util}% utilizado`));
   card.appendChild(grid);
