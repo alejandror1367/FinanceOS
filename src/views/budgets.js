@@ -20,9 +20,21 @@ function expenseCategories(s) {
   return (s.categories || []).filter((c) => c.kind === 'expense');
 }
 
+function parsePeriodKey(raw, isMonthly) {
+  const s = String(raw);
+  if (/^\d{4}/.test(s)) return s;
+  const d = new Date(s);
+  if (isNaN(d)) return s;
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+  return isMonthly ? `${y}-${m}` : String(y);
+}
+
 function periodLabel(b) {
-  if (b.period === 'annual') return `Anual ${b.periodKey}`;
-  const [y, m] = b.periodKey.split('-');
+  const isMonthly = b.period !== 'annual';
+  const key = parsePeriodKey(b.periodKey, isMonthly);
+  if (!isMonthly) return `Anual ${key.slice(0, 4)}`;
+  const [y, m] = key.split('-');
   const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
   return `${months[Number(m) - 1] || ''} ${y}`;
 }

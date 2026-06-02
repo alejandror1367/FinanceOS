@@ -62,7 +62,6 @@ export function Topbar({ title, theme, sync, onToggleTheme, onToggleNav, onRefre
         class: 'btn btn--ghost btn--icon', type: 'button', 'aria-label': 'Actualizar',
         on: onRefresh ? { click: onRefresh } : {}, html: icon('refresh'),
       }),
-      el('button', { class: 'btn btn--ghost btn--icon', type: 'button', 'aria-label': 'Buscar', html: icon('search') }),
       el('button', {
         class: 'btn btn--ghost btn--icon theme-toggle', type: 'button',
         'aria-label': 'Cambiar tema', on: { click: onToggleTheme },

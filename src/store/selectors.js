@@ -3,9 +3,20 @@
 
 import { priceService } from '../services/priceService.js';
 
+// Normalizes a periodKey that Google Sheets may auto-convert from 'YYYY-MM' to a Date object.
+function normPeriodKey(raw, len) {
+  const s = String(raw);
+  if (/^\d{4}/.test(s)) return s.slice(0, len);
+  const d = new Date(s);
+  return isNaN(d) ? s.slice(0, len) : `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`.slice(0, len);
+}
+
 function sameMonth(iso, ref = new Date()) {
-  const refKey = `${ref.getFullYear()}-${String(ref.getMonth() + 1).padStart(2, '0')}`;
-  return String(iso).slice(0, 7) === refKey;
+  const isoKey = String(iso).slice(0, 7);
+  const refKey = ref instanceof Date
+    ? `${ref.getFullYear()}-${String(ref.getMonth() + 1).padStart(2, '0')}`
+    : String(ref).slice(0, 7);
+  return isoKey === refKey;
 }
 
 const MONTH_ABBR = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
@@ -129,11 +140,12 @@ export const selectors = {
   // ---- Presupuestos (valores derivados, no persistidos) ----
   budgetConsumed(s, budget) {
     const isMonthly = budget.period === 'monthly';
+    const pKey = normPeriodKey(budget.periodKey, isMonthly ? 7 : 4);
     return s.transactions
       .filter((t) => {
         if (t.type !== 'expense' || t.categoryId !== budget.categoryId) return false;
         const key = isMonthly ? String(t.date).slice(0, 7) : String(t.date).slice(0, 4);
-        return key === budget.periodKey;
+        return key === pKey;
       })
       .reduce((sum, t) => sum + (t.amount || 0), 0);
   },
@@ -148,7 +160,7 @@ export const selectors = {
     let projected = consumed;
     const now = new Date();
     const curMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    if (budget.period === 'monthly' && budget.periodKey === curMonthKey) {
+    if (budget.period === 'monthly' && normPeriodKey(budget.periodKey, 7) === curMonthKey) {
       const day = now.getDate();
       const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
       projected = day > 0 ? (consumed / day) * daysInMonth : consumed;
