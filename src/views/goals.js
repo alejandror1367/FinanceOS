@@ -4,6 +4,7 @@
 import { el, mount } from '../utils/dom.js';
 import { icon } from '../utils/icons.js';
 import { store } from '../store/store.js';
+import { selectors } from '../store/selectors.js';
 import { dataService } from '../services/dataService.js';
 import { formatMoney, formatDate } from '../utils/format.js';
 import { Card, Badge, ProgressBar, EmptyState, Button } from '../components/ui.js';
@@ -43,6 +44,17 @@ function goalStats(g) {
   const months = monthsUntil(g.targetDate);
   const recommended = (months && months > 0) ? remaining / months : null;
   return { target, current, pct, remaining, months, recommended };
+}
+
+// Forecasting basado en el ritmo de ahorro mensual actual.
+function goalForecast(remaining, monthlySavings) {
+  if (!remaining || remaining <= 0 || !monthlySavings || monthlySavings <= 0) return null;
+  const months = Math.ceil(remaining / monthlySavings);
+  if (months > 240) return null; // más de 20 años — no informativo
+  const d = new Date();
+  d.setMonth(d.getMonth() + months);
+  const dateStr = new Intl.DateTimeFormat('es-CO', { month: 'long', year: 'numeric' }).format(d);
+  return { months, dateStr };
 }
 
 // ---------- Formularios ----------
@@ -94,14 +106,20 @@ function openGoalModal({ goal = {}, mode = 'create' }) {
 
 // Aporte rápido a una meta.
 function openContributeModal(goal) {
+  const s = store.get();
+  const cur = goal.currency || s.baseCurrency;
+  const linkedAcc = goal.linkedAccountId ? (s.accounts || []).find((a) => a.id === goal.linkedAccountId) : null;
   const body = el('div', {}, [
-    el('p', { class: 't-caption text-secondary', text: `Acumulado actual: ${formatMoney(goal.currentAmount || 0, goal.currency)}` }),
+    el('p', { class: 't-caption text-secondary', text: `Acumulado actual: ${formatMoney(goal.currentAmount || 0, cur)}` }),
     field('Monto a aportar', numberInput({ name: 'amount', value: '' })),
+    linkedAcc
+      ? el('p', { class: 't-caption text-tertiary mt-2', text: `Cuenta vinculada: ${linkedAcc.name} · El aporte actualiza el progreso; el saldo de la cuenta se ajusta manualmente.` })
+      : el('p', { class: 't-caption text-tertiary mt-2', text: 'Vincula una cuenta en la meta para saber de dónde sale el dinero.' }),
   ]);
   openModal({
     title: `Aportar a ${goal.name}`,
     body,
-    submitLabel: 'Aportar',
+    submitLabel: 'Registrar aporte',
     onSubmit: async () => {
       const amount = Number(body.querySelector('[name="amount"]').value) || 0;
       if (amount <= 0) { toast('Ingresa un monto válido', { type: 'negative' }); return false; }
@@ -113,10 +131,37 @@ function openContributeModal(goal) {
   });
 }
 
-function goalCard(g, cur) {
+function goalCard(g, cur, monthlySavings) {
   const st = goalStats(g);
   const done = g.status === 'completed' || st.pct >= 100;
   const statusBadge = done ? Badge('Completada', 'positive') : g.status === 'paused' ? Badge('Pausada', 'warning') : Badge('Activa', 'info');
+  const forecast = !done ? goalForecast(st.remaining, monthlySavings) : null;
+
+  // Línea de proyección inteligente — combina aporte recomendado + ritmo real.
+  let forecastEl = null;
+  if (!done) {
+    const lines = [];
+    if (st.recommended) {
+      lines.push(el('span', { class: 'text-secondary' },
+        [`Necesitas ${formatMoney(st.recommended, cur)}/mes para llegar en ${st.months} ${st.months === 1 ? 'mes' : 'meses'}.`]));
+    } else if (st.months === 0) {
+      lines.push(el('span', { class: 'text-secondary' }, ['La fecha objetivo ya pasó.']));
+    } else {
+      lines.push(el('span', { class: 'text-secondary' }, ['Define una fecha objetivo para calcular el aporte recomendado.']));
+    }
+    if (forecast) {
+      const ahead = st.months != null && forecast.months <= st.months;
+      const cls = ahead ? 'text-positive' : monthlySavings > 0 ? 'text-warning' : 'text-secondary';
+      const icon_ = ahead ? '✓' : '→';
+      lines.push(el('span', { class: cls },
+        [`${icon_} A este ritmo (${formatMoney(monthlySavings, cur)}/mes): ${forecast.dateStr} (${forecast.months} ${forecast.months === 1 ? 'mes' : 'meses'})`]));
+    } else if (monthlySavings <= 0) {
+      lines.push(el('span', { class: 'text-negative' }, ['Sin ahorro neto este mes.']));
+    }
+    if (lines.length) {
+      forecastEl = el('div', { class: 't-caption mt-2', style: 'display:flex;flex-direction:column;gap:2px' }, lines);
+    }
+  }
 
   return el('div', { class: 'card card--pad-sm' }, [
     el('div', { class: 'row-flex between' }, [
@@ -138,12 +183,7 @@ function goalCard(g, cur) {
       el('span', { class: 't-caption', html: `<b class="tabular">${formatMoney(st.current, cur)}</b> de <span class="tabular">${formatMoney(st.target, cur)}</span> · ${st.pct.toFixed(0)}%` }),
       el('span', { class: 't-caption text-secondary', text: done ? '¡Meta cumplida!' : `Faltan ${formatMoney(st.remaining, cur)}` }),
     ]),
-    (!done && (st.recommended || st.months != null))
-      ? el('div', { class: 't-caption text-secondary mt-2', text:
-          st.recommended
-            ? `Aporta ${formatMoney(st.recommended, cur)}/mes para llegar en ${st.months} ${st.months === 1 ? 'mes' : 'meses'}.`
-            : 'Define una fecha objetivo para calcular el aporte recomendado.' })
-      : null,
+    forecastEl,
   ].filter(Boolean));
 }
 
@@ -156,6 +196,7 @@ export function renderGoals() {
     const goals = [...(s.goals || [])].sort((a, b) => goalStats(b).pct - goalStats(a).pct);
     const totalTarget = goals.reduce((sum, g) => sum + (g.targetAmount || 0), 0);
     const totalCurrent = goals.reduce((sum, g) => sum + (g.currentAmount || 0), 0);
+    const monthlySavings = selectors.monthlySavings(s);
 
     mount(root,
       el('div', {}, [
@@ -169,7 +210,7 @@ export function renderGoals() {
           ]),
         ]),
         goals.length
-          ? el('div', { class: goals.length === 1 ? 'stack' : 'grid grid--2' }, goals.map((g) => goalCard(g, cur)))
+          ? el('div', { class: goals.length === 1 ? 'stack' : 'grid grid--2' }, goals.map((g) => goalCard(g, cur, monthlySavings)))
           : el('div', { class: 'card' }, [EmptyState({ title: 'Sin metas', message: 'Crea tu primera meta financiera.', iconName: 'goals',
               action: Button('Nueva meta', { variant: 'primary', iconName: 'plus', onClick: () => openGoalModal({ mode: 'create' }) }) })]),
       ])
