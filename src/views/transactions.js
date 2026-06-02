@@ -6,15 +6,15 @@ import { icon } from '../utils/icons.js';
 import { store } from '../store/store.js';
 import { dataService } from '../services/dataService.js';
 import { formatMoney, formatDate } from '../utils/format.js';
-import { Button, Badge, EmptyState } from '../components/ui.js';
+import { Button, EmptyState } from '../components/ui.js';
 import { openModal, confirmDialog } from '../components/modal.js';
 import { field, textInput, numberInput, textarea, select, segmented } from '../components/forms.js';
 import { toast } from '../services/toast.js';
 
 // Estado de filtro a nivel de módulo (persiste entre re-renders).
-const FILTER = { q: '', type: 'all', accountId: 'all' };
+function currentMonth() { return new Date().toISOString().slice(0, 7); }
+const FILTER = { q: '', type: 'all', accountId: 'all', month: currentMonth(), categoryId: 'all' };
 
-const TYPE_LABELS = { income: 'Ingreso', expense: 'Gasto', transfer: 'Transferencia' };
 const today = () => new Date().toISOString().slice(0, 10);
 
 function maps(s) {
@@ -113,12 +113,14 @@ export function openTxModal({ tx = {}, mode = 'create' }) {
   });
 }
 
-// ---------- Lista ----------
+// ---------- Filtros ----------
 function applyFilters(list, m) {
   const q = FILTER.q.trim().toLowerCase();
   return list.filter((t) => {
     if (FILTER.type !== 'all' && t.type !== FILTER.type) return false;
     if (FILTER.accountId !== 'all' && t.accountId !== FILTER.accountId && t.toAccountId !== FILTER.accountId) return false;
+    if (FILTER.month && t.date && t.date.slice(0, 7) !== FILTER.month) return false;
+    if (FILTER.categoryId !== 'all' && t.categoryId !== FILTER.categoryId) return false;
     if (q) {
       const cat = m.cat[t.categoryId];
       const acc = m.acc[t.accountId];
@@ -129,21 +131,77 @@ function applyFilters(list, m) {
   });
 }
 
+// ---------- Agrupación por fecha ----------
+function groupByDate(txList) {
+  const groups = new Map();
+  for (const t of txList) {
+    const date = t.date ? t.date.slice(0, 10) : '';
+    if (!groups.has(date)) groups.set(date, []);
+    groups.get(date).push(t);
+  }
+  return groups;
+}
+
+function dateGroupLabel(isoDate) {
+  const todayStr = today();
+  const d = new Date(); d.setDate(d.getDate() - 1);
+  const yesterdayStr = d.toISOString().slice(0, 10);
+  if (isoDate === todayStr) return 'Hoy';
+  if (isoDate === yesterdayStr) return 'Ayer';
+  return formatDate(isoDate, 'short');
+}
+
+function groupNet(txList, cur) {
+  let net = 0;
+  for (const t of txList) {
+    if (t.type === 'income') net += t.amount;
+    else if (t.type === 'expense') net -= t.amount;
+  }
+  if (net === 0) return '';
+  return formatMoney(net, cur, { signed: true });
+}
+
+// ---------- Resumen de filtro ----------
+function buildSummary(filtered, cur) {
+  if (!filtered.length) return '';
+  let income = 0, expense = 0;
+  for (const t of filtered) {
+    if (t.type === 'income') income += t.amount;
+    else if (t.type === 'expense') expense += t.amount;
+  }
+  const net = income - expense;
+  const count = filtered.length === 1 ? '1 transacción' : `${filtered.length} transacciones`;
+  return `${count} · ${formatMoney(net, cur, { signed: true })} neto`;
+}
+
+// ---------- Actualizar opciones de <select> sin recrear el elemento ----------
+function updateOpts(selectEl, opts) {
+  const cur = selectEl.value;
+  selectEl.replaceChildren(...opts.map((o) =>
+    el('option', { value: o.value, selected: String(o.value) === String(cur) ? true : null, text: o.label })
+  ));
+}
+
+// ---------- Fila ----------
 function txRow(t, m, cur) {
   const isIncome = t.type === 'income';
   const isTransfer = t.type === 'transfer';
   const cat = m.cat[t.categoryId];
   const acc = m.acc[t.accountId];
+  const toAcc = m.acc[t.toAccountId];
   const sign = isIncome ? '+' : isTransfer ? '' : '−';
   const cls = isIncome ? 'text-positive' : isTransfer ? '' : 'text-negative';
   const label = isTransfer ? 'Transferencia' : (cat ? cat.name : 'Sin categoría');
   const iconName = isTransfer ? 'transactions' : (cat ? cat.icon : 'wallet');
+  const subLabel = isTransfer
+    ? `Transferencia · ${acc ? acc.name : '?'} → ${toAcc ? toAcc.name : '?'} · ${formatDate(t.date, 'short')}`
+    : `${label} · ${acc ? acc.name : ''} · ${formatDate(t.date, 'short')}`;
 
   return el('div', { class: 'row' }, [
     el('div', { class: 'row__avatar', html: icon(iconName) }),
     el('div', { class: 'row__main' }, [
       el('div', { class: 'row__title', text: t.description || label }),
-      el('div', { class: 'row__sub', text: `${label} · ${acc ? acc.name : ''} · ${formatDate(t.date, 'short')}` }),
+      el('div', { class: 'row__sub', text: subLabel }),
     ]),
     el('div', { class: `row__amount ${cls}`, text: `${sign}${formatMoney(t.amount, t.currency || cur)}` }),
     el('div', { class: 'row__actions' }, [
@@ -161,19 +219,66 @@ function txRow(t, m, cur) {
   ]);
 }
 
+// ---------- Vista ----------
 export function renderTransactions() {
   const root = el('div');
   const listMount = el('div');
+  const summaryEl = el('p', { class: 'tx-summary' });
+
+  const searchEl = textInput({ name: 'q', value: FILTER.q, placeholder: 'Buscar…' });
+  const monthEl = textInput({ name: 'fmonth', value: FILTER.month, type: 'month' });
+  const typeEl = select({ name: 'ftype', value: FILTER.type, options: [
+    { value: 'all', label: 'Todos los tipos' },
+    { value: 'income', label: 'Ingresos' },
+    { value: 'expense', label: 'Gastos' },
+    { value: 'transfer', label: 'Transferencias' },
+  ] });
+  // accEl y catEl empiezan vacíos — paint() los puebla reactivamente (TX-6)
+  const accEl = select({ name: 'facc', value: FILTER.accountId, options: [] });
+  const catEl = select({ name: 'fcat', value: FILTER.categoryId, options: [] });
+
+  searchEl.addEventListener('input', () => { FILTER.q = searchEl.value; paint(); });
+  monthEl.addEventListener('change', () => { FILTER.month = monthEl.value; paint(); });
+  typeEl.addEventListener('change', () => { FILTER.type = typeEl.value; FILTER.categoryId = 'all'; paint(); });
+  accEl.addEventListener('change', () => { FILTER.accountId = accEl.value; paint(); });
+  catEl.addEventListener('change', () => { FILTER.categoryId = catEl.value; paint(); });
 
   function paint() {
     const s = store.get();
     const m = maps(s);
     const cur = s.baseCurrency;
-    const all = [...(s.transactions || [])].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+
+    // Opciones de cuenta reactivas (TX-6)
+    updateOpts(accEl, [{ value: 'all', label: 'Todas las cuentas' }]
+      .concat((s.accounts || []).filter((a) => !a.isArchived).map((a) => ({ value: a.id, label: a.name }))));
+
+    // Opciones de categoría según tipo seleccionado
+    const catKind = FILTER.type === 'income' ? 'income' : FILTER.type === 'expense' ? 'expense' : null;
+    updateOpts(catEl, [{ value: 'all', label: 'Todas las categorías' }]
+      .concat((s.categories || []).filter((c) => !catKind || c.kind === catKind).map((c) => ({ value: c.id, label: c.name }))));
+    catEl.style.display = FILTER.type === 'transfer' ? 'none' : '';
+
+    const all = [...(s.transactions || [])].sort((a, b) => {
+      if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+      return (a.createdAt || a.id || '') < (b.createdAt || b.id || '') ? 1 : -1;
+    });
     const filtered = applyFilters(all, m);
 
+    // Línea de resumen (TX-4)
+    summaryEl.textContent = buildSummary(filtered, cur);
+
+    // Lista agrupada por fecha (TX-1)
+    const groups = groupByDate(filtered);
     const content = filtered.length
-      ? el('div', { class: 'card card--pad-sm' }, [el('div', { class: 'row-list' }, filtered.map((t) => txRow(t, m, cur)))])
+      ? el('div', { class: 'card card--pad-sm' }, [
+          el('div', { class: 'row-list' }, [...groups.entries()].flatMap(([date, txs]) => [
+            el('div', { class: 'tx-date-header' }, [
+              el('span', { class: 'tx-date-label', text: dateGroupLabel(date) }),
+              el('span', { class: 'tx-date-total', text: groupNet(txs, cur) }),
+            ]),
+            ...txs.map((t) => txRow(t, m, cur)),
+          ])),
+        ])
       : el('div', { class: 'card' }, [EmptyState({
           title: all.length ? 'Sin resultados' : 'Sin transacciones',
           message: all.length ? 'Ajusta la búsqueda o los filtros.' : 'Registra tu primer movimiento.',
@@ -181,23 +286,6 @@ export function renderTransactions() {
         })]);
     mount(listMount, content);
   }
-
-  const accountOpts = [{ value: 'all', label: 'Todas las cuentas' }]
-    .concat((store.get().accounts || []).filter((a) => !a.isArchived).map((a) => ({ value: a.id, label: a.name })));
-
-  const searchEl = textInput({ name: 'q', value: FILTER.q, placeholder: 'Buscar…' });
-  searchEl.addEventListener('input', () => { FILTER.q = searchEl.value; paint(); });
-
-  const typeEl = select({ name: 'ftype', value: FILTER.type, options: [
-    { value: 'all', label: 'Todos los tipos' },
-    { value: 'income', label: 'Ingresos' },
-    { value: 'expense', label: 'Gastos' },
-    { value: 'transfer', label: 'Transferencias' },
-  ] });
-  typeEl.addEventListener('change', () => { FILTER.type = typeEl.value; paint(); });
-
-  const accEl = select({ name: 'facc', value: FILTER.accountId, options: accountOpts });
-  accEl.addEventListener('change', () => { FILTER.accountId = accEl.value; paint(); });
 
   root.append(
     el('div', { class: 'page-header' }, [
@@ -211,9 +299,12 @@ export function renderTransactions() {
     ]),
     el('div', { class: 'toolbar' }, [
       el('div', { class: 'search' }, [el('span', { class: 'search__icon', html: icon('search') }), searchEl]),
+      monthEl,
       typeEl,
       accEl,
+      catEl,
     ]),
+    summaryEl,
     listMount,
   );
 

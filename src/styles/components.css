@@ -439,3 +439,12 @@ body.modal-open { overflow: hidden; }
 .between { justify-content: space-between; }
 .mt-2 { margin-top: var(--space-2); }
 .mt-4 { margin-top: var(--space-4); }
+
+/* Transacciones — encabezado de grupo por fecha */
+.tx-date-header { display: flex; align-items: center; justify-content: space-between; padding: var(--space-3) var(--space-2) var(--space-1); margin-top: var(--space-2); }
+.tx-date-header:first-child { margin-top: 0; padding-top: var(--space-1); }
+.tx-date-label { font-size: var(--fs-caption); font-weight: var(--fw-semibold); color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
+.tx-date-total { font-size: var(--fs-caption); font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+
+/* Transacciones — resumen de filtro */
+.tx-summary { font-size: var(--fs-caption); color: var(--text-secondary); margin-bottom: var(--space-3); min-height: 1em; }
