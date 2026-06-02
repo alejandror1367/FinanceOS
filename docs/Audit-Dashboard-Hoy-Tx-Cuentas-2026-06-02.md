@@ -2,7 +2,8 @@
 **Fecha:** 2026-06-02 | **Auditor:** Claude Sonnet 4.6 (Playwright MCP)  
 **Versión auditada:** v0.2.14 | **Commit base:** `5d73d5e`  
 **Sprint 1 ya aplicado:** commit `0d74646` — v0.2.15  
-**Sprint 2 ya aplicado:** commit `55f024a` — v0.2.16
+**Sprint 2 ya aplicado:** commit `55f024a` — v0.2.16  
+**Sprint 3 ya aplicado:** commit `a3d8208` — v0.2.17
 
 > Auditoría de 7 fases realizada como Staff Frontend + QA + Product Designer + Financial Systems Architect.
 > Los fixes del Sprint 1 ya están en `main`. Los sprints 2–5 son la cola de trabajo.
@@ -23,10 +24,10 @@
 | TX-4 | Totales en resultado de filtro | 2 | ✅ Resuelto `55f024a` |
 | TX-5 | Cuenta destino visible en fila de transferencia | 2 | ✅ Resuelto `55f024a` |
 | TX-6 | `accountOpts` del filtro stale (capturado al mount) | 2 | ✅ Resuelto `55f024a` |
-| HOY-1 | Panel "Para hoy" con items accionables | 3 | ⏳ Pendiente |
-| HOY-2 | Señal de salud financiera del día | 3 | ⏳ Pendiente |
-| HOY-3 | Insight diario automático | 3 | ⏳ Pendiente |
-| HOY-4 | Vista Hoy no reactiva (`store.subscribe`) | 3 | ⏳ Pendiente |
+| HOY-1 | Panel "Para hoy" con items accionables | 3 | ✅ Resuelto `a3d8208` |
+| HOY-2 | Señal de salud financiera del día | 3 | ✅ Resuelto `a3d8208` |
+| HOY-3 | Insight diario automático | 3 | ✅ Resuelto `a3d8208` |
+| HOY-4 | Vista Hoy no reactiva (`store.subscribe`) | 3 | ✅ Resuelto `a3d8208` |
 | CTA-1 | Agrupación de Cuentas por tipo | 4 | ⏳ Pendiente |
 | CTA-2 | KPI summary en Cuentas | 4 | ⏳ Pendiente |
 | CTA-3 | Quick presets bancos colombianos | 4 | ⏳ Pendiente |
@@ -309,7 +310,7 @@ const PRESETS = [
 
 ---
 
-### Sprint 3 — Hoy como copiloto
+### Sprint 3 — Hoy como copiloto ✅ COMPLETADO (`a3d8208` · v0.2.17)
 
 **Objetivo:** que abrir "Hoy" dé una respuesta inmediata sobre el estado financiero del día.
 
