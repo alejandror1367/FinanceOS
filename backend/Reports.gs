@@ -19,12 +19,15 @@ function sum_(arr, fn) {
 }
 
 function computeNetWorth_(ctx) {
-  // Excluye cuentas de inversión: su valor ya viene de Investments (TD-03).
-  var accountsValue = sum_(ctx.accounts.filter(function (a) { return a.type !== 'investment'; }), function (a) { return a.balance; });
+  // Excluye cuentas de inversión (TD-03) y tarjetas de crédito (son pasivos, no activos).
+  var accountsValue = sum_(ctx.accounts.filter(function (a) { return a.type !== 'investment' && a.type !== 'credit_card'; }), function (a) { return a.balance; });
   var investmentsValue = sum_(ctx.investments, function (i) { return i.quantity * i.currentPrice; });
   var otherAssets = sum_(ctx.assets, function (a) { return a.value; });
   var totalAssets = accountsValue + investmentsValue + otherAssets;
-  var totalLiabilities = sum_(ctx.liabilities, function (l) { return l.balance; });
+  var ccDebt = ctx.accounts.filter(function (a) {
+    return a.type === 'credit_card' && !a.isArchived;
+  }).reduce(function (sum, a) { return sum + Math.abs(a.balance || 0); }, 0);
+  var totalLiabilities = sum_(ctx.liabilities, function (l) { return l.balance; }) + ccDebt;
   return {
     totalAssets: totalAssets,
     totalLiabilities: totalLiabilities,
@@ -63,7 +66,7 @@ function getDashboard_(p) {
 
   var nw = computeNetWorth_(ctx);
 
-  var liquidity = sum_(ctx.accounts.filter(function (a) { return a.type !== 'investment'; }),
+  var liquidity = sum_(ctx.accounts.filter(function (a) { return a.type !== 'investment' && a.type !== 'credit_card'; }),
     function (a) { return a.balance; });
 
   var monthTx = ctx.transactions.filter(function (t) { return monthKey_(t.date) === mk; });
