@@ -1,11 +1,16 @@
 # FinanceOS
 
-Sistema operativo financiero personal privado. PWA instalable, offline-first.
+Sistema operativo financiero personal privado para Alejo. PWA instalable, offline-first.
 
-- **Frontend:** HTML + CSS + JavaScript (ES Modules). Sin frameworks, sin build, sin dependencias npm.
+- **Frontend:** HTML + CSS + JavaScript (ES Modules). Sin frameworks, sin build step,
+  sin dependencias npm en el runtime del cliente.
 - **Backend:** Google Apps Script (`backend/`).
-- **Base de datos:** Google Sheets.
+- **Base de datos:** Google Sheets (`FinanceOS_DB`, 13 hojas).
 - **Hosting:** GitHub Pages.
+- **Auth:** Google OAuth (Google Identity Services), restringida a emails autorizados.
+
+> Las reglas, principios e invariantes del proyecto están en **`CLAUDE.md`**.
+> El estado real (qué está hecho, pendientes, bugs) en **`PROJECT_HANDOFF.md`**.
 
 ## Desarrollo local
 
@@ -17,6 +22,9 @@ npx serve .
 ```
 
 Abre `http://localhost:3000/`.
+
+Con `api.baseUrl = null` en `src/core/config.js` la app corre en modo local con datos
+mock (sin backend). Con `auth.clientId` vacío, la autenticación de Google se desactiva.
 
 ## Setup del repositorio (una sola vez por clon)
 
@@ -34,23 +42,38 @@ git config core.hooksPath .githooks
 node --test tests/selectors.test.js
 ```
 
+Deben pasar siempre antes de commitear. Node.js v18+ (para `node:test` nativo).
+
 ## Estructura
 
 ```
 index.html · manifest.json · sw.js · assets/
 src/
-  core/        bootstrap, router, rutas, config
-  store/       estado reactivo + selectores
-  services/    apiClient, sync, IndexedDB, tema, datos
-  components/  UI, shell, modal, formularios, charts
-  views/       dashboard, hoy, transacciones, cuentas, presupuestos,
-               recurrentes, patrimonio, inversiones, metas, deudas,
-               analítica, diario, exportaciones, ajustes
+  core/        bootstrap, auth (OAuth), router, rutas, config
+  store/       estado reactivo + selectores (derivaciones financieras, testeadas)
+  services/    apiClient, dataService, sync, IndexedDB, priceService (precios en vivo),
+               tema, datos
+  components/  ui, shell, modal, formularios, charts
+  views/       dashboard, hoy, transacciones, cuentas, presupuestos, recurrentes,
+               patrimonio, inversiones, metas, deudas, analítica, diario,
+               importar (#/import, extractos con IA), exportaciones, ajustes
   styles/      tokens, temas, base, layout, componentes
   utils/       formato, dom, ids, iconos, export
 backend/       Google Apps Script (.gs) + README de despliegue
-docs/          PRD, Architecture, Database, Roadmap
+tests/         selectors.test.js (node:test)
+docs/          ver abajo
 ```
+
+## Documentación
+
+- **`CLAUDE.md`** — reglas, principios e invariantes del proyecto (leer antes de cambiar).
+- **`PROJECT_HANDOFF.md`** — estado real, arquitectura, pendientes y guía de retomada.
+- **`DEPLOY.md`** — despliegue del frontend en GitHub Pages.
+- `docs/PRD.md` · `docs/Architecture.md` · `docs/Database.md` · `docs/Roadmap.md` — diseño base.
+- `docs/TechnicalDebt.md` — deuda técnica priorizada (P0→P3).
+- `docs/Audit.md` · `Audit-Financiero.md` · `Audit-Frontend.md` · `Audit-Backend.md` ·
+  `Audit-Funcional-2026-06-02.md` — auditorías.
+- `docs/SessionState.md` — estado de sesión.
 
 ## Configuración del backend
 
@@ -59,7 +82,6 @@ En `src/core/config.js` define:
 - `api.baseUrl` — URL `/exec` del Web App de Apps Script.
 - `auth.clientId` — Client ID de Google Cloud Console (OAuth).
 
-Con `api.baseUrl = null` la app funciona en modo local con datos mock.
-Con `auth.clientId` vacío, la autenticación de Google está desactivada.
-
-Detalles de despliegue del backend en `backend/README.md`, y del frontend en `DEPLOY.md`.
+El backend valida el `id_token` de Google y restringe el acceso a `allowedEmails`
+(en `backend/Config.gs`). Detalles de despliegue del backend en `backend/README.md`,
+y del frontend en `DEPLOY.md`.
