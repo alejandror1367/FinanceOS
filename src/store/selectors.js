@@ -282,6 +282,49 @@ export const selectors = {
       .sort((a, b) => b.amount - a.amount);
   },
 
+  // Score financiero mensual 0–100 (Dashboard).
+  // 4 componentes: ahorro (30), presupuestos (30), metas (20), liquidez (20).
+  financialScore(s) {
+    let score = 0;
+    const now = new Date();
+    const curMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+    // Tasa de ahorro — 30 pts
+    const rate = selectors.savingsRate(s);
+    score += rate >= 20 ? 30 : rate >= 10 ? 20 : rate >= 0 ? Math.max(0, rate * 1.5) : 0;
+
+    // Presupuestos del mes — 30 pts
+    const budgets = (s.budgets || []).filter((b) => b.period === 'monthly' && normPeriodKey(b.periodKey, 7) === curMonthKey);
+    if (budgets.length > 0) {
+      const over = budgets.filter((b) => selectors.budgetStats(s, b).pct > 100).length;
+      const avgPct = budgets.reduce((sum, b) => sum + selectors.budgetStats(s, b).pct, 0) / budgets.length;
+      score += over === 0 ? (avgPct < 80 ? 30 : 20) : Math.max(0, 30 - over * 10);
+    } else {
+      score += 15;
+    }
+
+    // Metas activas — 20 pts (promedio de avance)
+    const goals = selectors.activeGoals(s);
+    if (goals.length > 0) {
+      const avg = goals.reduce((sum, g) => sum + (g.targetAmount ? Math.min(100, ((g.currentAmount || 0) / g.targetAmount) * 100) : 0), 0) / goals.length;
+      score += (avg / 100) * 20;
+    } else {
+      score += 10;
+    }
+
+    // Cobertura de liquidez — 20 pts (meses de gastos cubiertos)
+    const monthExp = selectors.monthlyExpense(s);
+    const liq = selectors.totalLiquidity(s);
+    if (monthExp > 0) {
+      const coverage = liq / monthExp;
+      score += coverage >= 3 ? 20 : coverage >= 1 ? 12 : coverage >= 0.5 ? 5 : 0;
+    } else {
+      score += 10;
+    }
+
+    return Math.round(Math.min(100, Math.max(0, score)));
+  },
+
   // ---- Vista Hoy: copiloto diario ----
 
   // Semáforo de salud del día: green / yellow / red + razones legibles.
