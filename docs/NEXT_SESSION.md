@@ -54,7 +54,9 @@ PENDIENTE (no abordado aún):
 - ✅ BUG-C1 (crítico) RESUELTO (`23009b0`+`98f8c19`): guard anti-signOut + warm-up + retry,
   y TD-15 (getBootstrap) cura la raíz. Pendiente confirmar happy-path en vivo tras desplegar backend.
 - BUG-A4 (alto): Deudas — KPI "Tarjetas de crédito" en $0 (consolidar credit_card + Liabilities).
-- ✅ TD-15 (getBootstrap, 12→1 request) HECHO (`98f8c19`). P1 restante: TD-13, TD-14, TD-10, TD-16, TD-17, TD-18.
+- ✅ TD-15 (getBootstrap, 12→1 request) HECHO (`98f8c19`); ✅ TD-16 (memoizar openById)
+  ya estaba HECHO (`47f91e1`, solo faltaba marcarlo). P1 restante: TD-13, TD-14, TD-10, TD-17, TD-18.
+  (Nota: `47f91e1` también dice corregir TD-17 — sin verificar esta sesión.)
 - Bugs medios: BUG-M1 (auto-load precios), BUG-M2 (purgar snapshots de test en Sheets),
   BUG-M3 (FX rate), BUG-M4 (dashboard usa snapshots reales).
 
