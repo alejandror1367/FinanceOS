@@ -571,15 +571,29 @@ Bugs resueltos: **BUG-C1** (`23009b0`+`98f8c19`), **BUG-C2** + **BUG-A1**/TD-12 
 **Sprint 1** (`0d74646`): bugs financieros críticos Dashboard. **Sprint 2** (`55f024a` · v0.2.16):
 Transacciones completas — agrupación fecha, filtros mes/categoría, totales, cuenta destino TX-1..TX-6.
 
+**Sprints 6–9 completados (2026-06-02, sesión auditoria Patrimonio/Inversiones/Metas/Deudas):**
+
+- **Sprint 6** (`4c7f543` · v0.2.20): Patrimonio correcto — `totalAssets` excluye CC; `totalLiabilities`
+  incluye CC. Patrimonio neto corregido ($6.38M real vs $13.2M inflado). `renderNetWorth()` y
+  `renderGoals()` reactivos. `priceService.update()` notifica al store. 45/45 tests.
+- **Sprint 7** (`058c987` · v0.2.21): Inversiones — auto-refresh cold start en `app.js` (elimina $0
+  en Dashboard). `formatMoney({decimals:n})`. `fmtI` para 2 decimales USD. P&L absoluto + % en
+  tabla de compras. Timestamp "precios: hace N min". 7 brokers en DEFAULT_BROKERS. Fix fecha ISO
+  en tabla. Presets nuevos en Cuentas.
+- **Sprint 8** (`b7c0d4d` · v0.2.22): Deudas — `amortize()` iterativo (meses, intereses totales,
+  fecha libre). `projectionCard` con tabla PROYECCIÓN debajo del plan Snowball/Avalanche.
+  Verificado: Amex $3.4M · EA 28.8% · cuota $1.34M → 3 meses · $136.105 intereses · libre sept 2026.
+- **Sprint 9** (`c50360b` · v0.2.23): Metas — `goalForecast()` con ritmo de ahorro real.
+  `goalCard` muestra: recomendado/fecha objetivo + "✓ A este ritmo ($3.8M/mes): sept 2026 (3 meses)".
+  Color verde si va adelantado, warning si va atrasado. Modal aporte con nota de cuenta vinculada.
+
 **Siguiente (en orden):**
-1. **TD-18** (único P1): touch targets de `.icon-btn` en táctil (WCAG 2.5.8).
-2. Menor: alinear `src/core/config.js` `version` (`'0.2.6'`) con el SW (`v0.2.16`) — BUG-B1 follow-up.
-3. **Sprint 3** (Hoy como copiloto): `store.subscribe`, panel "Para hoy", semáforo de salud, insight diario — ver auditoría `docs/Audit-Dashboard-Hoy-Tx-Cuentas-2026-06-02.md`.
-4. **Sprint 4** (Cuentas como ecosistema): agrupación por tipo, KPI summary, CC en negativo/rojo, quick presets.
-5. **Sprint 5** (Dashboard premium): `store.subscribe`, score financiero, alertas inline en KPIs.
-6. Bugs medios BUG-M1..M4 (auto-load precios, purgar snapshots de test, FX rate, dashboard con snapshots reales).
-7. P2 (`docs/TechnicalDebt.md`): TD-19 factorías CRUD · TD-21/22 precisión monetaria ·
-   TD-23 amortización real Snowball/Avalanche · TD-24/25/27/28 backend.
+1. **TD-18** (único P1 abierto): touch targets `.icon-btn` en táctil (WCAG 2.5.8). S — 1 archivo CSS.
+2. **BUG-B1**: alinear `src/core/config.js` `version` (`'0.2.6'`) con SW (`v0.2.23`).
+3. **Sprint 10** (Portfolio profesional): ventas/P&L realizado en Inversiones, dividendos, asset
+   allocation donut en Patrimonio. Ver `docs/Audit-Patrimonio-Inversiones-2026-06-02.md`.
+4. P2 (`docs/TechnicalDebt.md`): TD-19 factorías CRUD · TD-21/22 precisión monetaria ·
+   TD-24/25/27/28 backend.
 
 ---
 
