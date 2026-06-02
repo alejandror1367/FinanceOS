@@ -571,29 +571,34 @@ Bugs resueltos: **BUG-C1** (`23009b0`+`98f8c19`), **BUG-C2** + **BUG-A1**/TD-12 
 **Sprint 1** (`0d74646`): bugs financieros críticos Dashboard. **Sprint 2** (`55f024a` · v0.2.16):
 Transacciones completas — agrupación fecha, filtros mes/categoría, totales, cuenta destino TX-1..TX-6.
 
-**Sprints 6–9 completados (2026-06-02, sesión auditoria Patrimonio/Inversiones/Metas/Deudas):**
+**Sprints 6–10 completados (2026-06-02, sesión auditoria completa):**
 
-- **Sprint 6** (`4c7f543` · v0.2.20): Patrimonio correcto — `totalAssets` excluye CC; `totalLiabilities`
-  incluye CC. Patrimonio neto corregido ($6.38M real vs $13.2M inflado). `renderNetWorth()` y
-  `renderGoals()` reactivos. `priceService.update()` notifica al store. 45/45 tests.
-- **Sprint 7** (`058c987` · v0.2.21): Inversiones — auto-refresh cold start en `app.js` (elimina $0
-  en Dashboard). `formatMoney({decimals:n})`. `fmtI` para 2 decimales USD. P&L absoluto + % en
-  tabla de compras. Timestamp "precios: hace N min". 7 brokers en DEFAULT_BROKERS. Fix fecha ISO
-  en tabla. Presets nuevos en Cuentas.
-- **Sprint 8** (`b7c0d4d` · v0.2.22): Deudas — `amortize()` iterativo (meses, intereses totales,
-  fecha libre). `projectionCard` con tabla PROYECCIÓN debajo del plan Snowball/Avalanche.
-  Verificado: Amex $3.4M · EA 28.8% · cuota $1.34M → 3 meses · $136.105 intereses · libre sept 2026.
-- **Sprint 9** (`c50360b` · v0.2.23): Metas — `goalForecast()` con ritmo de ahorro real.
-  `goalCard` muestra: recomendado/fecha objetivo + "✓ A este ritmo ($3.8M/mes): sept 2026 (3 meses)".
-  Color verde si va adelantado, warning si va atrasado. Modal aporte con nota de cuenta vinculada.
+- **Sprint 6** (`4c7f543` · v0.2.20): Patrimonio correcto. `totalAssets` excluye CC;
+  `totalLiabilities` incluye CC. -$6.8M error eliminado. Reactividad networth+goals. 45/45 tests.
+- **Sprint 7** (`058c987` · v0.2.21): Auto-refresh cold start. `formatMoney({decimals})`. `fmtI` USD.
+  P&L absoluto en tabla compras. Timestamp precios. 7 brokers. Fix fecha ISO. Presets Cuentas.
+- **Sprint 8** (`b7c0d4d` · v0.2.22): `amortize()` real. `projectionCard` PROYECCIÓN en Deudas.
+  Verificado: Amex $3.4M · 28.8% · $1.34M/mes → 3 meses · $136.105 intereses · sept 2026.
+- **Sprint 9** (`c50360b` · v0.2.23): `goalForecast()` con ahorro real. "✓ A este ritmo" en verde.
+- **Sprint 10a** (`75aba73` · v0.2.24): TD-18 touch targets WCAG 2.5.8. BUG-B1 config version.
+  Donut "Composición del patrimonio". Cobertura liquidez "10.9 meses". Nota CC en Pasivos.
+  Badge urgente "2 DÍAS" en Deudas (WCAG 1.3.3). `fmtI` en positionCard header. groupByTicker fix.
+- **Sprint 10b** (`ce2c711` · v0.2.25): Ventas en Inversiones. `openSellModal`. Sección
+  "Operaciones cerradas". KPI "P&L Realizado". closedGroups separados de activeGroups.
+- **Sprint 10c** (`08d0da9` · v0.2.26): Dividendos → transacción de ingreso real. Botón "Dividendo"
+  en positionCard. `recentTransactions` con tiebreaker estable por createdAt/id.
 
-**Siguiente (en orden):**
-1. **TD-18** (único P1 abierto): touch targets `.icon-btn` en táctil (WCAG 2.5.8). S — 1 archivo CSS.
-2. **BUG-B1**: alinear `src/core/config.js` `version` (`'0.2.6'`) con SW (`v0.2.23`).
-3. **Sprint 10** (Portfolio profesional): ventas/P&L realizado en Inversiones, dividendos, asset
-   allocation donut en Patrimonio. Ver `docs/Audit-Patrimonio-Inversiones-2026-06-02.md`.
-4. P2 (`docs/TechnicalDebt.md`): TD-19 factorías CRUD · TD-21/22 precisión monetaria ·
-   TD-24/25/27/28 backend.
+**Estado actual HEAD:**
+```
+commit: 08d0da9 · rama: main · SW: v0.2.26 · tests: 45/45
+```
+
+**Pendiente (P2 en TechnicalDebt.md):**
+1. TD-19: Factorías CRUD (11 vistas con andamiaje duplicado) — L
+2. TD-22: Aritmética float sin redondeo controlado — M
+3. TD-24/25: Backend lecturas O(n) + paginación real — M
+4. TD-27: LockService en escrituras Apps Script — S
+5. TD-28: Purga de soft-deletes — M
 
 ---
 
