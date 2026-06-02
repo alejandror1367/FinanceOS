@@ -73,16 +73,20 @@ export const selectors = {
   },
 
   totalAssets(s) {
-    // Excluye cuentas de inversión: su valor viene de Investments (quantity×price), no de balance (TD-03).
+    // Excluye cuentas investment (doble conteo con posiciones, TD-03) y credit_card (son pasivos).
     const accountsValue = s.accounts
-      .filter((a) => !a.isArchived && a.type !== 'investment')
+      .filter((a) => !a.isArchived && a.type !== 'investment' && a.type !== 'credit_card')
       .reduce((sum, a) => sum + (a.balance || 0), 0);
     const otherAssets = s.assets.reduce((sum, a) => sum + (a.value || 0), 0);
     return accountsValue + selectors.investmentsValue(s) + otherAssets;
   },
 
   totalLiabilities(s) {
-    return s.liabilities.reduce((sum, l) => sum + (l.balance || 0), 0);
+    const fromLiabilities = s.liabilities.reduce((sum, l) => sum + (l.balance || 0), 0);
+    // Las tarjetas de crédito registradas como cuentas también son pasivos.
+    const fromCC = selectors.creditCardAccounts(s)
+      .reduce((sum, a) => sum + Math.abs(a.balance || 0), 0);
+    return fromLiabilities + fromCC;
   },
 
   // Patrimonio Neto = Activos - Pasivos (docs/PRD.md §8.6)

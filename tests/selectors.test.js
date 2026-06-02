@@ -78,6 +78,16 @@ describe('totalAssets', () => {
     });
     assert.equal(selectors.totalAssets(s), 1_000_000);
   });
+
+  test('excluye tarjetas de crédito (son pasivos, no activos)', () => {
+    const s = mkState({
+      accounts: [
+        acc('1', 4_000_000, 'bank'),
+        acc('2', 3_000_000, 'credit_card'), // monto de deuda almacenado como positivo
+      ],
+    });
+    assert.equal(selectors.totalAssets(s), 4_000_000);
+  });
 });
 
 // ── totalLiabilities ──────────────────────────────────────────────────────────
@@ -92,6 +102,27 @@ describe('totalLiabilities', () => {
       liabilities: [{ id: 'l1', balance: 3_000_000 }, { id: 'l2', balance: 1_500_000 }],
     });
     assert.equal(selectors.totalLiabilities(s), 4_500_000);
+  });
+
+  test('incluye deuda de tarjetas de crédito (cuentas credit_card)', () => {
+    const s = mkState({
+      accounts: [
+        acc('1', 4_000_000, 'bank'),
+        acc('2', 3_000_000, 'credit_card'),
+      ],
+      liabilities: [{ id: 'l1', balance: 1_000_000 }],
+    });
+    assert.equal(selectors.totalLiabilities(s), 4_000_000); // 3M CC + 1M liability
+  });
+
+  test('excluye tarjetas archivadas del total de pasivos', () => {
+    const s = mkState({
+      accounts: [
+        acc('1', 3_000_000, 'credit_card'),
+        acc('2', 1_000_000, 'credit_card', { isArchived: true }),
+      ],
+    });
+    assert.equal(selectors.totalLiabilities(s), 3_000_000);
   });
 });
 
@@ -122,6 +153,29 @@ describe('netWorth', () => {
     });
     // Solo posiciones (500k), no el balance de la cuenta investment
     assert.equal(selectors.netWorth(s), 500_000);
+  });
+
+  test('tarjeta de crédito cuenta como pasivo, no como activo', () => {
+    const s = mkState({
+      accounts: [
+        acc('1', 5_000_000, 'bank'),
+        acc('2', 2_000_000, 'credit_card'),
+      ],
+    });
+    // Activos: 5M (solo banco) − Pasivos: 2M (CC) = 3M
+    assert.equal(selectors.netWorth(s), 3_000_000);
+  });
+
+  test('patrimonio correcto con banco + CC + liability', () => {
+    const s = mkState({
+      accounts: [
+        acc('1', 10_000_000, 'bank'),
+        acc('2', 3_000_000, 'credit_card'),
+      ],
+      liabilities: [{ id: 'l1', balance: 2_000_000 }],
+    });
+    // Activos: 10M − Pasivos: 5M (3M CC + 2M liability) = 5M
+    assert.equal(selectors.netWorth(s), 5_000_000);
   });
 });
 

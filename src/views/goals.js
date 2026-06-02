@@ -1,7 +1,7 @@
 // views/goals.js — módulo de Metas.
 // Avance, tiempo estimado y aporte recomendado (derivados, no persistidos).
 
-import { el } from '../utils/dom.js';
+import { el, mount } from '../utils/dom.js';
 import { icon } from '../utils/icons.js';
 import { store } from '../store/store.js';
 import { dataService } from '../services/dataService.js';
@@ -148,25 +148,35 @@ function goalCard(g, cur) {
 }
 
 export function renderGoals() {
-  const s = store.get();
-  const cur = s.baseCurrency;
-  const goals = [...(s.goals || [])].sort((a, b) => goalStats(b).pct - goalStats(a).pct);
-  const totalTarget = goals.reduce((sum, g) => sum + (g.targetAmount || 0), 0);
-  const totalCurrent = goals.reduce((sum, g) => sum + (g.currentAmount || 0), 0);
+  const root = el('div');
 
-  return el('div', {}, [
-    el('div', { class: 'page-header' }, [
-      el('div', { class: 'row-flex between' }, [
-        el('div', {}, [
-          el('h2', { class: 't-h1', text: 'Metas' }),
-          el('p', { class: 'page-header__sub', text: goals.length ? `${formatMoney(totalCurrent, cur)} de ${formatMoney(totalTarget, cur)} ahorrado` : 'Define tus objetivos financieros.' }),
+  function repaint() {
+    const s = store.get();
+    const cur = s.baseCurrency;
+    const goals = [...(s.goals || [])].sort((a, b) => goalStats(b).pct - goalStats(a).pct);
+    const totalTarget = goals.reduce((sum, g) => sum + (g.targetAmount || 0), 0);
+    const totalCurrent = goals.reduce((sum, g) => sum + (g.currentAmount || 0), 0);
+
+    mount(root,
+      el('div', {}, [
+        el('div', { class: 'page-header' }, [
+          el('div', { class: 'row-flex between' }, [
+            el('div', {}, [
+              el('h2', { class: 't-h1', text: 'Metas' }),
+              el('p', { class: 'page-header__sub', text: goals.length ? `${formatMoney(totalCurrent, cur)} de ${formatMoney(totalTarget, cur)} ahorrado` : 'Define tus objetivos financieros.' }),
+            ]),
+            Button('Nueva meta', { variant: 'primary', iconName: 'plus', onClick: () => openGoalModal({ mode: 'create' }) }),
+          ]),
         ]),
-        Button('Nueva meta', { variant: 'primary', iconName: 'plus', onClick: () => openGoalModal({ mode: 'create' }) }),
-      ]),
-    ]),
-    goals.length
-      ? el('div', { class: 'grid grid--2' }, goals.map((g) => goalCard(g, cur)))
-      : el('div', { class: 'card' }, [EmptyState({ title: 'Sin metas', message: 'Crea tu primera meta financiera.', iconName: 'goals',
-          action: Button('Nueva meta', { variant: 'primary', iconName: 'plus', onClick: () => openGoalModal({ mode: 'create' }) }) })]),
-  ]);
+        goals.length
+          ? el('div', { class: goals.length === 1 ? 'stack' : 'grid grid--2' }, goals.map((g) => goalCard(g, cur)))
+          : el('div', { class: 'card' }, [EmptyState({ title: 'Sin metas', message: 'Crea tu primera meta financiera.', iconName: 'goals',
+              action: Button('Nueva meta', { variant: 'primary', iconName: 'plus', onClick: () => openGoalModal({ mode: 'create' }) }) })]),
+      ])
+    );
+  }
+
+  store.subscribe(() => { if (root.isConnected) repaint(); });
+  repaint();
+  return root;
 }

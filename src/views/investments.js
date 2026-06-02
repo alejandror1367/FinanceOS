@@ -378,6 +378,7 @@ export function renderInvestments() {
       fxRates = buildFxRates();
       // Persiste en priceService (localStorage + memoria compartida con selectors)
       priceService.update(livePrices, fxRates);
+      store.set({ _priceRevision: Date.now() }); // notifica a Dashboard y Patrimonio
       toast('Precios actualizados');
     } catch (e) { toast('Error: ' + e.message, { type: 'warning' }); }
     finally { refreshing = false; paint(false); }

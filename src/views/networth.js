@@ -2,7 +2,7 @@
 // Patrimonio Neto = Activos − Pasivos. Desglose, evolución (snapshots) y
 // CRUD de "Otros activos" (Assets) y "Deudas" (Liabilities).
 
-import { el } from '../utils/dom.js';
+import { el, mount } from '../utils/dom.js';
 import { icon } from '../utils/icons.js';
 import { store } from '../store/store.js';
 import { selectors } from '../store/selectors.js';
@@ -130,77 +130,90 @@ async function doSaveSnapshot() {
 }
 
 export function renderNetWorth() {
-  const s = store.get();
-  const cur = s.baseCurrency;
-  const netWorth = selectors.netWorth(s);
-  const totalAssets = selectors.totalAssets(s);
-  const totalLiabilities = selectors.totalLiabilities(s);
-  const accountsValue = s.accounts.filter((a) => !a.isArchived).reduce((sum, a) => sum + (a.balance || 0), 0);
-  const invValue = selectors.investmentsValue(s);
+  const root = el('div');
 
-  // KPIs
-  const kpis = el('div', { class: 'grid grid--kpi' }, [
-    KpiCard({ label: 'Patrimonio neto', value: formatMoney(netWorth, cur), iconName: 'networth', variant: 'accent', hero: true,
-      foot: [el('span', { class: 't-caption', text: `${formatMoney(totalAssets, cur)} activos − ${formatMoney(totalLiabilities, cur)} pasivos` })] }),
-    KpiCard({ label: 'Activos', value: formatMoney(totalAssets, cur), iconName: 'investments', variant: 'emerald' }),
-    KpiCard({ label: 'Pasivos', value: formatMoney(totalLiabilities, cur), iconName: 'debts', variant: 'negative' }),
-  ]);
+  function repaint() {
+    const s = store.get();
+    const cur = s.baseCurrency;
+    const netWorth = selectors.netWorth(s);
+    const totalAssets = selectors.totalAssets(s);
+    const totalLiabilities = selectors.totalLiabilities(s);
+    // Cuentas líquidas: excluye inversiones (doble conteo) y CC (son pasivos).
+    const liquidAccounts = s.accounts.filter((a) => !a.isArchived && a.type !== 'investment' && a.type !== 'credit_card');
+    const accountsValue = liquidAccounts.reduce((sum, a) => sum + (a.balance || 0), 0);
+    const invValue = selectors.investmentsValue(s);
 
-  // Evolución (snapshots reales)
-  const snaps = [...(s.netWorthSnapshots || [])].sort((a, b) => (a.date < b.date ? -1 : 1)).slice(-8);
-  const evolution = Card({
-    title: 'Evolución del patrimonio',
-    action: Button('Guardar snapshot', { variant: 'ghost', iconName: 'plus', onClick: doSaveSnapshot }),
-    body: snaps.length
-      ? BarChart(snaps.map((sn) => ({ label: formatDate(sn.date, 'short'), value: sn.netWorth })))
-      : EmptyState({ title: 'Sin histórico', message: 'Guarda un snapshot para empezar a registrar la evolución.', iconName: 'networth' }),
-  });
+    // KPIs
+    const kpis = el('div', { class: 'grid grid--kpi' }, [
+      KpiCard({ label: 'Patrimonio neto', value: formatMoney(netWorth, cur), iconName: 'networth', variant: 'accent', hero: true,
+        foot: [el('span', { class: 't-caption', text: `${formatMoney(totalAssets, cur)} activos − ${formatMoney(totalLiabilities, cur)} pasivos` })] }),
+      KpiCard({ label: 'Activos', value: formatMoney(totalAssets, cur), iconName: 'investments', variant: 'emerald' }),
+      KpiCard({ label: 'Pasivos', value: formatMoney(totalLiabilities, cur), iconName: 'debts', variant: totalLiabilities > 0 ? 'negative' : 'neutral' }),
+    ]);
 
-  // Activos: cuentas, inversiones, otros activos
-  const assetItems = [];
-  assetItems.push(simpleRow('accounts', 'Cuentas', `${s.accounts.filter((a) => !a.isArchived).length} cuentas`, formatMoney(accountsValue, cur)));
-  assetItems.push(simpleRow('investments', 'Inversiones', `${s.investments.length} posiciones`, formatMoney(invValue, cur)));
-  (s.assets || []).forEach((a) => {
-    const label = (ASSET_CATEGORIES.find((c) => c.value === a.category) || {}).label || a.category;
-    assetItems.push(simpleRow('home', a.name, label, formatMoney(a.value, a.currency || cur), '',
-      actionButtons(() => openAssetModal({ asset: a, mode: 'edit' }),
-        () => confirmDialog({ title: 'Eliminar activo', message: `¿Eliminar "${a.name}"?`, onConfirm: async () => { try { await dataService.remove('assets', a.id); toast('Activo eliminado'); } catch (e) { toast('Error', { type: 'negative' }); } } }))));
-  });
+    // Evolución (snapshots reales)
+    const snaps = [...(s.netWorthSnapshots || [])].sort((a, b) => (a.date < b.date ? -1 : 1)).slice(-8);
+    const evolution = Card({
+      title: 'Evolución del patrimonio',
+      action: Button('Guardar snapshot', { variant: 'ghost', iconName: 'plus', onClick: doSaveSnapshot }),
+      body: snaps.length
+        ? BarChart(snaps.map((sn) => ({ label: formatDate(sn.date, 'short'), value: sn.netWorth })))
+        : EmptyState({ title: 'Sin histórico', message: 'Guarda un snapshot para empezar a registrar la evolución.', iconName: 'networth' }),
+    });
 
-  const assetsCard = Card({
-    title: 'Activos',
-    action: Button('Otro activo', { variant: 'ghost', iconName: 'plus', onClick: () => openAssetModal({ mode: 'create' }) }),
-    body: el('div', { class: 'row-list' }, assetItems),
-  });
+    // Activos: cuentas líquidas, inversiones, otros activos
+    const assetItems = [];
+    assetItems.push(simpleRow('accounts', 'Cuentas', `${liquidAccounts.length} cuentas`, formatMoney(accountsValue, cur)));
+    const activeInv = s.investments.filter((i) => !i.isDeleted);
+    assetItems.push(simpleRow('investments', 'Inversiones', `${activeInv.length} posiciones`, formatMoney(invValue, cur)));
+    (s.assets || []).forEach((a) => {
+      const label = (ASSET_CATEGORIES.find((c) => c.value === a.category) || {}).label || a.category;
+      assetItems.push(simpleRow('home', a.name, label, formatMoney(a.value, a.currency || cur), '',
+        actionButtons(() => openAssetModal({ asset: a, mode: 'edit' }),
+          () => confirmDialog({ title: 'Eliminar activo', message: `¿Eliminar "${a.name}"?`, onConfirm: async () => { try { await dataService.remove('assets', a.id); toast('Activo eliminado'); } catch (e) { toast('Error', { type: 'negative' }); } } }))));
+    });
 
-  // Pasivos
-  const liabs = s.liabilities || [];
-  const liabsCard = Card({
-    title: 'Pasivos',
-    action: Button('Nueva deuda', { variant: 'ghost', iconName: 'plus', onClick: () => openLiabilityModal({ mode: 'create' }) }),
-    body: liabs.length
-      ? el('div', { class: 'row-list' }, liabs.map((l) => {
-          const typeLabel = (LIABILITY_TYPES.find((t) => t.value === l.type) || {}).label || l.type;
-          const sub = `${typeLabel} · ${l.interestRate || 0}%${l.dueDate ? ' · vence ' + formatDate(l.dueDate, 'short') : ''}`;
-          return simpleRow('debts', l.name, sub, formatMoney(l.balance, l.currency || cur), 'text-negative',
-            actionButtons(() => openLiabilityModal({ liability: l, mode: 'edit' }),
-              () => confirmDialog({ title: 'Eliminar deuda', message: `¿Eliminar "${l.name}"?`, onConfirm: async () => { try { await dataService.remove('liabilities', l.id); toast('Deuda eliminada'); } catch (e) { toast('Error', { type: 'negative' }); } } })));
-        }))
-      : EmptyState({ title: 'Sin deudas', message: 'Registra tus pasivos para un patrimonio preciso.', iconName: 'debts' }),
-  });
+    const assetsCard = Card({
+      title: 'Activos',
+      action: Button('Otro activo', { variant: 'ghost', iconName: 'plus', onClick: () => openAssetModal({ mode: 'create' }) }),
+      body: el('div', { class: 'row-list' }, assetItems),
+    });
 
-  return el('div', {}, [
-    el('div', { class: 'page-header' }, [
-      el('div', { class: 'row-flex between' }, [
-        el('div', {}, [
-          el('h2', { class: 't-h1', text: 'Patrimonio' }),
-          el('p', { class: 'page-header__sub', text: 'Activos menos pasivos y su evolución.' }),
+    // Pasivos
+    const liabs = s.liabilities || [];
+    const liabsCard = Card({
+      title: 'Pasivos',
+      action: Button('Nueva deuda', { variant: 'ghost', iconName: 'plus', onClick: () => openLiabilityModal({ mode: 'create' }) }),
+      body: liabs.length
+        ? el('div', { class: 'row-list' }, liabs.map((l) => {
+            const typeLabel = (LIABILITY_TYPES.find((t) => t.value === l.type) || {}).label || l.type;
+            const sub = `${typeLabel} · ${l.interestRate || 0}%${l.dueDate ? ' · vence ' + formatDate(l.dueDate, 'short') : ''}`;
+            return simpleRow('debts', l.name, sub, formatMoney(l.balance, l.currency || cur), 'text-negative',
+              actionButtons(() => openLiabilityModal({ liability: l, mode: 'edit' }),
+                () => confirmDialog({ title: 'Eliminar deuda', message: `¿Eliminar "${l.name}"?`, onConfirm: async () => { try { await dataService.remove('liabilities', l.id); toast('Deuda eliminada'); } catch (e) { toast('Error', { type: 'negative' }); } } })));
+          }))
+        : EmptyState({ title: 'Sin deudas', message: 'Registra tus pasivos para un patrimonio preciso.', iconName: 'debts' }),
+    });
+
+    mount(root,
+      el('div', {}, [
+        el('div', { class: 'page-header' }, [
+          el('div', { class: 'row-flex between' }, [
+            el('div', {}, [
+              el('h2', { class: 't-h1', text: 'Patrimonio' }),
+              el('p', { class: 'page-header__sub', text: 'Activos menos pasivos y su evolución.' }),
+            ]),
+            Badge('Activos − Pasivos', 'info'),
+          ]),
         ]),
-        Badge('Activos − Pasivos', 'info'),
-      ]),
-    ]),
-    kpis,
-    el('div', { class: 'section' }, [evolution]),
-    el('div', { class: 'grid grid--2 section' }, [assetsCard, liabsCard]),
-  ]);
+        kpis,
+        el('div', { class: 'section' }, [evolution]),
+        el('div', { class: 'grid grid--2 section' }, [assetsCard, liabsCard]),
+      ])
+    );
+  }
+
+  store.subscribe(() => { if (root.isConnected) repaint(); });
+  repaint();
+  return root;
 }
