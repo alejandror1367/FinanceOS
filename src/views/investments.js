@@ -12,9 +12,31 @@ import { openModal, confirmDialog } from '../components/modal.js';
 import { field, textInput, numberInput, select, segmented } from '../components/forms.js';
 import { toast } from '../services/toast.js';
 
-// Caché de precios a nivel de módulo — persiste cuando el router re-renderiza la vista.
-let _priceCache = {};
-let _fxCache    = {};
+// Caché de precios — persiste entre re-renders del router Y entre recargas (F5) via localStorage.
+const PRICE_TTL   = 15 * 60_000; // 15 min (igual que CacheService de Apps Script)
+const LS_PRICES   = 'financeOS:inv:prices';
+const LS_FX       = 'financeOS:inv:fx';
+const LS_FETCH_AT = 'financeOS:inv:fetchAt';
+
+let _priceCache  = {};
+let _fxCache     = {};
+let _lastFetchAt = 0;
+
+// Restaurar desde localStorage si el TTL no expiró
+try {
+  const ts = Number(localStorage.getItem(LS_FETCH_AT) || 0);
+  if (ts && Date.now() - ts < PRICE_TTL) {
+    _priceCache  = JSON.parse(localStorage.getItem(LS_PRICES) || '{}');
+    _fxCache     = JSON.parse(localStorage.getItem(LS_FX)     || '{}');
+    _lastFetchAt = ts;
+  }
+} catch (_) { /* localStorage no disponible */ }
+
+// Brokers predefinidos que aparecen como quick-create si no existen como cuenta
+const DEFAULT_BROKERS = [
+  { name: 'XTB',        type: 'investment', currency: 'USD' },
+  { name: 'ARQ Invest', type: 'investment', currency: 'COP' },
+];
 
 const ASSET_TYPES = [
   { value: 'etf',    label: 'ETF',             section: 'mkt'    },
@@ -86,7 +108,12 @@ function toCOP(amount, currency, fxRates) {
 function openPurchaseModal({ inv = null, defaultSymbol = '', defaultType = 'etf' }) {
   const s = store.get();
   const mode = inv ? 'edit' : 'create';
+  const existingNames = new Set((s.accounts || []).map((a) => a.name.toLowerCase()));
+  const brokerOpts = DEFAULT_BROKERS
+    .filter((b) => !existingNames.has(b.name.toLowerCase()))
+    .map((b) => ({ value: `__broker__${b.name}`, label: `${b.name}` }));
   const accOpts = [{ value: '', label: '— Sin cuenta —' }]
+    .concat(brokerOpts)
     .concat((s.accounts || []).filter((a) => !a.isArchived).map((a) => ({ value: a.id, label: a.name })));
 
   let inputMode = 'qty';
@@ -155,10 +182,22 @@ function openPurchaseModal({ inv = null, defaultSymbol = '', defaultType = 'etf'
     body, submitLabel: mode === 'edit' ? 'Guardar' : 'Registrar',
     onSubmit: async () => {
       const g = (n) => body.querySelector(`[name="${n}"]`)?.value || '';
+      let accountId = g('accountId');
+      if (accountId.startsWith('__broker__')) {
+        const brokerName = accountId.slice('__broker__'.length);
+        const brokerDef  = DEFAULT_BROKERS.find((b) => b.name === brokerName);
+        try {
+          const acc = await dataService.create('accounts', {
+            name: brokerName, type: brokerDef?.type || 'investment',
+            currency: brokerDef?.currency || 'USD', balance: 0,
+          });
+          accountId = acc.id;
+        } catch (e) { accountId = ''; }
+      }
       const data = {
         symbol: g('symbol').trim().toUpperCase() || null,
         name:   g('name').trim(),
-        assetType: g('assetType'), accountId: g('accountId'),
+        assetType: g('assetType'), accountId,
         quantity:  Number(qtyEl.value) || 0,
         purchasePrice: Number(priceEl.value) || 0,
         purchaseDate: g('purchaseDate'),
@@ -356,6 +395,12 @@ export function renderInvestments() {
       });
       fxRates = buildFxRates();
       _fxCache = { ...fxRates };
+      _lastFetchAt = Date.now();
+      try {
+        localStorage.setItem(LS_FETCH_AT, String(_lastFetchAt));
+        localStorage.setItem(LS_PRICES,   JSON.stringify(_priceCache));
+        localStorage.setItem(LS_FX,       JSON.stringify(_fxCache));
+      } catch (_) { /* quota o modo privado */ }
       toast('Precios actualizados');
     } catch (e) { toast('Error: ' + e.message, { type: 'warning' }); }
     finally { refreshing = false; paint(false); }
@@ -509,5 +554,7 @@ export function renderInvestments() {
 
   store.subscribe(() => paint());
   paint();
+  // Auto-refresh al entrar a la vista si el TTL expiró o nunca se cargaron precios
+  if (!_lastFetchAt || Date.now() - _lastFetchAt > PRICE_TTL) refreshPrices();
   return root;
 }
