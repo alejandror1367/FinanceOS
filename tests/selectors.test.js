@@ -434,6 +434,63 @@ describe('deudas', () => {
   });
 });
 
+// ── upcomingPayments ─────────────────────────────────────────────────────────
+
+describe('upcomingPayments', () => {
+  function recurring(id, nextRunDate, amount = 50_000) {
+    return { id, description: `Pago ${id}`, isActive: true, nextRunDate, amount, currency: 'COP', categoryId: '' };
+  }
+
+  test('solo recurrentes cuando no hay CC con paymentDay', () => {
+    const s = mkState({
+      recurring: [
+        recurring('r1', '2026-06-10'),
+        recurring('r2', '2026-06-05'),
+      ],
+      accounts: [acc('c1', -1_000_000, 'credit_card')], // sin paymentDay
+    });
+    const result = selectors.upcomingPayments(s);
+    assert.equal(result.length, 2);
+    assert.equal(result[0].id, 'r2'); // más próximo primero
+  });
+
+  test('incluye CC con paymentDay y balance > 0', () => {
+    const s = mkState({
+      recurring: [recurring('r1', '2026-06-15', 30_000)],
+      accounts: [
+        acc('c1', -500_000, 'credit_card', { paymentDay: 3, isArchived: false }),
+      ],
+    });
+    const result = selectors.upcomingPayments(s, 10);
+    const cc = result.find((p) => p._source === 'credit_card');
+    assert.ok(cc, 'debe incluir el pago de CC');
+    assert.equal(cc.amount, 500_000); // Math.abs del balance
+  });
+
+  test('excluye CC sin paymentDay o con balance 0', () => {
+    const s = mkState({
+      accounts: [
+        acc('c1', -200_000, 'credit_card'),              // sin paymentDay
+        acc('c2', 0, 'credit_card', { paymentDay: 5 }), // saldo 0
+      ],
+    });
+    const result = selectors.upcomingPayments(s, 10);
+    assert.equal(result.filter((p) => p._source === 'credit_card').length, 0);
+  });
+
+  test('ordena recurrentes y CC por fecha y respeta límite n', () => {
+    const s = mkState({
+      recurring: [recurring('r1', '2026-06-20', 20_000)],
+      accounts: [
+        acc('c1', -1_000_000, 'credit_card', { paymentDay: 1 }),
+        acc('c2', -2_000_000, 'credit_card', { paymentDay: 2 }),
+      ],
+    });
+    const result = selectors.upcomingPayments(s, 2);
+    assert.equal(result.length, 2);
+  });
+});
+
 // ── hasMixedCurrencies (TD-02) ────────────────────────────────────────────────
 
 describe('hasMixedCurrencies', () => {

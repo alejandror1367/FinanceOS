@@ -134,8 +134,30 @@ export const selectors = {
   },
 
   upcomingPayments(s, n = 4) {
-    return [...s.recurring]
+    const recurring = [...s.recurring]
       .filter((r) => r.isActive)
+      .map((r) => ({ ...r, _source: 'recurring' }));
+
+    // Vencimientos de tarjetas de crédito con paymentDay configurado.
+    const today = new Date();
+    const todayDay = today.getDate();
+    const ccPayments = selectors.creditCardAccounts(s)
+      .filter((a) => a.paymentDay && Math.abs(a.balance || 0) > 0)
+      .map((a) => {
+        const day = Number(a.paymentDay);
+        const y = today.getFullYear();
+        const m = today.getMonth();
+        const dueDate = todayDay <= day
+          ? new Date(y, m, day).toISOString().slice(0, 10)
+          : new Date(y, m + 1, day).toISOString().slice(0, 10);
+        return {
+          id: a.id, description: a.name, nextRunDate: dueDate,
+          amount: Math.abs(a.balance || 0), currency: a.currency,
+          categoryId: null, _source: 'credit_card',
+        };
+      });
+
+    return [...recurring, ...ccPayments]
       .sort((a, b) => new Date(a.nextRunDate) - new Date(b.nextRunDate))
       .slice(0, n);
   },
