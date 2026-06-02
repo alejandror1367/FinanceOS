@@ -1,67 +1,54 @@
 # NEXT_SESSION.md — prompt de continuación
 
-> Pega el bloque siguiente al inicio de una nueva sesión de Claude Code.
-> Generado tras la sesión del 2026-06-02 (HEAD `bccc956`).
+> Generado tras la sesión del 2026-06-02 (tarde). HEAD `b870d6c` · SW v0.2.13 · tests 39/39.
+> El mismo prompt vive en `PROJECT_HANDOFF.md` §19. **Antes de pegarlo: reinicia Claude Code**
+> (cierra y reabre) para que cargue las tools del MCP de Playwright y poder hacer la
+> verificación visual en vivo — en la sesión anterior conectaba pero sus tools no se cargaron
+> (timing de arranque; el servidor está sano y expone 23 tools).
 
 ```text
-Proyecto: FinanceOS — PWA financiera personal y privada de Alejo.
-Repo: https://github.com/alejandror1367/FinanceOS (rama main)
-Producción: https://alejandror1367.github.io/FinanceOS/
+Lee PROJECT_HANDOFF.md (sección §14d para lo último) y CLAUDE.md antes de cualquier cambio.
 
-LEE PRIMERO (en este orden):
-- CLAUDE.md → reglas, principios e invariantes. NO son "prohibiciones de marca":
-  son principios + invariantes. Frontend = Vanilla JS sin build step en el artefacto
-  servido; se permite JSDoc + tsc --checkJs --noEmit, Node/Playwright/MCPs como tooling
-  de dev. Apps Script + Sheets + GitHub Pages siguen siendo el stack recomendado.
-- PROJECT_HANDOFF.md → estado real, arquitectura, pendientes (fuente de verdad del estado)
-- docs/TechnicalDebt.md → deuda priorizada P1→P3
+PROYECTO: FinanceOS — PWA financiera personal y privada de Alejo.
+Repo: https://github.com/alejandror1367/FinanceOS (rama main). Prod: https://alejandror1367.github.io/FinanceOS/
+HEAD: b870d6c · SW v0.2.13 · Tests 39/39 (node --test tests/selectors.test.js).
 
-STACK (no romper invariantes): HTML+CSS+JS ES Modules sin build · Apps Script ·
-Google Sheets (13 hojas) · GitHub Pages · OAuth de Google (no token) · PWA offline-first.
-Tests: node --test tests/selectors.test.js (35/35, deben pasar). Local: npx serve . → :3000.
+INVARIANTES (ver CLAUDE.md): JS ES Modules sin build step en lo servido · sin frameworks/
+bundlers · cero deps npm en runtime · frontend abstraído tras src/services/ · Apps Script +
+Google Sheets (13 hojas) + GitHub Pages + OAuth de Google · offline-first. Se PERMITE como
+tooling de dev: Node/tests, Playwright, JSDoc + tsc --checkJs --noEmit.
 
-HECHO EN LA SESIÓN ANTERIOR (2026-06-02), HEAD = bccc956:
-1. TD-13 + TD-14 (bccc956), P1 de fiabilidad de sync:
-   - TD-14: create/update/remove en src/services/dataService.js escriben dato + op de
-     cola en UNA transacción IndexedDB atómica (nuevo db.transact() en src/services/db.js;
-     syncQueue.makeRecord() comparte la forma del registro). Sin más divergencia local↔cola.
-   - TD-13: refresh() hace flush() de la cola antes de pullData() (no pisa creates locales).
-2. Documentación sincronizada al estado real:
-   - PROJECT_HANDOFF.md: §2/§5/§10/§11/§14b/§15/§19 actualizados (backend de saldos
-     desplegado, P1 al día, SW v0.2.11, MCPs conectados, invariantes alineados a CLAUDE.md).
-   - docs/TechnicalDebt.md: TD-13 y TD-14 marcados HECHO.
-   - docs/NEXT_SESSION.md: este archivo, regenerado.
+HECHO Y DESPLEGADO: roadmap 0–12 · P0 completa · backend de saldos (TD-01) + getBootstrap
+(TD-15) en producción · P1 cerrada salvo TD-18. Última sesión (b870d6c):
+- TD-10 dead-letter en syncEngine (sin head-of-line; Ajustes → Reintentar/Descartar).
+- TD-13/TD-14 (flush antes de pull + escritura atómica dato+cola).
+- Deudas rediseñado: selectors debtList/debtStats/creditCardDebt; deuda total incluye
+  tarjetas; cuota mínima = suma de pagos mínimos; tasa promedio toma tarjetas+créditos;
+  abono = transferencia banco→tarjeta (debt settlement); plan Snowball/Avalanche unificado.
 
-ESTADO DE DEUDA TÉCNICA:
-- P0: toda resuelta (TD-01..TD-09).
-- P1: ✅ TD-11, TD-12, TD-13, TD-14, TD-15, TD-16, TD-17.
-       🔴 Pendiente: TD-10 (head-of-line / dead-letter, M) · TD-18 (touch targets, S).
-- P2/P3: pendientes (ver docs/TechnicalDebt.md).
+PENDIENTE — EMPEZAR POR AQUÍ:
+1. VERIFICACIÓN VISUAL EN VIVO con Playwright (ya disponible tras el reinicio). Levanta
+   `npx serve .` (:3000), inyecta el JWT de prueba + datos en IndexedDB (ver memoria
+   reference-playwright-auth-test) y comprueba SIN login real:
+   - DEUDAS: agrega/edita una tarjeta de crédito como CUENTA (saldo negativo) y confirma
+     que "Deuda total", "Cuota mínima/mes" y "Tasa promedio" la incluyen; que el botón
+     "Abonar" de la tarjeta abre una transferencia banco→tarjeta y que tras guardarla baja
+     la deuda; que un crédito/hipoteca (Liability) aparece en el plan y su "Abonar" reduce
+     el saldo. Plan Snowball/Avalanche reordena bien.
+   - PRESUPUESTOS: período legible ("May 2026") y consumido > $0 con datos reales.
+   - Limpia siempre el token de prueba y SOLO las filas de prueba al terminar.
+   El happy-path autenticado REAL (con datos de producción) lo confirma Alejo tras login.
+2. TD-18 (único P1): aumentar área/separación de .icon-btn en táctil (WCAG 2.5.8).
+3. Pendiente menor: alinear src/core/config.js `version` ('0.2.6') con el SW (v0.2.13).
+4. Bugs medios: BUG-M1 (auto-load precios), BUG-M2 (purgar snapshots de test en Sheets),
+   BUG-M3 (FX rate), BUG-M4 (dashboard con snapshots reales).
+5. P2 (docs/TechnicalDebt.md): TD-19 factorías CRUD, TD-21/22 precisión monetaria,
+   TD-23 amortización real Snowball/Avalanche, TD-24/25/27/28 backend.
 
-BACKEND: ✅ desplegado y verificado en producción — getBootstrap (TD-15, 1 sola petición)
-y el modelo híbrido de saldos (Accounts/Transactions/Migration → TD-01). Auth.gs sin bypass.
-Opcional: Ajustes → Recalcular saldos para recalcular desde 0 con el histórico completo.
-
-ENTORNO DE DESARROLLO:
-- MCPs (claude mcp list): github ✓, playwright ✓, context7 ✓ (los tres conectan).
-- Plugins (.claude/settings.json): playwright, context7, code-simplifier.
-- Skills propias (.claude/skills/): performance-auditor, frontend-auditor, documentation-generator.
-- Node v24. Hook pre-commit activo (auto-bump del SW). git config core.hooksPath .githooks.
-
-PENDIENTE / SIGUIENTE:
-- Presupuestos (BUG-A1/BUG-C2): la LÓGICA ya está cubierta por tests de regresión
-  (periodKey como Date de Sheets → consumido > $0; periodLabel '2026-05' → "May 2026").
-  Falta solo el happy-path AUTENTICADO REAL tras login OAuth (lo confirma Alejo en vivo):
-  que con datos reales se vea el período legible y consumido > $0.
-- TD-10: dead-letter para errores de negocio en syncEngine.flush() (no bloquear la cola).
-- TD-18: aumentar área/separación de .icon-btn en táctil.
-- Bugs medios: BUG-M1 (auto-load precios), BUG-M2 (purgar snapshots de test en Sheets),
-  BUG-M3 (FX rate), BUG-M4 (dashboard con snapshots reales).
+CAVEAT de datos: si una tarjeta se registra a la vez como cuenta credit_card Y como
+Liability credit_card, se cuenta en ambas (consistente con BUG-A4). Llevarla solo como cuenta.
 
 FORMA DE TRABAJO: fases pequeñas y verificables · explicar qué/por qué · correr tests ·
-commits descriptivos (el pre-commit hook auto-bumpea el SW) · cada cambio de docs en su
-propio commit docs(...). Confirmar antes de push.
-
-Empieza confirmando el estado: git log --oneline -8, git status, node --test
-tests/selectors.test.js. Luego dime por dónde seguimos.
+commits descriptivos (el pre-commit hook auto-bumpea el SW) · docs en commit docs(...) aparte.
+Empieza con: git log --oneline -8, git status, node --test, claude mcp list.
 ```

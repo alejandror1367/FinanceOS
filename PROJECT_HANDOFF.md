@@ -23,10 +23,10 @@ Centraliza: patrimonio neto, presupuestos, flujo de caja, inversiones, metas, de
 | PWA instalada en celular | ✅ Funcionando |
 | Google OAuth | ✅ Activo (`patitosalmir@gmail.com` + `alejandrorr1367@gmail.com`) |
 | Backend Apps Script | ✅ Desplegado y verificado en producción |
-| Tests financieros | ✅ 35/35 pasando |
+| Tests financieros | ✅ 39/39 pasando |
 | Modelo híbrido de saldos (TD-01) | ✅ Código + backend desplegados y verificados |
 | Deuda técnica P0 | ✅ Toda resuelta |
-| Deuda técnica P1 | 🟡 En progreso — hechos TD-13/14/15/16/17; pendientes TD-10, TD-18 |
+| Deuda técnica P1 | 🟡 Casi cerrada — hechos TD-10/13/14/15/16/17; pendiente solo TD-18 |
 | Deuda técnica P2 | 🔴 Pendiente (14 ítems) |
 
 ---
@@ -127,7 +127,7 @@ FinanceOS/
 │   ├── Journal.gs          # CRUD diario financiero
 │   └── appsscript.json     # Runtime V8
 ├── tests/
-│   └── selectors.test.js   # 35 tests financieros (node --test)
+│   └── selectors.test.js   # 39 tests financieros (node --test)
 ├── docs/
 │   ├── PRD.md · Architecture.md · Database.md · Roadmap.md
 │   ├── Audit.md            # Auditoría de arquitectura
@@ -279,8 +279,8 @@ Recalcular saldos** si se quiere recalcular desde 0 sumando el histórico comple
 | TD-17 | Foco de input tenue — posible fallo WCAG 2.4.11 | ✅ Hecho (`47f91e1`) |
 | TD-13 | `refresh()` no hace flush antes de pull → creates pendientes desaparecen | ✅ Hecho (`bccc956`) |
 | TD-14 | No-atomicidad `db.put` + `enqueue` — divergencia si el proceso muere | ✅ Hecho (`bccc956`) |
-| TD-10 | Head-of-line blocking en `syncEngine.flush()` — op con error de negocio bloquea cola | 🔴 Pendiente (M) |
-| TD-18 | Touch targets densos — `.icon-btn` 32px, gap 2px, 3 acciones/fila | 🔴 Pendiente (S) |
+| TD-10 | Head-of-line blocking en `syncEngine.flush()` — op con error de negocio bloquea cola | ✅ Hecho (`9a1cf3c`) |
+| TD-18 | Touch targets densos — `.icon-btn` 32px, gap 2px, 3 acciones/fila | 🔴 Pendiente (S) — único P1 |
 
 ### P2 — Media prioridad
 
@@ -385,6 +385,47 @@ Para la auditoría se agregó un bypass temporal en `backend/Auth.gs` que acepta
 
 ---
 
+## 14d. Cambios — sesión 2026-06-02 (tarde, Opus 4.8)
+
+HEAD pasó de `75eacca` a **`b870d6c`**. SW `v0.2.10 → v0.2.13`. Tests `33 → 39`.
+
+### Fiabilidad de sync (P1 cerrada salvo TD-18)
+- **TD-13** (`bccc956`): `refresh()` hace `flush()` de la cola antes de `pullData()`.
+- **TD-14** (`bccc956`): `create/update/remove` escriben dato + op de cola en UNA transacción
+  IndexedDB atómica (nuevo `db.transact()`; `syncQueue.makeRecord()` comparte el registro).
+- **TD-10** (`9a1cf3c`): dead-letter en `syncEngine.flush()`. Distingue error transitorio
+  (sin red/timeout/5xx/token frío → reintenta) de error de negocio (4xx → dead-letter
+  inmediato). Tras `MAX_ATTEMPTS` también va a dead-letter; la cola ya no se bloquea
+  (head-of-line) ni re-postea para siempre. `syncQueue`: `markDead/requeue/discard/
+  deadLetters/deadCount`; `all()`/`count()` excluyen muertas. **Ajustes** muestra "Cambios
+  sin sincronizar: N" con **Reintentar/Descartar** y el badge refleja `Fallidas`.
+
+### Módulo Deudas — rediseño (`b870d6c`)
+- Selectores puros y testeados en `selectors.js`: `debtList` (unifica `Liabilities` con las
+  tarjetas de crédito que son **cuentas**, normalizando `minPayment`↔`minimumPayment`),
+  `debtStats` (total, cuota mínima, **tasa promedio ponderada**) y `creditCardDebt`.
+- **Deuda total** ahora incluye el saldo de las tarjetas (cuentas `credit_card`).
+- **Cuota mínima/mes** = suma de los pagos mínimos manuales de todas las deudas.
+- **Tasa promedio** ahora toma la tasa de tarjetas y créditos (antes solo pasivos).
+- Créditos/hipotecas (`Liabilities` con saldo, cuota y tasa anual) entran en KPIs y plan.
+- **Abono = debt settlement**: tarjeta → transferencia banco→tarjeta (el modelo híbrido
+  sube el saldo de la tarjeta = reduce deuda); crédito/pasivo → reduce el saldo y opcional-
+  mente registra el egreso de efectivo. Plan Snowball/Avalanche ordena todas las deudas.
+  La vista repinta sola tras un abono (suscripción al store con guard `isConnected`).
+- `accounts.js` exporta `openAccountModal` (editar tarjeta desde Deudas).
+
+### Documentación
+- `PROJECT_HANDOFF`, `docs/TechnicalDebt`, `docs/NEXT_SESSION` sincronizados al estado real
+  (HEAD/SW/MCP/backend, invariantes alineados con `CLAUDE.md`).
+
+### Verificado / no verificado
+- ✅ 39/39 tests (`node --test`), `node --check` y smoke de imports/exports con stubs DOM.
+- ⛔ **Sin verificación visual en navegador**: las tools del MCP Playwright no se cargaron en
+  esa sesión (timing de arranque; el servidor está sano y expone 23 tools). Requiere
+  reiniciar Claude Code. **Pendiente** la verificación visual de Deudas y Presupuestos (ver §19).
+
+---
+
 ## 14. Últimos cambios importantes (sesión 2026-06-01)
 
 ### Deuda técnica P0 implementada
@@ -411,7 +452,8 @@ Para la auditoría se agregó un bypass temporal en `backend/Auth.gs` que acepta
 - Backend: `Auth.gs` (verifyGoogleToken_ con CacheService 25 min), `Code.gs` (assertAuthorized_ usa OAuth)
 - Emails autorizados: `patitosalmir@gmail.com`, `alejandrorr1367@gmail.com`
 
-**TD-01** — Modelo híbrido de saldos (código listo, backend pendiente de subir):
+**TD-01** — Modelo híbrido de saldos (en esta fecha el backend estaba *pendiente de subir*;
+**ya desplegado y verificado** — ver §14d y §2):
 - `backend/Accounts.gs`: `adjustBalance_()` y `applyTxBalanceDelta_()`
 - `backend/Transactions.gs`: create/update/delete ajustan saldo(s) de cuenta automáticamente
 - `backend/Migration.gs`: `recalculateAccountBalances_()` (correr una vez desde Settings)
@@ -429,19 +471,24 @@ Para la auditoría se agregó un bypass temporal en `backend/Auth.gs` que acepta
 ```
 Rama:    main
 Remote:  https://github.com/alejandror1367/FinanceOS.git
-HEAD:    bccc956  fix: TD-13 flush antes de pull + TD-14 escritura atómica dato+cola
-SW:      v0.2.11 (auto-bump del pre-commit)
+HEAD:    b870d6c  feat: Deudas — tarjetas/créditos en KPIs, abono como transferencia y plan
+SW:      v0.2.13 (auto-bump del pre-commit)
+Status:  limpio · sincronizado con origin/main
 ```
+
+> ⚠️ `src/core/config.js` tiene `version: '0.2.6'` (se muestra en Ajustes → Acerca de),
+> desfasado del SW `v0.2.13`. El hook solo bumpea el SW, no `config.version`. Pendiente
+> menor: alinear `config.version` con el SW (BUG-B1 follow-up).
 
 ### Commits recientes
 ```
+b870d6c feat: Deudas — tarjetas/créditos en KPIs, abono como transferencia y plan priorizado
+9a1cf3c fix: TD-10 dead-letter en la cola de sync (sin head-of-line blocking)
+9eccfa1 docs: actualizar conteo de tests a 35/35 y estado de verificación de Presupuestos
+ba55373 test: regresión BUG-A1/TD-12 — periodKey como Date de Sheets
+21c7c60 docs: sincronizar handoff/deuda/next-session con el estado real
 bccc956 fix: TD-13 flush antes de pull + TD-14 escritura atómica dato+cola
 75eacca docs: marcar TD-17 hecho y confirmar backend de saldos desplegado/verificado
-2a407b1 docs: confirmar en vivo BUG-C1 + TD-15 tras desplegar backend
-8082e22 docs: marcar TD-16 hecho (memoización de openById ya estaba en 47f91e1)
-56d0290 docs: marcar BUG-A4 resuelto
-fe961a8 fix: BUG-A4 Deudas — KPI "Tarjetas de crédito" consolida liabilities credit_card
-617821c docs: marcar BUG-C1 resuelto y TD-15 hecho
 98f8c19 feat: TD-15 getBootstrap — cargar las 12 colecciones en 1 request
 23009b0 fix: BUG-C1 cold start auth — warm-up + reintento, no destruir sesión válida
 ```
@@ -494,7 +541,7 @@ La app ya tiene `config.js` con las URLs reales commiteadas. Solo necesitas:
 ### En el nuevo equipo (una sola vez)
 - [ ] `git clone https://github.com/alejandror1367/FinanceOS.git`
 - [ ] `git config core.hooksPath .githooks` (activa auto-bump del SW)
-- [ ] `node --test tests/selectors.test.js` → debe dar 35/35 ✅
+- [ ] `node --test tests/selectors.test.js` → debe dar 39/39 ✅
 - [ ] `npx serve .` → verificar que carga en `localhost:3000`
 - [ ] Leer `CLAUDE.md` (reglas absolutas), `docs/TechnicalDebt.md` (trabajo pendiente)
 
@@ -517,94 +564,91 @@ La app ya tiene `config.js` con las URLs reales commiteadas. Solo necesitas:
 
 ## 18. Próximos pasos recomendados
 
-**Inmediato (antes de cualquier desarrollo):**
-1. Subir los 5 archivos .gs al backend y publicar Nueva versión
-2. Ejecutar "Recalcular saldos" desde la app
-3. ⚠️ Verificar que el bypass de auditoría fue eliminado de Auth.gs (ver §14b)
+> El **paso 1 es la verificación visual en vivo** (requiere reiniciar Claude Code para el
+> MCP de Playwright). El prompt completo de continuación está en **§19**.
 
-**Auditoría funcional completada (2026-06-02):**
-Ver `docs/Audit-Funcional-2026-06-02.md` para el informe completo con bugs priorizados.
+**Hecho (ya no son pendientes):** backend de saldos + `getBootstrap` desplegados y verificados;
+bypass de auditoría eliminado; auditoría funcional 2026-06-02 (`docs/Audit-Funcional-2026-06-02.md`).
+Bugs resueltos: **BUG-C1** (`23009b0`+`98f8c19`), **BUG-C2** + **BUG-A1**/TD-12 (`8d8d4d9`),
+**BUG-A3**/TD-31 (`8d8d4d9`), **BUG-A4** (`fe961a8`). Deuda P1: TD-10/11/12/13/14/15/16/17 ✅.
 
-Bugs más urgentes identificados en la auditoría:
-- **BUG-C1** (Crítico): Cold start — todos los KPIs en $0 hasta hacer click en "Actualizar" — ✅ RESUELTO (`23009b0`+`98f8c19`); happy-path **confirmado en producción**: la primera carga hace 1 sola petición `getBootstrap`, sin "No autorizado"
-- **BUG-C2** (Crítico): Presupuestos — fecha del período renderiza como `Date.toString()` crudo
-- **BUG-A1** (Alto): Presupuestos — consumido siempre $0 (confirma TD-12, fix = 1 línea)
-- **BUG-A3** (Alto): Botón "Buscar" en topbar no hace nada (confirma TD-31)
-- **BUG-A4** (Alto): Deudas — KPI "Tarjetas de crédito" muestra $0 aunque hay $3.83M — ✅ RESUELTO (`fe961a8`): el KPI consolida cuentas + liabilities `credit_card`
-
-**Sprint de quick wins (~1-2 horas):**
-- BUG-C2: Fecha presupuestos — `formatDate(budget.startDate)` en `src/views/budgets.js`
-- BUG-A1/TD-12: `sameMonth()` con `slice(0,7)` en `src/store/selectors.js` (1 línea)
-- BUG-A3/TD-31: Quitar botón "Buscar" de `src/components/shell.js`
-- BUG-B1: Versión `config.js` → `'0.2.6'`
-- TD-11: `syncEngine.js:84` — `'pending'` en lugar de `'idle'` (1 línea)
-
-**Sprint BUG-C1 (cold start auth) — ✅ HECHO:**
-- `apiClient`: guard contra `signOut()` destructivo si el token local sigue válido (`23009b0`).
-- `dataService`: warm-up secuencial + retry en `init()` (`23009b0`).
-- **TD-15 `getBootstrap`** (`98f8c19`): 12 colecciones en 1 request (frontend con fallback +
-  backend `Code.gs`/`Reports.gs`). Cura la raíz (la estampida de verificación de token).
-  ✅ Backend desplegado y **confirmado en producción**: la carga hace 1 sola petición `getBootstrap`.
+**Siguiente (en orden):**
+1. **Verificación visual en vivo** (Playwright, tras reiniciar) de **Deudas** y **Presupuestos** — ver §19.
+2. **TD-18** (único P1): touch targets de `.icon-btn` en táctil (WCAG 2.5.8).
+3. Menor: alinear `src/core/config.js` `version` (`'0.2.6'`) con el SW (`v0.2.13`) — BUG-B1 follow-up.
+4. Bugs medios BUG-M1..M4 (auto-load precios, purgar snapshots de test, FX rate, dashboard con snapshots reales).
+5. P2 (`docs/TechnicalDebt.md`): TD-19 factorías CRUD · TD-21/22 precisión monetaria ·
+   TD-23 amortización real Snowball/Avalanche · TD-24/25/27/28 backend.
 
 ---
 
-## 19. Prompt de continuación para nueva sesión de Claude Code
+## 19. Reinicio de Claude Code + prompt de nueva sesión
 
-> ⚠️ El bloque de abajo es **histórico** (2026-06-01). El prompt de continuación
-> vigente está en **`docs/NEXT_SESSION.md`**, regenerado al estado actual.
+**Por qué reiniciar:** en la sesión 2026-06-02 (tarde) el MCP de Playwright conectaba
+(`claude mcp list` → ✓) pero sus tools `browser_*` **no se cargaron** en la sesión (la lista
+de tools MCP se congela al arrancar Claude Code; un sondeo JSON-RPC directo confirmó que el
+servidor expone 23 tools y está sano). Para poder hacer la **verificación visual en vivo**
+hay que **cerrar y reabrir Claude Code** y que re-enumere los MCP al arrancar.
 
-Copia este prompt al iniciar una nueva sesión:
+**Pasos:**
+1. Cierra y reabre Claude Code en `C:\Users\Usuario\FinanceOS`.
+2. Verifica: `claude mcp list` → `github ✓, playwright ✓, context7 ✓`, y que las tools
+   `mcp__plugin_playwright_playwright__browser_*` ya estén disponibles.
+3. Pega el prompt de abajo.
+
+Copia este prompt al iniciar la nueva sesión:
 
 ---
 
 ```
-Lee PROJECT_HANDOFF.md en la raíz del repositorio. Aquí el contexto rápido:
+Lee PROJECT_HANDOFF.md (sección §14d para lo último) y CLAUDE.md antes de cualquier cambio.
 
-PROYECTO: FinanceOS — sistema operativo financiero personal y privado para Alejo (PWA).
-URL producción: https://alejandror1367.github.io/FinanceOS/
-Repo: https://github.com/alejandror1367/FinanceOS (rama main)
+PROYECTO: FinanceOS — PWA financiera personal y privada de Alejo.
+Repo: https://github.com/alejandror1367/FinanceOS (rama main). Prod: https://alejandror1367.github.io/FinanceOS/
+HEAD: b870d6c · SW v0.2.13 · Tests 39/39 (node --test tests/selectors.test.js).
 
-STACK (reglas absolutas — no romper nunca):
-- Frontend: HTML + CSS + JavaScript ES Modules puro. SIN React/Vue/Svelte/Angular.
-- SIN TypeScript. SIN Vite/Webpack/build tools. SIN dependencias npm en runtime.
-- Backend: solo Google Apps Script. BD: solo Google Sheets.
-- Commits automáticos: hacer commit+push después de cada cambio verificado.
+INVARIANTES (ver CLAUDE.md): JS ES Modules sin build step en lo servido · sin frameworks/
+bundlers · cero deps npm en runtime · frontend abstraído tras src/services/ · Apps Script +
+Google Sheets (13 hojas) + GitHub Pages + OAuth de Google · offline-first. Se PERMITE como
+tooling de dev: Node/tests, Playwright, JSDoc + tsc --checkJs --noEmit.
 
-ARCHIVOS CLAVE:
-- CLAUDE.md → reglas absolutas (leer antes de cualquier cambio)
-- src/core/config.js → api.baseUrl + auth.clientId (valores reales commiteados)
-- src/services/priceService.js → caché compartido de precios en vivo (nuevo, sesión tarde)
-- src/store/selectors.js → usa priceService para investmentsValue con conversión FX
-- src/views/investments.js → DCA, precios Yahoo Finance, brokers XTB/ARQ
-- sw.js → v0.2.6, network-first, auto-update via SKIP_WAITING
-- docs/TechnicalDebt.md → registro priorizado de deuda técnica (P0→P3)
-- tests/selectors.test.js → 33 tests financieros (deben pasar siempre)
+HECHO Y DESPLEGADO: roadmap 0–12 · P0 completa · backend de saldos (TD-01) + getBootstrap
+(TD-15) en producción · P1 cerrada salvo TD-18. Última sesión (b870d6c):
+- TD-10 dead-letter en syncEngine (sin head-of-line; Ajustes → Reintentar/Descartar).
+- TD-13/TD-14 (flush antes de pull + escritura atómica dato+cola).
+- Deudas rediseñado: selectors debtList/debtStats/creditCardDebt; deuda total incluye
+  tarjetas; cuota mínima = suma de pagos mínimos; tasa promedio toma tarjetas+créditos;
+  abono = transferencia banco→tarjeta (debt settlement); plan Snowball/Avalanche unificado.
 
-ESTADO AL 2026-06-01 (sesión tarde):
-✅ Inversiones: auto-refresh de precios al entrar, persistencia F5 via localStorage,
-   brokers XTB y ARQ Invest en formulario nueva compra
-✅ Dashboard: card de Inversiones muestra valor real con precios en vivo y conversión USD→COP
-✅ SW: F5 ya trae versión nueva sin Ctrl+Shift+R; auto-reload cuando hay update
-✅ Fix freeze al navegar a Inversiones (ciclo store.set eliminado con priceService)
+PENDIENTE — EMPEZAR POR AQUÍ:
+1. VERIFICACIÓN VISUAL EN VIVO con Playwright (ya disponible tras el reinicio). Levanta
+   `npx serve .` (:3000), inyecta el JWT de prueba + datos en IndexedDB (ver memoria
+   reference-playwright-auth-test) y comprueba SIN login real:
+   - DEUDAS: agrega/edita una tarjeta de crédito como CUENTA (saldo negativo) y confirma
+     que "Deuda total", "Cuota mínima/mes" y "Tasa promedio" la incluyen; que el botón
+     "Abonar" de la tarjeta abre una transferencia banco→tarjeta y que tras guardarla baja
+     la deuda; que un crédito/hipoteca (Liability) aparece en el plan y su "Abonar" reduce
+     el saldo. Plan Snowball/Avalanche reordena bien.
+   - PRESUPUESTOS: período legible ("May 2026") y consumido > $0 con datos reales.
+   - Limpia siempre el token de prueba y SOLO las filas de prueba al terminar.
+   El happy-path autenticado REAL (con datos de producción) lo confirma Alejo tras login.
+2. TD-18 (único P1): aumentar área/separación de .icon-btn en táctil (WCAG 2.5.8).
+3. Pendiente menor: alinear src/core/config.js `version` ('0.2.6') con el SW (v0.2.13).
+4. Bugs medios: BUG-M1 (auto-load precios), BUG-M2 (purgar snapshots de test en Sheets),
+   BUG-M3 (FX rate), BUG-M4 (dashboard con snapshots reales).
+5. P2 (docs/TechnicalDebt.md): TD-19 factorías CRUD, TD-21/22 precisión monetaria,
+   TD-23 amortización real Snowball/Avalanche, TD-24/25/27/28 backend.
 
-PENDIENTE URGENTE (de sesiones anteriores — NO olvidar):
-- Subir 5 archivos .gs al backend Apps Script + publicar Nueva versión:
-  backend/Accounts.gs, Transactions.gs, Code.gs, Auth.gs, Migration.gs (nuevo)
-  Activan el modelo híbrido de saldos (transacciones mueven dinero automáticamente)
-- Luego: Ajustes → Recalcular saldos en la app (migra saldos existentes)
+CAVEAT de datos: si una tarjeta se registra a la vez como cuenta credit_card Y como
+Liability credit_card, se cuenta en ambas (consistente con BUG-A4). Llevarla solo como cuenta.
 
-DEUDA TÉCNICA P1 PENDIENTE (docs/TechnicalDebt.md):
-- TD-11: syncEngine.js:84 — state: pending > 0 ? 'idle' : 'idle'  (1 línea)
-- TD-12: sameMonth() usa Date local → drift UTC-5  (1 línea)
-- TD-16: openById sin cachear en Utils.gs → 5-8 aperturas/request  (3 líneas)
-- TD-17: .input:focus con opacidad baja → puede fallar WCAG 2.4.11
-- TD-10/13/15: syncEngine, flush antes de pull, getBootstrap
-
-Para tests: node --test tests/selectors.test.js → 33/33
-Para servidor local: npx serve . → http://localhost:3000
+FORMA DE TRABAJO: fases pequeñas y verificables · explicar qué/por qué · correr tests ·
+commits descriptivos (el pre-commit hook auto-bumpea el SW) · docs en commit docs(...) aparte.
+Empieza con: git log --oneline -8, git status, node --test, claude mcp list.
 ```
 
 ---
 
-*Actualizado el 2026-06-02 por Claude Opus 4.8: TD-13/TD-14 hechos (`bccc956`), estado de
-git/SW/MCP/backend sincronizado, invariantes alineados con `CLAUDE.md`.*
+*Actualizado el 2026-06-02 (tarde) por Claude Opus 4.8: TD-10/13/14 + rediseño de Deudas
+(`b870d6c`), HEAD/SW v0.2.13/tests 39 sincronizados, §14d añadida y §19 con el prompt de
+reinicio + nueva sesión (verificación visual de Deudas/Presupuestos pendiente).*
