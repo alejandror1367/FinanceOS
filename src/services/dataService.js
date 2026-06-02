@@ -70,9 +70,31 @@ async function seedMockIfNeeded() {
 // Descarga todas las colecciones del backend y refresca caché + store.
 // TD-13 fix: re-aplica operaciones pendientes de la cola después de pull,
 // para que los creates/updates locales no se pierdan hasta ser confirmados.
+// Envuelve una promesa en la forma {status, value|reason} de Promise.allSettled.
+function settle(promise) {
+  return promise.then(
+    (value) => ({ status: 'fulfilled', value }),
+    (reason) => ({ status: 'rejected', reason }),
+  );
+}
+
 async function pullAll() {
   const colls = Object.keys(ENTITIES);
-  const results = await Promise.allSettled(colls.map((c) => apiClient.get(ENTITIES[c].read)));
+
+  // BUG-C1 (cold start): calentamos la verificación del token con UNA petición
+  // secuencial antes de la ráfaga concurrente. Así el backend cachea el token
+  // (verifyGoogleToken_, 25 min) y las 11 peticiones restantes no disparan 11
+  // verificaciones simultáneas contra Google tokeninfo — la "estampida" que
+  // devolvía "No autorizado." en cada primera carga. Reintentamos el warm-up un
+  // par de veces porque es la petición que "abre la puerta".
+  // (TD-15 sustituirá las 12 peticiones por un único getBootstrap y hará esto innecesario.)
+  let head = await settle(apiClient.get(ENTITIES[colls[0]].read));
+  for (let i = 0; i < 2 && head.status === 'rejected'; i++) {
+    await new Promise((r) => setTimeout(r, 600));
+    head = await settle(apiClient.get(ENTITIES[colls[0]].read));
+  }
+  const tail = await Promise.allSettled(colls.slice(1).map((c) => apiClient.get(ENTITIES[c].read)));
+  const results = [head, ...tail];
   const patch = {};
   let ok = 0;
   for (let i = 0; i < colls.length; i++) {
@@ -155,7 +177,16 @@ export const dataService = {
     try { await syncEngine.flush(); } catch (e) { /* offline: se reintenta */ }
 
     if (navigator.onLine) {
-      try { await pullAll(); }
+      try {
+        let res = await pullAll();
+        // BUG-C1: si TODO falló (cold start con la verificación del token todavía
+        // fría/transitoria), reintentar una vez tras un breve respiro. El primer
+        // intento ya habrá calentado el estado de auth en el backend.
+        if (res.pulled === 0) {
+          await new Promise((r) => setTimeout(r, 800));
+          res = await pullAll();
+        }
+      }
       catch (e) { console.warn('[dataService] pull falló (se usa caché):', e); }
     }
     return { source: 'backend', connected: true };

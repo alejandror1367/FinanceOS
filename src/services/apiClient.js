@@ -50,8 +50,13 @@ async function request(method, action, payload) {
       const err = json && json.error ? json.error : 'Respuesta inválida del backend.';
       // Sesión expirada: recargar UNA SOLA VEZ por sesión de browser para evitar bucle.
       // sessionStorage sobrevive a location.reload() pero no a cerrar el tab.
+      // BUG-C1: solo cerramos sesión si el token local REALMENTE expiró/falta. Si el
+      // token sigue siendo válido localmente, un "No autorizado." es transitorio (la
+      // verificación fría del backend en el cold start): destruir la sesión reventaría
+      // el store y dejaría todo en $0. En ese caso solo propagamos el error y dejamos
+      // que el reintento de pullAll() se recupere.
       if (err === 'No autorizado.' || err === 'No autorizado: falta credencial.') {
-        if (!sessionStorage.getItem('financeos.auth.reload')) {
+        if (!auth.getToken() && !sessionStorage.getItem('financeos.auth.reload')) {
           sessionStorage.setItem('financeos.auth.reload', '1');
           auth.signOut(); // limpia token + recarga
         }
