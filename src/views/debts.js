@@ -1,16 +1,21 @@
-// views/debts.js — Deudas (Snowball/Avalanche) + panel de Tarjetas de crédito.
+// views/debts.js — Deudas: KPIs unificados (Liabilities + tarjetas de crédito),
+// plan de pago Snowball/Avalanche y "abono" como transferencia (debt settlement).
 
-import { el, mount } from '../utils/dom.js';
+import { el } from '../utils/dom.js';
 import { icon } from '../utils/icons.js';
 import { store } from '../store/store.js';
+import { selectors } from '../store/selectors.js';
 import { dataService } from '../services/dataService.js';
 import { formatMoney, formatDate } from '../utils/format.js';
+import { KpiCard, Badge, EmptyState, Button } from '../components/ui.js';
+import { openModal, confirmDialog } from '../components/modal.js';
+import { field, textInput, numberInput, select } from '../components/forms.js';
+import { openLiabilityModal, LIABILITY_TYPE_LIST } from './networth.js';
+import { openTxModal } from './transactions.js';
+import { openAccountModal } from './accounts.js';
+import { toast } from '../services/toast.js';
 
 const pct = (n) => `${(Number(n) || 0).toFixed(1).replace(/\.0$/, '')}%`;
-import { Card, KpiCard, Badge, EmptyState, Button } from '../components/ui.js';
-import { confirmDialog } from '../components/modal.js';
-import { openLiabilityModal, LIABILITY_TYPE_LIST } from './networth.js';
-import { toast } from '../services/toast.js';
 
 const STATE = { strategy: 'avalanche' };
 const typeLabel = (v) => (LIABILITY_TYPE_LIST.find((t) => t.value === v) || {}).label || v;
@@ -30,7 +35,76 @@ function daysUntil(isoDate) {
   return Math.round(diff / 86400000);
 }
 
-// ---------- Tarjeta de crédito card ----------
+// ── Abono (debt settlement) ───────────────────────────────────────────────────
+// Tarjeta (cuenta): se registra como TRANSFERENCIA banco→tarjeta. El modelo híbrido de
+// saldos sube el saldo de la tarjeta (que es negativo) → reduce la deuda. Crédito/pasivo:
+// reduce el saldo del pasivo y, opcionalmente, registra el egreso de efectivo.
+function openAbono(d) {
+  if (d.source === 'account') {
+    const accounts = (store.get().accounts || [])
+      .filter((a) => !a.isArchived && a.type !== 'credit_card' && a.type !== 'investment');
+    if (!accounts.length) { toast('Crea una cuenta de origen primero', { type: 'warning' }); return; }
+    openTxModal({ mode: 'create', tx: {
+      type: 'transfer',
+      toAccountId: d.id,
+      accountId: accounts[0].id,
+      amount: d.minPayment || '',
+      description: `Abono ${d.name}`,
+    } });
+    return;
+  }
+  openLiabilityAbono(d);
+}
+
+// Categoría de gasto para registrar el egreso de un abono a un crédito/pasivo.
+function resolveDebtCategory(s) {
+  const cats = (s.categories || []).filter((c) => c.kind === 'expense');
+  return cats.find((c) => /deuda|prest|prést|pago|cr[eé]dito|financ/i.test(c.name || '')) || cats[0] || null;
+}
+
+function openLiabilityAbono(d) {
+  const s = store.get();
+  const accounts = (s.accounts || [])
+    .filter((a) => !a.isArchived && a.type !== 'investment' && a.type !== 'credit_card');
+  const acctOpts = [{ value: '', label: '(No registrar movimiento de efectivo)' }, ...accounts.map((a) => ({ value: a.id, label: a.name }))];
+
+  const amountEl = numberInput({ name: 'amount', value: d.minPayment || '' });
+  const dateEl   = textInput({ name: 'date', value: new Date().toISOString().slice(0, 10), type: 'date' });
+  const acctEl   = select({ name: 'acct', value: accounts[0]?.id || '', options: acctOpts });
+
+  const body = el('div', {}, [
+    el('p', { class: 't-caption text-secondary', text: `Reduce el saldo de "${d.name}". Si eliges una cuenta de origen, se registra también el egreso del efectivo.` }),
+    el('div', { class: 'field-row' }, [field('Monto', amountEl), field('Fecha', dateEl)]),
+    field('Cuenta de origen', acctEl),
+  ]);
+
+  openModal({
+    title: `Abonar a ${d.name}`,
+    body,
+    submitLabel: 'Registrar abono',
+    onSubmit: async () => {
+      const amount = Number(amountEl.value) || 0;
+      if (amount <= 0) { toast('El monto debe ser mayor a cero', { type: 'negative' }); return false; }
+      try {
+        const acctId = acctEl.value;
+        if (acctId) {
+          const cat = resolveDebtCategory(s);
+          if (cat) {
+            await dataService.create('transactions', {
+              type: 'expense', amount, date: dateEl.value, accountId: acctId,
+              categoryId: cat.id, description: `Abono ${d.name}`,
+            });
+          }
+        }
+        const newBalance = Math.max(0, (d.raw.balance || 0) - amount);
+        await dataService.update('liabilities', d.id, { balance: newBalance });
+        toast('Abono registrado');
+      } catch (e) { toast('Error al registrar el abono', { type: 'negative' }); return false; }
+    },
+  });
+}
+
+// ── Tarjeta de crédito (panel rico) ─────────────────────────────────────────────
 function creditCardPanel(a, cur) {
   const debt     = Math.abs(a.balance || 0);
   const limit    = a.creditLimit || 0;
@@ -47,7 +121,6 @@ function creditCardPanel(a, cur) {
 
   const card = el('div', { class: 'cc-panel' });
 
-  // Header
   const head = el('div', { class: 'cc-panel__head' });
   head.appendChild(el('div', { class: 'cc-panel__name' }, [
     el('span', { class: 'cc-panel__title', text: a.name }),
@@ -56,12 +129,10 @@ function creditCardPanel(a, cur) {
   head.appendChild(el('div', { class: 'cc-panel__debt tabular text-negative', text: formatMoney(debt, a.currency || cur) }));
   card.appendChild(head);
 
-  // Barra de utilización
   const barWrap = el('div', { class: 'cc-util-bar' });
   barWrap.appendChild(el('div', { class: 'cc-util-fill', style: `width:${util}%;background:${utilColor}` }));
   card.appendChild(barWrap);
 
-  // Métricas en grid
   const grid = el('div', { class: 'cc-panel__grid' });
   const metric = (label, value, sub) => {
     const m = el('div', { class: 'cc-metric' });
@@ -80,22 +151,39 @@ function creditCardPanel(a, cur) {
   if (limit) grid.appendChild(metric('Cupo total', formatMoney(limit, a.currency || cur), `${util}% utilizado`));
   card.appendChild(grid);
 
+  card.appendChild(el('div', { class: 'cc-panel__actions', style: { marginTop: '12px', display: 'flex', gap: '8px' } }, [
+    Button('Abonar', { variant: 'primary', iconName: 'plus', onClick: () => openAbono({ source: 'account', id: a.id, name: a.name, minPayment: a.minPayment || 0, raw: a }) }),
+    Button('Editar', { variant: 'ghost', iconName: 'edit', onClick: () => openAccountModal(a) }),
+  ]));
+
   return card;
 }
 
-// ---------- Deuda row ----------
-function debtRow(l, rank, cur) {
+// ── Fila de deuda (lista priorizada Snowball/Avalanche) ─────────────────────────
+function debtRow(d, rank, cur) {
+  const isCard = d.source === 'account';
+  const sub = `${typeLabel(d.type)} · ${pct(d.interestRate)} · cuota ${formatMoney(d.minPayment || 0, d.currency || cur)}${d.dueDate ? ' · vence ' + formatDate(d.dueDate, 'short') : ''}`;
+
+  const actions = [
+    el('button', { class: 'icon-btn', 'aria-label': 'Abonar', title: 'Registrar abono', on: { click: () => openAbono(d) }, html: icon('plus') }),
+    el('button', { class: 'icon-btn', 'aria-label': 'Editar', title: 'Editar', on: { click: () => isCard ? openAccountModal(d.raw) : openLiabilityModal({ liability: d.raw, mode: 'edit' }) }, html: icon('edit') }),
+  ];
+  if (!isCard) {
+    actions.push(el('button', {
+      class: 'icon-btn icon-btn--danger', 'aria-label': 'Eliminar', title: 'Eliminar',
+      on: { click: () => confirmDialog({ title: 'Eliminar deuda', message: `¿Eliminar "${d.name}"?`, onConfirm: async () => { try { await dataService.remove('liabilities', d.id); toast('Deuda eliminada'); } catch (e) { toast('Error', { type: 'negative' }); } } }) },
+      html: icon('trash'),
+    }));
+  }
+
   return el('div', { class: 'row' }, [
     el('div', { class: 'row__avatar', html: rank === 1 ? icon('bolt') : icon('debts'), style: rank === 1 ? { background: 'var(--negative-bg)', color: 'var(--negative)' } : {} }),
     el('div', { class: 'row__main' }, [
-      el('div', { class: 'row__title' }, [l.name, ' ', rank === 1 ? Badge('Atacar primero', 'negative') : null].filter(Boolean)),
-      el('div', { class: 'row__sub', text: `${typeLabel(l.type)} · ${pct(l.interestRate)} · cuota ${formatMoney(l.minimumPayment || 0, l.currency || cur)}${l.dueDate ? ' · vence ' + formatDate(l.dueDate, 'short') : ''}` }),
+      el('div', { class: 'row__title' }, [d.name, ' ', rank === 1 ? Badge('Atacar primero', 'negative') : null, isCard ? Badge('Tarjeta', 'info') : null].filter(Boolean)),
+      el('div', { class: 'row__sub', text: sub }),
     ]),
-    el('div', { class: 'row__amount tabular text-negative', text: formatMoney(l.balance, l.currency || cur) }),
-    el('div', { class: 'row__actions' }, [
-      el('button', { class: 'icon-btn', 'aria-label': 'Editar', on: { click: () => openLiabilityModal({ liability: l, mode: 'edit' }) }, html: icon('edit') }),
-      el('button', { class: 'icon-btn icon-btn--danger', 'aria-label': 'Eliminar', on: { click: () => confirmDialog({ title: 'Eliminar deuda', message: `¿Eliminar "${l.name}"?`, onConfirm: async () => { try { await dataService.remove('liabilities', l.id); toast('Deuda eliminada'); } catch (e) { toast('Error', { type: 'negative' }); } } }) }, html: icon('trash') }),
-    ]),
+    el('div', { class: 'row__amount tabular text-negative', text: formatMoney(d.balance, d.currency || cur) }),
+    el('div', { class: 'row__actions' }, actions),
   ]);
 }
 
@@ -108,87 +196,80 @@ function orderBy(debts, strategy) {
 
 export function renderDebts() {
   const root = el('div');
-  const listMount = el('div');
 
-  function paint() {
+  function repaint() {
     const s = store.get();
     const cur = s.baseCurrency;
-    const debts = (s.liabilities || []).filter((l) => (l.balance || 0) > 0);
+    const stats = selectors.debtStats(s);          // { total, minPayment, avgRate, count, list }
+    const ccDebt = selectors.creditCardDebt(s);
+    const ccAccounts = selectors.creditCardAccounts(s);
+    const ccLiabCount = (s.liabilities || []).filter((l) => l.type === 'credit_card' && (l.balance || 0) > 0).length;
+    const ccCount = ccAccounts.length + ccLiabCount;
 
-    if (!debts.length) {
-      mount(listMount, el('div', { class: 'card' }, [EmptyState({
-        title: 'Sin deudas', message: 'Registra tus deudas para planear su pago.', iconName: 'debts',
-        action: Button('Nueva deuda', { variant: 'primary', iconName: 'plus', onClick: () => openLiabilityModal({ mode: 'create' }) }),
-      })]));
-      return;
-    }
-
-    const ordered = orderBy(debts, STATE.strategy);
-    const explain = STATE.strategy === 'snowball'
-      ? 'Snowball: liquidas primero la deuda de menor saldo (motivación rápida).'
-      : 'Avalanche: liquidas primero la deuda de mayor tasa (ahorras más en intereses).';
-
-    mount(listMount, el('div', {}, [
-      el('div', { class: 'card card--pad-sm' }, [
-        el('div', { class: 'row-flex between mt-2' }, [
-          el('div', { class: 'seg', style: { width: 'auto' } }, [
-            el('button', { class: 'seg__btn', 'aria-pressed': String(STATE.strategy === 'avalanche'), text: 'Avalanche', on: { click: () => { STATE.strategy = 'avalanche'; paint(); } } }),
-            el('button', { class: 'seg__btn', 'aria-pressed': String(STATE.strategy === 'snowball'), text: 'Snowball', on: { click: () => { STATE.strategy = 'snowball'; paint(); } } }),
-          ]),
-          el('span', { class: 't-caption text-secondary', text: explain }),
-        ]),
-      ]),
-      el('div', { class: 'card card--pad-sm mt-4' }, [el('div', { class: 'row-list' }, ordered.map((l, i) => debtRow(l, i + 1, cur)))]),
-    ]));
-  }
-
-  const s = store.get();
-  const cur = s.baseCurrency;
-  const debts = (s.liabilities || []).filter((l) => (l.balance || 0) > 0);
-  const totalDebt = debts.reduce((sum, l) => sum + (l.balance || 0), 0);
-  const totalMin  = debts.reduce((sum, l) => sum + (l.minimumPayment || 0), 0);
-  const avgRate   = totalDebt ? debts.reduce((sum, l) => sum + (l.interestRate || 0) * (l.balance || 0), 0) / totalDebt : 0;
-
-  // Tarjetas de crédito (BUG-A4): consolida cuentas type='credit_card' con las deudas
-  // (Liabilities) type='credit_card'. La vía "Nueva deuda" crea liabilities credit_card
-  // por defecto, así que mirar solo accounts dejaba el KPI en $0 aunque hubiera saldo.
-  const ccAccounts = (s.accounts || []).filter((a) => a.type === 'credit_card' && !a.isArchived);
-  const ccLiabilities = (s.liabilities || []).filter((l) => l.type === 'credit_card' && (l.balance || 0) > 0);
-  const totalCcDebt = ccAccounts.reduce((sum, a) => sum + Math.abs(a.balance || 0), 0)
-    + ccLiabilities.reduce((sum, l) => sum + (l.balance || 0), 0);
-  const ccCount = ccAccounts.length + ccLiabilities.length;
-
-  root.append(
-    el('div', { class: 'page-header' }, [
+    const header = el('div', { class: 'page-header' }, [
       el('div', { class: 'row-flex between' }, [
         el('div', {}, [
           el('h2', { class: 't-h1', text: 'Deudas' }),
-          el('p', { class: 'page-header__sub', text: 'Plan de pago con Snowball y Avalanche.' }),
+          el('p', { class: 'page-header__sub', text: 'Tarjetas, créditos e hipotecas. Plan de pago Snowball y Avalanche.' }),
         ]),
         Button('Nueva deuda', { variant: 'primary', iconName: 'plus', onClick: () => openLiabilityModal({ mode: 'create' }) }),
       ]),
-    ]),
-    el('div', { class: 'grid grid--kpi' }, [
-      KpiCard({ label: 'Deuda total', value: formatMoney(totalDebt, cur), iconName: 'debts', variant: 'negative', hero: true,
-        foot: [el('span', { class: 't-caption', text: `${debts.length} deudas` })] }),
-      KpiCard({ label: 'Tarjetas de crédito', value: formatMoney(totalCcDebt, cur), iconName: 'accounts', variant: 'negative',
+    ]);
+
+    const kpis = el('div', { class: 'grid grid--kpi' }, [
+      KpiCard({ label: 'Deuda total', value: formatMoney(stats.total, cur), iconName: 'debts', variant: 'negative', hero: true,
+        foot: [el('span', { class: 't-caption', text: `${stats.count} deuda${stats.count !== 1 ? 's' : ''}` })] }),
+      KpiCard({ label: 'Tarjetas de crédito', value: formatMoney(ccDebt, cur), iconName: 'accounts', variant: 'negative',
         foot: [el('span', { class: 't-caption', text: `${ccCount} tarjeta${ccCount !== 1 ? 's' : ''}` })] }),
-      KpiCard({ label: 'Cuota mínima/mes', value: formatMoney(totalMin, cur), iconName: 'calendar', variant: 'neutral' }),
-      KpiCard({ label: 'Tasa promedio', value: pct(avgRate), iconName: 'analytics', variant: 'warning' }),
-    ]),
+      KpiCard({ label: 'Cuota mínima/mes', value: formatMoney(stats.minPayment, cur), iconName: 'calendar', variant: 'neutral' }),
+      KpiCard({ label: 'Tasa promedio', value: pct(stats.avgRate), iconName: 'analytics', variant: 'warning' }),
+    ]);
 
-    // Panel de tarjetas de crédito
-    ccAccounts.length ? el('div', { class: 'section' }, [
-      el('h3', { class: 't-h2 mb-4', text: 'Tarjetas de crédito' }),
-      el('div', { class: 'cc-panels-grid' }, ccAccounts.map((a) => creditCardPanel(a, cur))),
-    ]) : null,
+    const children = [header, kpis];
 
-    el('div', { class: 'section' }, [
-      debts.length ? el('h3', { class: 't-h2 mb-4', text: 'Detalle de deudas' }) : null,
-      listMount,
-    ]),
-  );
+    // Panel de tarjetas (estado detallado).
+    if (ccAccounts.length) {
+      children.push(el('div', { class: 'section' }, [
+        el('h3', { class: 't-h2 mb-4', text: 'Tarjetas de crédito' }),
+        el('div', { class: 'cc-panels-grid' }, ccAccounts.map((a) => creditCardPanel(a, cur))),
+      ]));
+    }
 
-  paint();
+    // Plan de pago priorizado (todas las deudas).
+    if (!stats.list.length) {
+      children.push(el('div', { class: 'section' }, [
+        el('div', { class: 'card' }, [EmptyState({
+          title: 'Sin deudas', message: 'Registra tus deudas (tarjetas, créditos, hipotecas) para planear su pago.', iconName: 'debts',
+          action: Button('Nueva deuda', { variant: 'primary', iconName: 'plus', onClick: () => openLiabilityModal({ mode: 'create' }) }),
+        })]),
+      ]));
+    } else {
+      const ordered = orderBy(stats.list, STATE.strategy);
+      const explain = STATE.strategy === 'snowball'
+        ? 'Snowball: liquidas primero la deuda de menor saldo (motivación rápida).'
+        : 'Avalanche: liquidas primero la deuda de mayor tasa (ahorras más en intereses).';
+
+      children.push(el('div', { class: 'section' }, [
+        el('h3', { class: 't-h2 mb-4', text: 'Plan de pago' }),
+        el('div', { class: 'card card--pad-sm' }, [
+          el('div', { class: 'row-flex between mt-2' }, [
+            el('div', { class: 'seg', style: { width: 'auto' } }, [
+              el('button', { class: 'seg__btn', 'aria-pressed': String(STATE.strategy === 'avalanche'), text: 'Avalanche', on: { click: () => { STATE.strategy = 'avalanche'; repaint(); } } }),
+              el('button', { class: 'seg__btn', 'aria-pressed': String(STATE.strategy === 'snowball'), text: 'Snowball', on: { click: () => { STATE.strategy = 'snowball'; repaint(); } } }),
+            ]),
+            el('span', { class: 't-caption text-secondary', text: explain }),
+          ]),
+        ]),
+        el('div', { class: 'card card--pad-sm mt-4' }, [el('div', { class: 'row-list' }, ordered.map((d, i) => debtRow(d, i + 1, cur)))]),
+      ]));
+    }
+
+    root.replaceChildren(...children);
+  }
+
+  repaint();
+  // Repintar al cambiar el store (tras un abono, edición o sync) sin fuga: el guard
+  // isConnected evita renders sobre un root ya desmontado (idéntico a investments.js).
+  store.subscribe(() => { if (root.isConnected) repaint(); });
   return root;
 }

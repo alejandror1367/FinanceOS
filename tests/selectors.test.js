@@ -317,6 +317,58 @@ describe('presupuestos', () => {
   });
 });
 
+// ── Deudas (debtList / debtStats / creditCardDebt) ─────────────────────────────
+
+describe('deudas', () => {
+  test('debtList unifica liabilities (saldo>0) y tarjetas de crédito (cuentas)', () => {
+    const s = mkState({
+      liabilities: [
+        { id: 'l1', name: 'Hipoteca', type: 'mortgage', balance: 100_000_000, interestRate: 12, minimumPayment: 1_200_000 },
+        { id: 'l2', name: 'Saldada', type: 'loan', balance: 0, interestRate: 20, minimumPayment: 0 }, // saldo 0 → excluida
+      ],
+      accounts: [
+        acc('c1', -3_000_000, 'credit_card', { interestRate: 30, minPayment: 300_000 }),
+        acc('c2', 0, 'credit_card', { interestRate: 28, minPayment: 0 }), // sin deuda → excluida
+        acc('b1', 5_000_000, 'bank'),
+      ],
+    });
+    const list = selectors.debtList(s);
+    assert.equal(list.length, 2);
+    const card = list.find((d) => d.id === 'c1');
+    assert.equal(card.source, 'account');
+    assert.equal(card.balance, 3_000_000);      // valor absoluto del saldo negativo
+    assert.equal(card.minPayment, 300_000);      // normaliza minPayment ↔ minimumPayment
+  });
+
+  test('debtStats: total, cuota mínima y tasa promedio ponderada (tarjetas + créditos)', () => {
+    const s = mkState({
+      liabilities: [{ id: 'l1', name: 'Crédito', type: 'loan', balance: 7_000_000, interestRate: 10, minimumPayment: 500_000 }],
+      accounts: [acc('c1', -3_000_000, 'credit_card', { interestRate: 30, minPayment: 300_000 })],
+    });
+    const st = selectors.debtStats(s);
+    assert.equal(st.total, 10_000_000);          // 7M + 3M (la tarjeta cuenta como deuda)
+    assert.equal(st.minPayment, 800_000);        // suma de pagos mínimos manuales
+    // promedio ponderado por saldo: (10*7M + 30*3M) / 10M = (70M+90M)/10M = 16
+    assert.equal(st.avgRate, 16);
+    assert.equal(st.count, 2);
+  });
+
+  test('debtStats: estado sin deudas → 0 sin dividir por cero', () => {
+    const st = selectors.debtStats(mkState());
+    assert.equal(st.total, 0);
+    assert.equal(st.avgRate, 0);
+    assert.equal(st.count, 0);
+  });
+
+  test('creditCardDebt: consolida cuentas credit_card + liabilities credit_card', () => {
+    const s = mkState({
+      accounts: [acc('c1', -2_500_000, 'credit_card'), acc('b1', 1_000_000, 'bank')],
+      liabilities: [{ id: 'l1', name: 'Tarjeta vieja', type: 'credit_card', balance: 1_330_000 }],
+    });
+    assert.equal(selectors.creditCardDebt(s), 3_830_000);
+  });
+});
+
 // ── hasMixedCurrencies (TD-02) ────────────────────────────────────────────────
 
 describe('hasMixedCurrencies', () => {

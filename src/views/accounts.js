@@ -68,7 +68,7 @@ function accountForm(existing) {
   ]);
 }
 
-function openAccountModal(existing) {
+export function openAccountModal(existing) {
   const body = accountForm(existing);
   openModal({
     title: existing ? 'Editar cuenta' : 'Nueva cuenta',

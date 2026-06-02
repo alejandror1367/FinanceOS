@@ -137,6 +137,55 @@ export const selectors = {
     return s.accounts.find((a) => a.id === id);
   },
 
+  // ---- Deudas (unifica Liabilities con las tarjetas de crédito que son cuentas) ----
+  creditCardAccounts(s) {
+    return (s.accounts || []).filter((a) => a.type === 'credit_card' && !a.isArchived);
+  },
+
+  // Lista unificada de deudas: pasivos (Liabilities con saldo > 0) + tarjetas de crédito
+  // registradas como cuentas (su saldo, negativo, es deuda). Normaliza el campo de cuota
+  // (account.minPayment ↔ liability.minimumPayment) para que los KPIs sean únicos.
+  // Los créditos/hipotecas son Liabilities con balance, interestRate y minimumPayment.
+  debtList(s) {
+    const out = [];
+    (s.liabilities || []).filter((l) => (l.balance || 0) > 0).forEach((l) => out.push({
+      id: l.id, source: 'liability', name: l.name, type: l.type || 'other',
+      balance: l.balance || 0, interestRate: l.interestRate || 0,
+      minPayment: l.minimumPayment || 0, currency: l.currency, dueDate: l.dueDate || null, raw: l,
+    }));
+    selectors.creditCardAccounts(s).forEach((a) => {
+      const balance = Math.abs(a.balance || 0);
+      if (balance <= 0) return; // tarjeta sin deuda (saldo a favor o en cero)
+      out.push({
+        id: a.id, source: 'account', name: a.name, type: 'credit_card',
+        balance, interestRate: a.interestRate || 0, minPayment: a.minPayment || 0,
+        currency: a.currency, dueDate: null, raw: a,
+      });
+    });
+    return out;
+  },
+
+  // KPIs de deudas: deuda total, cuota mínima mensual (suma de los pagos mínimos manuales)
+  // y tasa promedio ponderada por saldo — incluyendo tarjetas y créditos/hipotecas.
+  debtStats(s) {
+    const list = selectors.debtList(s);
+    const total = list.reduce((sum, d) => sum + d.balance, 0);
+    const minPayment = list.reduce((sum, d) => sum + d.minPayment, 0);
+    const weighted = list.reduce((sum, d) => sum + d.interestRate * d.balance, 0);
+    const avgRate = total ? weighted / total : 0;
+    return { total, minPayment, avgRate, count: list.length, list };
+  },
+
+  // Total adeudado solo en tarjetas (cuentas credit_card + Liabilities type credit_card).
+  creditCardDebt(s) {
+    const fromAccounts = selectors.creditCardAccounts(s)
+      .reduce((sum, a) => sum + Math.abs(a.balance || 0), 0);
+    const fromLiabilities = (s.liabilities || [])
+      .filter((l) => l.type === 'credit_card' && (l.balance || 0) > 0)
+      .reduce((sum, l) => sum + (l.balance || 0), 0);
+    return fromAccounts + fromLiabilities;
+  },
+
   // ---- Presupuestos (valores derivados, no persistidos) ----
   budgetConsumed(s, budget) {
     const isMonthly = budget.period === 'monthly';
