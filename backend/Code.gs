@@ -21,6 +21,7 @@ var ROUTES = {
   getNetWorth: function (p) { return getNetWorth_(p); },
   getNetWorthSnapshots: function (p) { return listNetWorthSnapshots_(p); },
   saveNetWorthSnapshot: function (d) { return saveNetWorthSnapshot_(d); },
+  deleteNetWorthSnapshot: function (d) { return deleteNetWorthSnapshot_(d); },
   getReports: function (p) { return getReports_(p); },
   getBootstrap: function (p) { return getBootstrap_(p); }, // TD-15: 12 colecciones en 1 request
 

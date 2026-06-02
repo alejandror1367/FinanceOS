@@ -14,7 +14,7 @@ export const ENTITIES = {
   assets:       { store: 'assets',       entity: 'Assets',                read: 'getAssets',       create: 'createAsset',       update: 'updateAsset',       remove: 'deleteAsset' },
   liabilities:  { store: 'liabilities',  entity: 'Liabilities',           read: 'getLiabilities',  create: 'createLiability',   update: 'updateLiability',   remove: 'deleteLiability' },
   recurring:    { store: 'recurring',    entity: 'RecurringTransactions', read: 'getRecurring',    create: 'createRecurring',   update: 'updateRecurring',   remove: 'deleteRecurring' },
-  netWorthSnapshots: { store: 'netWorthSnapshots', entity: 'NetWorthSnapshots', read: 'getNetWorthSnapshots' },
+  netWorthSnapshots: { store: 'netWorthSnapshots', entity: 'NetWorthSnapshots', read: 'getNetWorthSnapshots', remove: 'deleteNetWorthSnapshot' },
   journal:      { store: 'journal',      entity: 'Journal',               read: 'getJournal',      create: 'createJournal',     update: 'updateJournal',     remove: 'deleteJournal' },
   settings:     { store: 'settings',     entity: 'Settings',              read: 'getSettings' },
 };

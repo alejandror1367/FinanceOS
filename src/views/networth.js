@@ -179,11 +179,29 @@ export function renderNetWorth() {
 
     // Evolución (snapshots reales)
     const snaps = [...(s.netWorthSnapshots || [])].sort((a, b) => (a.date < b.date ? -1 : 1)).slice(-8);
+    const snapRows = snaps.map((sn) => el('div', { class: 'row row--compact' }, [
+      el('div', { class: 'row__main' }, [
+        el('div', { class: 'row__title', text: formatDate(sn.date, 'short') }),
+      ]),
+      el('div', { class: `row__amount tabular ${sn.netWorth >= 0 ? '' : 'text-negative'}`, text: formatMoney(sn.netWorth, sn.currency || cur) }),
+      el('button', {
+        class: 'icon-btn icon-btn--danger', 'aria-label': 'Eliminar snapshot', title: 'Eliminar snapshot',
+        html: icon('trash'),
+        on: { click: () => confirmDialog({
+          title: 'Eliminar snapshot',
+          message: `¿Eliminar el snapshot del ${formatDate(sn.date)}?`,
+          onConfirm: () => guardedOp(() => dataService.remove('netWorthSnapshots', sn.id), 'Snapshot eliminado'),
+        }) },
+      }),
+    ]));
     const evolution = Card({
       title: 'Evolución del patrimonio',
       action: Button('Guardar snapshot', { variant: 'ghost', iconName: 'plus', onClick: doSaveSnapshot }),
       body: snaps.length
-        ? BarChart(snaps.map((sn) => ({ label: formatDate(sn.date, 'short'), value: sn.netWorth })))
+        ? el('div', {}, [
+            BarChart(snaps.map((sn) => ({ label: formatDate(sn.date, 'short'), value: sn.netWorth }))),
+            el('div', { class: 'row-list', style: 'margin-top:var(--space-3)' }, snapRows),
+          ])
         : EmptyState({ title: 'Sin histórico', message: 'Guarda un snapshot para empezar a registrar la evolución.', iconName: 'networth' }),
     });
 
