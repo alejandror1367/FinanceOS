@@ -5,13 +5,11 @@
 import { el } from '../utils/dom.js';
 import { icon } from '../utils/icons.js';
 import { store } from '../store/store.js';
-import { selectors } from '../store/selectors.js';
+import { selectors, normPeriodKey } from '../store/selectors.js';
 import { formatMoney, formatDate, formatPercent, formatNumber } from '../utils/format.js';
 import { Card, EmptyState } from '../components/ui.js';
 import { LineChart, Donut, Legend, CHART_PALETTE } from '../components/charts.js';
 
-const now = new Date();
-const curMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 const compact = (v) => formatNumber(v, { notation: 'compact', maximumFractionDigits: 1 });
 
 const VARIANT_STYLE = {
@@ -29,6 +27,8 @@ function insightRow(iconName, variant, html) {
 }
 
 function buildInsights(s, cur) {
+  const now = new Date();
+  const curMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const out = [];
   const income = selectors.monthlyIncome(s);
   const expense = selectors.monthlyExpense(s);
@@ -51,7 +51,7 @@ function buildInsights(s, cur) {
   }
 
   // Presupuesto del mes.
-  const monthlyBudgets = (s.budgets || []).filter((b) => b.period === 'monthly' && b.periodKey === curMonthKey);
+  const monthlyBudgets = (s.budgets || []).filter((b) => b.period === 'monthly' && normPeriodKey(b.periodKey, 7) === curMonthKey);
   if (monthlyBudgets.length) {
     const budgeted = monthlyBudgets.reduce((a, b) => a + (b.amount || 0), 0);
     const consumed = monthlyBudgets.reduce((a, b) => a + selectors.budgetConsumed(s, b), 0);
@@ -82,6 +82,9 @@ function buildInsights(s, cur) {
 export function renderAnalytics() {
   const s = store.get();
   const cur = s.baseCurrency;
+  const now = new Date();
+  const curMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
 
   // Flujo de caja (6 meses)
   const cf = selectors.cashflow(s, 6);

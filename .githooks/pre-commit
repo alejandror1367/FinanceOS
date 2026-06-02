@@ -19,7 +19,7 @@ if [ -n "$SW_STAGED" ]; then
   exit 0
 fi
 
-# Bump del patch version usando Node.js
+# Bump del patch version usando Node.js (sw.js + config.version)
 node -e "
 const fs = require('fs');
 const sw = fs.readFileSync('sw.js', 'utf8');
@@ -28,7 +28,9 @@ if (!m) { process.stderr.write('[sw] VERSION no encontrada en sw.js\n'); process
 const [, major, minor, patch] = m;
 const next = major + '.' + minor + '.' + (Number(patch) + 1);
 fs.writeFileSync('sw.js', sw.replace(/financeos-v\d+\.\d+\.\d+/g, 'financeos-v' + next));
+const cfg = fs.readFileSync('src/core/config.js', 'utf8');
+fs.writeFileSync('src/core/config.js', cfg.replace(/version:\s*'[^']*'/, \"version: '\" + next + \"'\"));
 process.stdout.write('[sw] auto-bump: v' + major+'.'+minor+'.'+patch+' → v'+next+'\n');
 "
 
-git add sw.js
+git add sw.js src/core/config.js

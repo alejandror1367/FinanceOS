@@ -5,7 +5,7 @@ import { priceService } from '../services/priceService.js';
 import { roundMoney } from '../utils/format.js';
 
 // Normalizes a periodKey that Google Sheets may auto-convert from 'YYYY-MM' to a Date object.
-function normPeriodKey(raw, len) {
+export function normPeriodKey(raw, len) {
   const s = String(raw);
   if (/^\d{4}/.test(s)) return s.slice(0, len);
   const d = new Date(s);
