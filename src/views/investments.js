@@ -56,14 +56,15 @@ function priceAgeLabel() {
 }
 
 // ─── DCA: agrupar compras individuales por ticker ──────────────────────────
+// Separa compras activas (sin soldDate) de vendidas (con soldDate).
 function groupByTicker(investments) {
   const map = {};
   (investments || []).filter((inv) => !inv.isDeleted).forEach((inv) => {
-    // Fondos y CDTs sin símbolo real no se agrupan entre sí (cada registro es una posición independiente).
     const key = isTrivial(inv.assetType) && !inv.symbol ? inv.id : ((inv.symbol || inv.name) || inv.id).toUpperCase();
-    if (!map[key]) map[key] = { key, symbol: inv.symbol, name: inv.name, assetType: inv.assetType, currency: inv.currency || 'USD', purchases: [] };
-    map[key].purchases.push(inv);
-    if (inv.name)     map[key].name     = inv.name;
+    if (!map[key]) map[key] = { key, symbol: inv.symbol, name: inv.name, assetType: inv.assetType, currency: inv.currency || 'USD', purchases: [], sold: [] };
+    if (inv.soldDate) map[key].sold.push(inv);
+    else              map[key].purchases.push(inv);
+    if (inv.name)      map[key].name     = inv.name;
     if (inv.assetType) map[key].assetType = inv.assetType;
     if (inv.currency)  map[key].currency  = inv.currency;
   });
@@ -71,7 +72,44 @@ function groupByTicker(investments) {
     const sorted    = [...g.purchases].sort((a, b) => (b.purchaseDate || '').localeCompare(a.purchaseDate || ''));
     const totalQty  = g.purchases.reduce((s, p) => s + (Number(p.quantity) || 0), 0);
     const totalCost = g.purchases.reduce((s, p) => s + (Number(p.quantity) || 0) * (Number(p.purchasePrice || p.avgCost) || 0), 0);
-    return { ...g, sorted, totalQty, totalCost, weightedAvg: totalQty ? totalCost / totalQty : 0, storedPrice: Number(sorted[0]?.currentPrice) || 0 };
+    // P&L realizado de las compras vendidas
+    const realizedPnL = g.sold.reduce((s, p) => {
+      const qty = Number(p.soldQuantity || p.quantity) || 0;
+      return s + qty * (Number(p.soldPrice) || 0) - qty * (Number(p.purchasePrice || p.avgCost) || 0);
+    }, 0);
+    return { ...g, sorted, totalQty, totalCost, weightedAvg: totalQty ? totalCost / totalQty : 0,
+      storedPrice: Number(sorted[0]?.currentPrice) || 0, realizedPnL };
+  });
+}
+
+// ─── Modal de venta ───────────────────────────────────────────────────────────
+function openSellModal(group, livePrice) {
+  const { symbol, name, totalQty, totalCost, currency, purchases } = group;
+  const currentPrice = livePrice?.price || group.storedPrice || 0;
+  const priceEl = numberInput({ name: 'soldPrice', value: currentPrice ? currentPrice.toFixed(currency !== 'COP' ? 2 : 0) : '', placeholder: 'Precio por unidad' });
+  const dateEl  = textInput({ name: 'soldDate', value: today(), type: 'date' });
+
+  const body = el('div', {}, [
+    el('p', { class: 't-caption text-secondary', text: `${totalQty.toFixed(6).replace(/\.?0+$/, '')} unidades · costo total ${fmtI(totalCost, currency)}` }),
+    el('div', { class: 'field-row' }, [field('Precio de venta', priceEl), field('Fecha de venta', dateEl)]),
+  ]);
+
+  openModal({
+    title: `Vender ${symbol || name}`,
+    body,
+    submitLabel: 'Registrar venta',
+    onSubmit: async () => {
+      const soldPrice = Number(priceEl.value) || 0;
+      const soldDate  = dateEl.value;
+      if (soldPrice <= 0) { toast('Ingresa el precio de venta', { type: 'negative' }); return false; }
+      if (!soldDate)      { toast('Selecciona una fecha', { type: 'negative' }); return false; }
+      try {
+        for (const p of purchases) {
+          await dataService.update('investments', p.id, { ...p, soldPrice, soldDate, soldQuantity: Number(p.quantity) || 0 });
+        }
+        toast(`Venta de ${symbol || name} registrada`);
+      } catch (e) { toast('Error: ' + e.message, { type: 'negative' }); return false; }
+    },
   });
 }
 
@@ -363,6 +401,10 @@ function positionCard(group, livePrice, fxRates, baseCur) {
     actions.appendChild(toggleBtn);
     actions.appendChild(Button('+ Compra', { variant: 'outline', size: 'sm',
       onClick: () => openPurchaseModal({ defaultSymbol: symbol || '', defaultType: assetType }) }));
+    if (totalQty > 0) {
+      actions.appendChild(Button('Vender', { variant: 'outline', size: 'sm',
+        onClick: () => openSellModal(group, livePrice) }));
+    }
   }
   if (assetType === 'fund') {
     actions.appendChild(Button('Actualizar valor', { variant: 'outline', size: 'sm',
@@ -414,6 +456,9 @@ export function renderInvestments() {
     const s = store.get();
     const baseCur = s.baseCurrency || 'COP';
     const allGroups = groupByTicker(s.investments);
+    // Grupos con posiciones activas (purchases no vacío) vs. completamente vendidos
+    const activeGroups = allGroups.filter((g) => g.purchases.length > 0);
+    const closedGroups = allGroups.filter((g) => g.purchases.length === 0 && g.sold.length > 0);
 
     if (!allGroups.length) {
       mount(bodyMount, el('div', { class: 'card' }, [EmptyState({
@@ -424,7 +469,7 @@ export function renderInvestments() {
     }
 
     const secStats = SECTIONS.map((sec) => {
-      const groups = allGroups.filter((g) => sec.types.includes(g.assetType));
+      const groups = activeGroups.filter((g) => sec.types.includes(g.assetType));
       let totalValue = 0, totalCost = 0;
       groups.forEach((g) => {
         const lp = livePrices[(g.symbol || '').toUpperCase()];
@@ -442,16 +487,23 @@ export function renderInvestments() {
     const cTotal = secStats.reduce((s, x) => s + x.totalCost, 0);
     const gTotal = pTotal - cTotal;
     const rTotal = cTotal ? gTotal / cTotal * 100 : 0;
+    // P&L realizado acumulado de todas las posiciones cerradas (en moneda base)
+    const realizedTotal = closedGroups.reduce((sum, g) => sum + (toCOP(g.realizedPnL, g.currency, fxRates) ?? g.realizedPnL), 0);
 
     const wrap = el('div', { class: 'stack' });
 
     // KPIs
-    wrap.appendChild(el('div', { class: 'grid grid--kpi' }, [
+    const kpiRow = [
       KpiCard({ label: 'Portafolio total', value: formatMoney(pTotal, baseCur), iconName: 'investments', variant: 'accent', hero: true,
         foot: [Trend(rTotal), el('span', { class: 't-caption', text: ' retorno total' })] }),
       KpiCard({ label: 'Capital invertido', value: formatMoney(cTotal, baseCur), iconName: 'wallet', variant: 'neutral' }),
       KpiCard({ label: 'Ganancia / Pérdida', value: formatMoney(gTotal, baseCur), iconName: gTotal >= 0 ? 'arrowUp' : 'arrowDown', variant: gTotal >= 0 ? 'emerald' : 'negative' }),
-    ]));
+    ];
+    if (closedGroups.length > 0) {
+      kpiRow.push(KpiCard({ label: 'P&L Realizado', value: formatMoney(realizedTotal, baseCur), iconName: realizedTotal >= 0 ? 'arrowUp' : 'arrowDown', variant: realizedTotal >= 0 ? 'emerald' : 'negative',
+        foot: [el('span', { class: 't-caption', text: `${closedGroups.length} posición${closedGroups.length > 1 ? 'es' : ''} cerrada${closedGroups.length > 1 ? 's' : ''}` })] }));
+    }
+    wrap.appendChild(el('div', { class: 'grid grid--kpi' }, kpiRow));
 
     // Distribución
     if (pTotal > 0) {
@@ -537,6 +589,45 @@ export function renderInvestments() {
       summaryCard.appendChild(el('p', { class: 't-caption text-tertiary', style: 'margin:var(--space-3) 0 0' }, [loading ? 'Obteniendo tasas de cambio…' : 'Pulsa "Actualizar precios" para obtener precios y tasas de cambio reales.']));
     }
     wrap.appendChild(summaryCard);
+
+    // ── Operaciones cerradas (posiciones totalmente vendidas) ─────────────────
+    if (closedGroups.length > 0) {
+      const closedEl = el('div', { class: 'section' });
+      closedEl.appendChild(el('h3', { class: 't-h2 mb-4', text: 'Operaciones cerradas' }));
+      const closedList = el('div', { class: 'card card--pad-sm' });
+      closedList.appendChild(el('div', { class: 'row-list' }, closedGroups.map((g) => {
+        const soldDate = g.sold.map((p) => p.soldDate).sort().at(-1) || '';
+        const soldPnLCOP = toCOP(g.realizedPnL, g.currency, fxRates) ?? g.realizedPnL;
+        const pnlPct = g.sold.reduce((s, p) => s + (Number(p.quantity)||0) * (Number(p.purchasePrice||p.avgCost)||0), 0);
+        const pnlPctVal = pnlPct ? g.realizedPnL / pnlPct * 100 : 0;
+        const isPos = g.realizedPnL >= 0;
+        return el('div', { class: 'row' }, [
+          el('div', { class: 'row__avatar', html: icon('investments') }),
+          el('div', { class: 'row__main' }, [
+            el('div', { class: 'row__title' }, [g.symbol || g.name, ' ', Badge(typeLabel(g.assetType), 'info')]),
+            el('div', { class: 'row__sub', text: `Vendido ${soldDate ? soldDate.slice(0, 10) : ''} · ${g.sold.length} compra${g.sold.length > 1 ? 's' : ''}` }),
+          ]),
+          el('div', { class: `row__amount tabular ${isPos ? 'text-positive' : 'text-negative'}` }, [
+            `${isPos ? '+' : ''}${formatMoney(soldPnLCOP, baseCur)}  ${pctFmt(pnlPctVal)}`,
+          ]),
+          el('div', { class: 'row__actions' }, [
+            el('button', { class: 'icon-btn icon-btn--danger', 'aria-label': 'Eliminar registros', title: 'Eliminar registros de venta',
+              on: { click: () => confirmDialog({ title: 'Eliminar operación cerrada',
+                message: `¿Eliminar todos los registros de ${g.symbol || g.name}?`,
+                onConfirm: async () => {
+                  try {
+                    for (const p of g.sold) await dataService.remove('investments', p.id);
+                    toast('Registros eliminados');
+                  } catch (e) { toast('Error', { type: 'negative' }); }
+                },
+              }) }, html: icon('trash') }),
+          ]),
+        ]);
+      })));
+      closedEl.appendChild(closedList);
+      wrap.appendChild(closedEl);
+    }
+
     mount(bodyMount, wrap);
   }
 
