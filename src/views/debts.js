@@ -149,9 +149,14 @@ export function renderDebts() {
   const totalMin  = debts.reduce((sum, l) => sum + (l.minimumPayment || 0), 0);
   const avgRate   = totalDebt ? debts.reduce((sum, l) => sum + (l.interestRate || 0) * (l.balance || 0), 0) / totalDebt : 0;
 
-  // Tarjetas de crédito (desde accounts)
+  // Tarjetas de crédito (BUG-A4): consolida cuentas type='credit_card' con las deudas
+  // (Liabilities) type='credit_card'. La vía "Nueva deuda" crea liabilities credit_card
+  // por defecto, así que mirar solo accounts dejaba el KPI en $0 aunque hubiera saldo.
   const ccAccounts = (s.accounts || []).filter((a) => a.type === 'credit_card' && !a.isArchived);
-  const totalCcDebt = ccAccounts.reduce((sum, a) => sum + Math.abs(a.balance || 0), 0);
+  const ccLiabilities = (s.liabilities || []).filter((l) => l.type === 'credit_card' && (l.balance || 0) > 0);
+  const totalCcDebt = ccAccounts.reduce((sum, a) => sum + Math.abs(a.balance || 0), 0)
+    + ccLiabilities.reduce((sum, l) => sum + (l.balance || 0), 0);
+  const ccCount = ccAccounts.length + ccLiabilities.length;
 
   root.append(
     el('div', { class: 'page-header' }, [
@@ -167,7 +172,7 @@ export function renderDebts() {
       KpiCard({ label: 'Deuda total', value: formatMoney(totalDebt, cur), iconName: 'debts', variant: 'negative', hero: true,
         foot: [el('span', { class: 't-caption', text: `${debts.length} deudas` })] }),
       KpiCard({ label: 'Tarjetas de crédito', value: formatMoney(totalCcDebt, cur), iconName: 'accounts', variant: 'negative',
-        foot: [el('span', { class: 't-caption', text: `${ccAccounts.length} tarjeta${ccAccounts.length !== 1 ? 's' : ''}` })] }),
+        foot: [el('span', { class: 't-caption', text: `${ccCount} tarjeta${ccCount !== 1 ? 's' : ''}` })] }),
       KpiCard({ label: 'Cuota mínima/mes', value: formatMoney(totalMin, cur), iconName: 'calendar', variant: 'neutral' }),
       KpiCard({ label: 'Tasa promedio', value: pct(avgRate), iconName: 'analytics', variant: 'warning' }),
     ]),
@@ -179,7 +184,7 @@ export function renderDebts() {
     ]) : null,
 
     el('div', { class: 'section' }, [
-      debts.length ? el('h3', { class: 't-h2 mb-4', text: 'Otras deudas' }) : null,
+      debts.length ? el('h3', { class: 't-h2 mb-4', text: 'Detalle de deudas' }) : null,
       listMount,
     ]),
   );
