@@ -34,7 +34,7 @@ export function LineChart({ labels = [], series = [], height = 210, showValues =
 
   const paths = series.map((s, si) => {
     const pts = s.points.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
-    const dots = s.points.map((v, i) => `<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="3" fill="${s.color}"/>`).join('');
+    const dots = s.points.map((v, i) => `<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="4" fill="${s.color}" style="cursor:default"><title>${labels[i]}: ${fmt(v)}</title></circle>`).join('');
     let valueLabels = '';
     if (showValues) {
       // Serie 0 etiqueta encima del punto; series siguientes, debajo (evita choque).

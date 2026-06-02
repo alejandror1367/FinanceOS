@@ -69,16 +69,19 @@ export function SkeletonKpis(n = 4) {
     Array.from({ length: n }, () => el('div', { class: 'skeleton skeleton--kpi' })));
 }
 
-// Mini gráfico de barras (sin librerías). data: [{label, value, muted?}], ariaLabel: texto alternativo WCAG 1.1.1.
-export function BarChart(data = [], { ariaLabel } = {}) {
+// Mini gráfico de barras (sin librerías). data: [{label, value, muted?}].
+// valueFormat(v)->string formatea el valor visible sobre cada barra y en el tooltip nativo.
+export function BarChart(data = [], { ariaLabel, valueFormat } = {}) {
+  const fmt = valueFormat || ((v) => String(Math.round(v)));
   const max = Math.max(1, ...data.map((d) => d.value));
-  const a11yLabel = ariaLabel || (data.length ? 'Evolución: ' + data.map((d) => `${d.label} ${d.value}`).join(', ') : 'Gráfico de barras');
+  const a11yLabel = ariaLabel || (data.length ? 'Evolución: ' + data.map((d) => `${d.label} ${fmt(d.value)}`).join(', ') : 'Gráfico de barras');
   return el('div', { class: 'bars', role: 'img', 'aria-label': a11yLabel },
     data.map((d) => el('div', { class: 'bars__col' }, [
+      el('span', { class: 'bars__val', text: fmt(d.value) }),
       el('div', {
         class: `bars__bar${d.muted ? ' bars__bar--muted' : ''}`,
         style: { height: `${Math.max(4, (d.value / max) * 100)}%` },
-        title: String(d.value),
+        title: `${d.label}: ${fmt(d.value)}`,
       }),
       el('span', { class: 'bars__label', text: d.label }),
     ])));

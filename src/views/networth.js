@@ -130,8 +130,19 @@ async function doSaveSnapshot() {
   await guardedOp(() => dataService.saveSnapshot(), 'Snapshot guardado', 'No se pudo guardar');
 }
 
+function outlierIds(snaps) {
+  if (snaps.length < 4) return new Set();
+  const vals = snaps.map((sn) => sn.netWorth);
+  const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
+  const std = Math.sqrt(vals.reduce((sum, v) => sum + (v - mean) ** 2, 0) / vals.length);
+  if (std === 0) return new Set();
+  return new Set(snaps.filter((sn) => Math.abs(sn.netWorth - mean) > 2 * std).map((sn) => sn.id));
+}
+
 export function renderNetWorth() {
   const root = el('div');
+  const selectedSnapIds = new Set();
+  let showAllSnaps = false;
 
   function repaint() {
     const s = store.get();
@@ -178,30 +189,77 @@ export function renderNetWorth() {
       : null;
 
     // Evolución (snapshots reales)
-    const snaps = [...(s.netWorthSnapshots || [])].sort((a, b) => (a.date < b.date ? -1 : 1)).slice(-8);
-    const snapRows = snaps.map((sn) => el('div', { class: 'row row--compact' }, [
-      el('div', { class: 'row__main' }, [
-        el('div', { class: 'row__title', text: formatDate(sn.date, 'short') }),
-      ]),
-      el('div', { class: `row__amount tabular ${sn.netWorth >= 0 ? '' : 'text-negative'}`, text: formatMoney(sn.netWorth, sn.currency || cur) }),
-      el('button', {
-        class: 'icon-btn icon-btn--danger', 'aria-label': 'Eliminar snapshot', title: 'Eliminar snapshot',
-        html: icon('trash'),
-        on: { click: () => confirmDialog({
-          title: 'Eliminar snapshot',
-          message: `¿Eliminar el snapshot del ${formatDate(sn.date)}?`,
-          onConfirm: () => guardedOp(() => dataService.remove('netWorthSnapshots', sn.id), 'Snapshot eliminado'),
-        }) },
-      }),
-    ]));
+    const allSnaps = [...(s.netWorthSnapshots || [])].sort((a, b) => (a.date < b.date ? -1 : 1));
+    const visibleSnaps = showAllSnaps ? allSnaps : allSnaps.slice(-8);
+    const outliers = outlierIds(allSnaps);
+
+    const snapRows = visibleSnaps.map((sn) => {
+      const isOutlier = outliers.has(sn.id);
+      const chk = el('input', { type: 'checkbox', 'aria-label': `Seleccionar snapshot del ${formatDate(sn.date)}` });
+      chk.checked = selectedSnapIds.has(sn.id);
+      chk.addEventListener('change', () => {
+        if (chk.checked) selectedSnapIds.add(sn.id); else selectedSnapIds.delete(sn.id);
+        repaint();
+      });
+      return el('div', { class: 'row row--compact' }, [
+        el('label', { style: 'display:flex;align-items:center;padding:0 var(--space-2)' }, [chk]),
+        el('div', { class: 'row__main' }, [
+          el('div', { class: 'row__title' }, [
+            formatDate(sn.date, 'short'),
+            isOutlier ? el('span', { style: 'margin-left:var(--space-2)' }, [Badge('Dato atípico', 'warning')]) : null,
+          ].filter(Boolean)),
+        ]),
+        el('div', { class: `row__amount tabular ${sn.netWorth >= 0 ? '' : 'text-negative'}`, text: formatMoney(sn.netWorth, sn.currency || cur) }),
+        el('button', {
+          class: 'icon-btn icon-btn--danger', 'aria-label': 'Eliminar snapshot', title: 'Eliminar snapshot',
+          html: icon('trash'),
+          on: { click: () => confirmDialog({
+            title: 'Eliminar snapshot',
+            message: `¿Eliminar el snapshot del ${formatDate(sn.date)}?`,
+            onConfirm: () => guardedOp(() => dataService.remove('netWorthSnapshots', sn.id), 'Snapshot eliminado'),
+          }) },
+        }),
+      ].filter(Boolean));
+    });
+
+    const deleteSelectedBtn = selectedSnapIds.size > 0
+      ? Button(`Eliminar ${selectedSnapIds.size} seleccionado${selectedSnapIds.size > 1 ? 's' : ''}`, {
+          variant: 'ghost',
+          onClick: () => {
+            const ids = [...selectedSnapIds];
+            confirmDialog({
+              title: 'Eliminar snapshots',
+              message: `¿Eliminar ${ids.length} snapshot${ids.length > 1 ? 's' : ''} seleccionado${ids.length > 1 ? 's' : ''}?`,
+              onConfirm: async () => {
+                for (const id of ids) await dataService.remove('netWorthSnapshots', id);
+                selectedSnapIds.clear();
+                toast(`${ids.length} snapshot${ids.length > 1 ? 's' : ''} eliminado${ids.length > 1 ? 's' : ''}`, { type: 'positive' });
+              },
+            });
+          },
+        })
+      : null;
+
+    const showMoreBtn = allSnaps.length > 8
+      ? Button(showAllSnaps ? 'Ver menos' : `Ver todos (${allSnaps.length})`, {
+          variant: 'ghost',
+          onClick: () => { showAllSnaps = !showAllSnaps; repaint(); },
+        })
+      : null;
+
     const evolution = Card({
       title: 'Evolución del patrimonio',
       action: Button('Guardar snapshot', { variant: 'ghost', iconName: 'plus', onClick: doSaveSnapshot }),
-      body: snaps.length
+      body: allSnaps.length
         ? el('div', {}, [
-            BarChart(snaps.map((sn) => ({ label: formatDate(sn.date, 'short'), value: sn.netWorth }))),
+            BarChart(visibleSnaps.map((sn) => ({ label: formatDate(sn.date, 'short'), value: sn.netWorth })),
+              { valueFormat: (v) => formatMoney(v, cur, { compact: true }) }),
             el('div', { class: 'row-list', style: 'margin-top:var(--space-3)' }, snapRows),
-          ])
+            (deleteSelectedBtn || showMoreBtn)
+              ? el('div', { class: 'row-flex', style: 'gap:var(--space-2);padding:var(--space-2) 0 0' },
+                  [deleteSelectedBtn, showMoreBtn].filter(Boolean))
+              : null,
+          ].filter(Boolean))
         : EmptyState({ title: 'Sin histórico', message: 'Guarda un snapshot para empezar a registrar la evolución.', iconName: 'networth' }),
     });
 
