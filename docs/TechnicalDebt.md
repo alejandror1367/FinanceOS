@@ -71,20 +71,20 @@ La deuda se concentra en **tres temas de fondo**: (1) **modelo contable** (el le
 
 | ID | Problema | Origen | Impacto | Esfuerzo | Recomendación |
 |----|----------|--------|---------|----------|---------------|
-| TD-19 | **Duplicación del andamiaje CRUD** en ~11 vistas | I-1 | Un cambio de UX obliga a editar 11 archivos | L | Factorías `entityRow`/`crudModal`/`withErrorToast`. |
-| TD-20 | **Mapas paralelos `ENTITIES` y `WRITE`** | I-4 | Drift al añadir entidades | S | Fusionar acciones de escritura dentro de `ENTITIES`. |
-| TD-21 | **`formatMoney` fuerza 0 decimales** para todas las divisas | F-6 | Oculta centavos en USD/cripto; *penny rounding mismatch* | S | Decimales por divisa (0 COP, 2 USD, etc.). |
-| TD-22 | **Aritmética float para dinero** sin redondeo controlado | F-5 | Error acumulado en cripto/fracciones; umbrales sobre floats | M–L | Política de redondeo (centavos enteros / *half-even*) en la capa de cálculo. |
-| TD-23 | **Snowball/Avalanche solo ordenan** (sin amortización) | F-7 | "Estrategias" no accionables (sin meses/intereses) | M | Calcular cronograma de pago e intereses ahorrados. |
-| TD-24 | **`repoUpdate_` hace 2 escaneos** (findRowIndex + repoGet) | GAS-I2 | Doble O(n) por update | S | Leer la fila puntual con `getRange(rowIndex,...)`. |
-| TD-25 | **`getDataRange().getValues()` carga todo** + sin paginación real | GAS-I5 | Lecturas O(n) crecientes; `getTransactions` lee todo y hace slice | M | Lecturas por rango + paginación real. |
-| TD-26 | **Sin `batchWrite`** para la cola de sync | GAS-I6 | N invocaciones para N cambios offline | M | Acción `batchWrite` (array de ops en una ejecución). |
-| TD-27 | **Sin `LockService`** en escrituras | GAS-I3 | Carreras en multi-dispositivo / reintentos | S | `LockService.getScriptLock()` en mutaciones. |
-| TD-28 | **Soft-deletes nunca purgados** | GAS-I4 | Hojas crecen sin límite; lecturas más lentas | M | Compactación/archivado periódico. |
-| TD-29 | **Dos sistemas de icon-button** (`.icon-btn` 32 vs `.btn--icon` 38) | DS-I1 | Inconsistencia de tamaño/estado | S | Consolidar en uno con variantes. |
-| TD-30 | **Variantes KPI duplicadas** (`--emerald`≡`--positive`, `--accent`≡`--info`) | DS-I2 | CSS redundante | S | Eliminar duplicados. |
-| TD-31 | **Componentes del DS faltantes + botón "Buscar" muerto** | DS-I5 | Promesa de DS incompleta; control sin función | S (retirar botón) / L (implementar) | Retirar el botón muerto ya; planificar Search/Command Palette. |
-| TD-32 | **CSS hardcoded en `exports.js`** (PDF) | DS-I6 | Estilos fuera de tokens; sin dark mode | S | Documentar como *print stylesheet* intencional; derivar de tokens si crece. |
+| TD-19 ✅ | **Duplicación del andamiaje CRUD** en ~11 vistas | I-1 | Un cambio de UX obliga a editar 11 archivos | L | **HECHO** (`b7e2aa2`): `crud.js` con `guardedOp`/`guardedSave` — reemplaza 50+ bloques try/catch/toast en 10 vistas. |
+| TD-20 ✅ | **Mapas paralelos `ENTITIES` y `WRITE`** | I-4 | Drift al añadir entidades | S | **HECHO** (`b7e2aa2`): acciones de escritura (create/update/remove) fusionadas en `ENTITIES`; eliminado mapa `WRITE`. |
+| TD-21 ✅ | **`formatMoney` fuerza 0 decimales** para todas las divisas | F-6 | Oculta centavos en USD/cripto; *penny rounding mismatch* | S | **HECHO** (`b7e2aa2`): `CURRENCY_DECIMALS` en `format.js` — 0 COP, 2 USD/EUR, 8 BTC. |
+| TD-22 ✅ | **Aritmética float para dinero** sin redondeo controlado | F-5 | Error acumulado en cripto/fracciones; umbrales sobre floats | M–L | **HECHO** (`b7e2aa2`): `roundMoney(amount, currency)` en `format.js`; aplicado en `investmentsValue`/`investmentsCost`. |
+| TD-23 ✅ | **Snowball/Avalanche solo ordenan** (sin amortización) | F-7 | "Estrategias" no accionables (sin meses/intereses) | M | **HECHO** (Sprint 8 · `b7c0d4d`): `amortize()` en `debts.js` — cronograma mes a mes, intereses totales, fecha de cancelación. |
+| TD-24 ✅ | **`repoUpdate_` hace 2 escaneos** (findRowIndex + repoGet) | GAS-I2 | Doble O(n) por update | S | **HECHO** (`dd68141`): lee la fila con `getRange(rowIndex, 1, 1, nCols)` — 1 operación Sheets, elimina `repoGet_`. |
+| TD-25 ✅ | **`getDataRange().getValues()` carga todo** + sin paginación real | GAS-I5 | Lecturas O(n) crecientes; `getTransactions` lee todo y hace slice | M | **HECHO** (`dd68141`): `repoReadAll_` usa `getRange(2, 1, lastRow-1, nCols)` — salta cabecera, lee solo columnas del schema. |
+| TD-26 ✅ | **Sin `batchWrite`** para la cola de sync | GAS-I6 | N invocaciones para N cambios offline | M | **HECHO** (`dd68141`): acción `batchWrite` en backend; `syncEngine` agrupa ≥2 ops con fallback op-a-op. |
+| TD-27 ✅ | **Sin `LockService`** en escrituras | GAS-I3 | Carreras en multi-dispositivo / reintentos | S | **HECHO** (`dd68141`): `LockService.getScriptLock()` en `doPost` — exclusión mutua por ejecución. |
+| TD-28 ✅ | **Soft-deletes nunca purgados** | GAS-I4 | Hojas crecen sin límite; lecturas más lentas | M | **HECHO** (`dd68141`): `purgeDeleted_()` en `Utils.gs`; acción POST `purgeDeleted`; botón en Ajustes. |
+| TD-29 ✅ | **Dos sistemas de icon-button** (`.icon-btn` 32 vs `.btn--icon` 38) | DS-I1 | Inconsistencia de tamaño/estado | S | **HECHO** (`b7e2aa2`): `.icon-btn` unificado con `border`, `:focus-visible` y doc del sistema doble-tamaño. |
+| TD-30 ✅ | **Variantes KPI duplicadas** (`--emerald`≡`--positive`, `--accent`≡`--info`) | DS-I2 | CSS redundante | S | **HECHO** (`b7e2aa2`): kpi--emerald y kpi--info unificados en reglas combinadas con alias CSS. |
+| TD-31 ✅ | **Componentes del DS faltantes + botón "Buscar" muerto** | DS-I5 | Promesa de DS incompleta; control sin función | S (retirar botón) / L (implementar) | **VERIFICADO**: el botón muerto no existe en el código actual (el search es live-filter input en transacciones). |
+| TD-32 ✅ | **CSS hardcoded en `exports.js`** (PDF) | DS-I6 | Estilos fuera de tokens; sin dark mode | S | **HECHO** (`dd68141`): documentado como *print stylesheet* intencional en comentario en `exports.js`. |
 
 ---
 

@@ -44,6 +44,9 @@ function exportBackup() {
 }
 
 // ---------- Reportes imprimibles ----------
+// TD-32: estilos inline intencionales — esto es una print stylesheet para documentos PDF
+// generados con window.print(). No usa tokens del DS porque el HTML se renderiza fuera
+// del DOM de la app (en #print-area) y debe ser autónomo para el diálogo de impresión.
 const reportStyles = `
   <style>
     .rep { font-family: Inter, system-ui, sans-serif; color:#111; max-width:720px; margin:0 auto; }

@@ -588,79 +588,69 @@ Transacciones completas — agrupación fecha, filtros mes/categoría, totales, 
 - **Sprint 10c** (`08d0da9` · v0.2.26): Dividendos → transacción de ingreso real. Botón "Dividendo"
   en positionCard. `recentTransactions` con tiebreaker estable por createdAt/id.
 
+**Sprints P2 completados (2026-06-02, sesión autonomous):**
+
+- **TD-19** (`b7e2aa2` · v0.2.27): `crud.js` — `guardedOp`/`guardedSave` reemplazan 50+ bloques try/catch/toast en 10 vistas.
+- **TD-20** (`b7e2aa2`): mapa `WRITE` eliminado; acciones de escritura fusionadas en `ENTITIES`.
+- **TD-21** (`b7e2aa2`): `CURRENCY_DECIMALS` en `format.js` — 0 COP, 2 USD/EUR, 8 BTC.
+- **TD-22** (`b7e2aa2`): `roundMoney()` en `format.js`; aplicado en `investmentsValue`/`investmentsCost`.
+- **TD-23**: ya completado en Sprint 8 (`b7c0d4d`).
+- **TD-24** (`dd68141` · v0.2.28): `repoUpdate_` lee fila directamente — elimina 2º O(n).
+- **TD-25** (`dd68141`): `repoReadAll_` usa rango explícito — salta cabecera, lee solo schema cols.
+- **TD-26** (`dd68141`): `batchWrite` backend + `syncEngine` agrupa ≥2 ops.
+- **TD-27** (`dd68141`): `LockService.getScriptLock()` en `doPost`.
+- **TD-28** (`dd68141`): `purgeDeleted_()` + acción POST + botón en Ajustes.
+- **TD-29** (`b7e2aa2`): `.icon-btn` con focus-visible y doc del sistema doble-tamaño.
+- **TD-30** (`b7e2aa2`): kpi--emerald/info unificados como aliases CSS.
+- **TD-31**: verificado — no existía botón muerto; search es live-filter.
+- **TD-32** (`dd68141`): `exports.js` CSS documentado como print stylesheet intencional.
+
 **Estado actual HEAD:**
 ```
-commit: 08d0da9 · rama: main · SW: v0.2.26 · tests: 45/45
+commit: dd68141 · rama: main · SW: v0.2.28 · tests: 45/45
 ```
 
-**Pendiente (P2 en TechnicalDebt.md):**
-1. TD-19: Factorías CRUD (11 vistas con andamiaje duplicado) — L
-2. TD-22: Aritmética float sin redondeo controlado — M
-3. TD-24/25: Backend lecturas O(n) + paginación real — M
-4. TD-27: LockService en escrituras Apps Script — S
-5. TD-28: Purga de soft-deletes — M
+**Toda la deuda P2 completada. Quedan solo P3 (mejoras incrementales, ver TechnicalDebt.md).**
 
 ---
 
-## 19. Reinicio de Claude Code + prompt de nueva sesión
-
-**Por qué reiniciar:** en la sesión 2026-06-02 (tarde) el MCP de Playwright conectaba
-(`claude mcp list` → ✓) pero sus tools `browser_*` **no se cargaron** en la sesión (la lista
-de tools MCP se congela al arrancar Claude Code; un sondeo JSON-RPC directo confirmó que el
-servidor expone 23 tools y está sano). Para poder hacer la **verificación visual en vivo**
-hay que **cerrar y reabrir Claude Code** y que re-enumere los MCP al arrancar.
-
-**Pasos:**
-1. Cierra y reabre Claude Code en `C:\Users\Usuario\FinanceOS`.
-2. Verifica: `claude mcp list` → `github ✓, playwright ✓, context7 ✓`, y que las tools
-   `mcp__plugin_playwright_playwright__browser_*` ya estén disponibles.
-3. Pega el prompt de abajo.
+## 19. Prompt de nueva sesión
 
 Copia este prompt al iniciar la nueva sesión:
 
 ---
 
 ```
-Lee PROJECT_HANDOFF.md (sección §14d para lo último) y CLAUDE.md antes de cualquier cambio.
+Lee PROJECT_HANDOFF.md (§18 para lo último) y CLAUDE.md antes de cualquier cambio.
 
 PROYECTO: FinanceOS — PWA financiera personal y privada de Alejo.
 Repo: https://github.com/alejandror1367/FinanceOS (rama main). Prod: https://alejandror1367.github.io/FinanceOS/
-HEAD: b870d6c · SW v0.2.13 · Tests 39/39 (node --test tests/selectors.test.js).
+HEAD: dd68141 · SW v0.2.28 · Tests 45/45 (node --test tests/selectors.test.js).
 
 INVARIANTES (ver CLAUDE.md): JS ES Modules sin build step en lo servido · sin frameworks/
 bundlers · cero deps npm en runtime · frontend abstraído tras src/services/ · Apps Script +
-Google Sheets (13 hojas) + GitHub Pages + OAuth de Google · offline-first. Se PERMITE como
-tooling de dev: Node/tests, Playwright, JSDoc + tsc --checkJs --noEmit.
+Google Sheets (13 hojas) + GitHub Pages + OAuth de Google · offline-first.
 
-HECHO Y DESPLEGADO: roadmap 0–12 · P0 completa · backend de saldos (TD-01) + getBootstrap
-(TD-15) en producción · P1 cerrada salvo TD-18. Última sesión (b870d6c):
-- TD-10 dead-letter en syncEngine (sin head-of-line; Ajustes → Reintentar/Descartar).
-- TD-13/TD-14 (flush antes de pull + escritura atómica dato+cola).
-- Deudas rediseñado: selectors debtList/debtStats/creditCardDebt; deuda total incluye
-  tarjetas; cuota mínima = suma de pagos mínimos; tasa promedio toma tarjetas+créditos;
-  abono = transferencia banco→tarjeta (debt settlement); plan Snowball/Avalanche unificado.
+HECHO Y DESPLEGADO: roadmap 0–12 · toda la deuda P0, P1 y P2 completada. Sesión 2026-06-02:
+- P2 completa: TD-19 (crud.js guardedOp/guardedSave), TD-20 (ENTITIES+WRITE fusionados),
+  TD-21 (CURRENCY_DECIMALS), TD-22 (roundMoney), TD-24/25 (backend reads explícitos),
+  TD-26 (batchWrite), TD-27 (LockService), TD-28 (purgeDeleted), TD-29/30/31/32 (CSS/DS).
+- Backend a desplegar: Code.gs (batchWrite, purgeDeleted, LockService), Utils.gs
+  (repoUpdate_ rápido, repoReadAll_ con rango explícito, purgeDeleted_).
 
 PENDIENTE — EMPEZAR POR AQUÍ:
-1. VERIFICACIÓN VISUAL EN VIVO con Playwright (ya disponible tras el reinicio). Levanta
-   `npx serve .` (:3000), inyecta el JWT de prueba + datos en IndexedDB (ver memoria
-   reference-playwright-auth-test) y comprueba SIN login real:
-   - DEUDAS: agrega/edita una tarjeta de crédito como CUENTA (saldo negativo) y confirma
-     que "Deuda total", "Cuota mínima/mes" y "Tasa promedio" la incluyen; que el botón
-     "Abonar" de la tarjeta abre una transferencia banco→tarjeta y que tras guardarla baja
-     la deuda; que un crédito/hipoteca (Liability) aparece en el plan y su "Abonar" reduce
-     el saldo. Plan Snowball/Avalanche reordena bien.
-   - PRESUPUESTOS: período legible ("May 2026") y consumido > $0 con datos reales.
-   - Limpia siempre el token de prueba y SOLO las filas de prueba al terminar.
-   El happy-path autenticado REAL (con datos de producción) lo confirma Alejo tras login.
-2. TD-18 (único P1): aumentar área/separación de .icon-btn en táctil (WCAG 2.5.8).
-3. Pendiente menor: alinear src/core/config.js `version` ('0.2.6') con el SW (v0.2.13).
-4. Bugs medios: BUG-M1 (auto-load precios), BUG-M2 (purgar snapshots de test en Sheets),
-   BUG-M3 (FX rate), BUG-M4 (dashboard con snapshots reales).
-5. P2 (docs/TechnicalDebt.md): TD-19 factorías CRUD, TD-21/22 precisión monetaria,
-   TD-23 amortización real Snowball/Avalanche, TD-24/25/27/28 backend.
+1. DESPLEGAR BACKEND: abrir script.google.com → proyecto FinanceOS → subir
+   backend/Code.gs y backend/Utils.gs → Implementar → Nueva versión.
+2. VERIFICACIÓN en producción: login con patitosalmir@gmail.com, verificar que
+   Ajustes → "Purgar eliminados" aparece y funciona; crear/editar/eliminar una
+   cuenta y verificar que el backend confirma sin error.
+3. P3 (opcional): TD-33–TD-40 son mejoras incrementales sin impacto en funcionalidad
+   (ver docs/TechnicalDebt.md). Abordar solo si hay un caso concreto.
 
-CAVEAT de datos: si una tarjeta se registra a la vez como cuenta credit_card Y como
-Liability credit_card, se cuenta en ambas (consistente con BUG-A4). Llevarla solo como cuenta.
+CAVEAT: backend Code.gs y Utils.gs tienen cambios no desplegados (batchWrite, LockService,
+purgeDeleted_, repoUpdate_ optimizado). El frontend ya usa la nueva API — fallará
+limpiamente si el backend es viejo (la acción batchWrite no existe → syncEngine hace
+fallback a op-a-op automáticamente).
 
 FORMA DE TRABAJO: fases pequeñas y verificables · explicar qué/por qué · correr tests ·
 commits descriptivos (el pre-commit hook auto-bumpea el SW) · docs en commit docs(...) aparte.
