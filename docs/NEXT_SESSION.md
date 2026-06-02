@@ -1,0 +1,66 @@
+# NEXT_SESSION.md — prompt de continuación
+
+> Pega el bloque siguiente al inicio de una nueva sesión de Claude Code.
+> Generado tras la sesión del 2026-06-02 (HEAD `133d999`).
+
+```text
+Proyecto: FinanceOS — PWA financiera personal y privada de Alejo.
+Repo: https://github.com/alejandror1367/FinanceOS (rama main)
+Producción: https://alejandror1367.github.io/FinanceOS/
+
+LEE PRIMERO (en este orden):
+- CLAUDE.md → reglas, principios e invariantes (recién modernizado; NO son
+  "prohibiciones de marca": son principios + invariantes. Frontend = Vanilla JS
+  sin build step en el artefacto servido; se permite JSDoc + tsc --checkJs --noEmit,
+  Node/Playwright/MCPs como tooling de dev. Apps Script + Sheets + GitHub Pages
+  siguen siendo el stack recomendado.)
+- PROJECT_HANDOFF.md → estado real, arquitectura, pendientes (fuente de verdad del estado)
+- docs/TechnicalDebt.md → deuda priorizada P1→P3
+
+STACK (no romper invariantes): HTML+CSS+JS ES Modules sin build · Apps Script ·
+Google Sheets (13 hojas) · GitHub Pages · OAuth de Google (no token) · PWA offline-first.
+Tests: node --test tests/selectors.test.js (deben pasar). Local: npx serve . → :3000.
+
+HECHO EN LA SESIÓN ANTERIOR (2026-06-02), todo commiteado y pusheado, HEAD = 133d999:
+1. Fixes de bugs (8d8d4d9), verificados en el código servido en producción:
+   - BUG-C2: fecha cruda en Presupuestos → parsePeriodKey() en src/views/budgets.js
+   - BUG-A1/TD-12: consumido $0 → normPeriodKey() + sameMonth() en src/store/selectors.js
+     (causa raíz: Sheets auto-convierte 'YYYY-MM' a Date)
+   - BUG-A3/TD-31: botón "Buscar" muerto eliminado de src/components/shell.js
+   - BUG-B1: version '0.2.6' en src/core/config.js
+   - TD-11 ya estaba corregido en el código. SW auto-bumpeado a v0.2.7.
+2. Documentación alineada al modelo OAuth y estado real:
+   - CLAUDE.md modernizado (3edb886)
+   - README.md + DEPLOY.md a OAuth (ef9bf44)
+   - backend/README.md a OAuth + 13 hojas + archivos/acciones reales; docs/SessionState.md
+     marcado SUPERADO (0ecee9b)
+   - docs/Architecture.md: regla de TypeScript alineada (929b62f)
+3. Entorno de desarrollo:
+   - MCPs: playwright ✓, context7 ✓ (ambos scope project). github MCP requiere
+     GITHUB_PERSONAL_ACCESS_TOKEN: YA está definida con setx (variable de usuario);
+     si github MCP sigue ✗ en `claude mcp list`, falta reiniciar Claude Code para que
+     el proceso la lea.
+   - 3 skills propias creadas y commiteadas en .claude/skills/ (133d999):
+     performance-auditor, frontend-auditor, documentation-generator.
+
+PENDIENTE (no abordado aún):
+- VERIFICAR EN VIVO (requiere login OAuth) que Presupuestos ahora muestra "May 2026"
+  y consumido > $0. Hoy solo se verificó el código servido, no con datos reales tras login.
+- ⚠️ BACKEND Apps Script sin actualizar: subir Accounts.gs, Transactions.gs, Code.gs,
+  Auth.gs, Migration.gs → publicar Nueva versión → Ajustes → Recalcular saldos
+  (modelo híbrido de saldos, TD-01). Hasta entonces las transacciones no mueven saldos en Sheets.
+- ⚠️ Confirmar que el bypass de auditoría fue eliminado de Auth.gs en Apps Script.
+- BUG-C1 (crítico): cold start — los 12 pulls fallan con "No autorizado" hasta dar
+  "Actualizar". Investigar race condition en src/core/app.js / apiClient.js.
+- BUG-A4 (alto): Deudas — KPI "Tarjetas de crédito" en $0 (consolidar credit_card + Liabilities).
+- P1 restante: TD-15 (getBootstrap, 12→1 request), TD-13, TD-14, TD-10, TD-16, TD-17, TD-18.
+- Bugs medios: BUG-M1 (auto-load precios), BUG-M2 (purgar snapshots de test en Sheets),
+  BUG-M3 (FX rate), BUG-M4 (dashboard usa snapshots reales).
+
+FORMA DE TRABAJO: fases pequeñas y verificables · explicar qué/por qué · correr tests ·
+commits descriptivos (el pre-commit hook auto-bumpea el SW) · cada cambio de docs en su
+propio commit docs(...). Confirmar antes de push.
+
+Empieza confirmando el estado: git log --oneline -6, git status, y `claude mcp list`
+(para ver si github MCP ya conecta tras el reinicio). Luego dime por dónde seguimos.
+```
