@@ -15,8 +15,13 @@ import { priceService } from '../services/priceService.js';
 
 // Brokers predefinidos que aparecen como quick-create si no existen como cuenta
 const DEFAULT_BROKERS = [
-  { name: 'XTB',        type: 'investment', currency: 'USD' },
-  { name: 'ARQ Invest', type: 'investment', currency: 'COP' },
+  { name: 'XTB',                  type: 'investment', currency: 'USD' },
+  { name: 'ARQ Invest',           type: 'investment', currency: 'COP' },
+  { name: 'Trii',                 type: 'investment', currency: 'COP' },
+  { name: 'Tyba',                 type: 'investment', currency: 'COP' },
+  { name: 'Interactive Brokers',  type: 'investment', currency: 'USD' },
+  { name: 'Trading212',           type: 'investment', currency: 'USD' },
+  { name: 'Bancolombia Valores',  type: 'investment', currency: 'COP' },
 ];
 
 const ASSET_TYPES = [
@@ -38,6 +43,17 @@ const typeLabel  = (v) => (ASSET_TYPES.find((t) => t.value === v) || {}).label |
 const pctFmt     = (n) => `${n >= 0 ? '+' : ''}${Number(n).toFixed(2)}%`;
 const today      = () => new Date().toISOString().slice(0, 10);
 const isTrivial  = (t) => ['cdt', 'fund'].includes(t);
+// Formatea montos con 2 decimales para divisas extranjeras (USD, EUR…) y 0 para COP.
+const fmtI       = (amount, currency) => formatMoney(amount, currency, currency && currency !== 'COP' ? { decimals: 2 } : {});
+
+function priceAgeLabel() {
+  const t = priceService.fetchedAt;
+  if (!t) return null;
+  const mins = Math.round((Date.now() - t) / 60000);
+  if (mins < 1) return 'precios: ahora';
+  if (mins < 60) return `precios: hace ${mins} min`;
+  return `precios: hace ${Math.round(mins / 60)}h`;
+}
 
 // ─── DCA: agrupar compras individuales por ticker ──────────────────────────
 function groupByTicker(investments) {
@@ -225,13 +241,22 @@ function purchasesTable(group, livePrice) {
     const pnlPct   = pnl !== null && costBasis ? pnl / costBasis * 100 : null;
 
     const tr = el('tr', {});
-    tr.appendChild(el('td', {}, [p.purchaseDate || '—']));
+    tr.appendChild(el('td', {}, [p.purchaseDate ? String(p.purchaseDate).slice(0, 10) : '—']));
     tr.appendChild(el('td', { class: 'text-right tabular' }, [qty % 1 === 0 ? String(qty) : qty.toFixed(6).replace(/0+$/, '')]));
-    tr.appendChild(el('td', { class: 'text-right tabular' }, [formatMoney(buyPrice, currency)]));
-    tr.appendChild(el('td', { class: 'text-right tabular' }, [formatMoney(costBasis, currency)]));
+    tr.appendChild(el('td', { class: 'text-right tabular' }, [fmtI(buyPrice, currency)]));
+    tr.appendChild(el('td', { class: 'text-right tabular' }, [fmtI(costBasis, currency)]));
 
     const pnlTd = el('td', { class: `text-right tabular ${pnl === null ? '' : pnl >= 0 ? 'text-positive' : 'text-negative'}` });
-    pnlTd.textContent = pnl === null ? '—' : `${pnl >= 0 ? '+' : ''}${pnlPct !== null ? pnlPct.toFixed(1) + '%' : ''}`;
+    if (pnl === null) {
+      pnlTd.textContent = '—';
+    } else {
+      const sign = pnl >= 0 ? '+' : '';
+      pnlTd.append(
+        el('span', { text: pnlPct !== null ? `${sign}${pnlPct.toFixed(1)}%` : '' }),
+        el('br'),
+        el('span', { class: 't-caption', text: `${sign}${fmtI(Math.abs(pnl), currency)}` }),
+      );
+    }
     tr.appendChild(pnlTd);
 
     const actionsTd = el('td', { class: 'inv-purchases-actions' });
@@ -306,11 +331,11 @@ function positionCard(group, livePrice, fxRates, baseCur) {
 
   if (!isTrivial(assetType)) {
     metrics.appendChild(m('Shares totales', totalQty % 1 === 0 ? String(totalQty) : totalQty.toFixed(6).replace(/0+$/, '')));
-    metrics.appendChild(m('Cost basis (avg)', formatMoney(weightedAvg, currency)));
-    if (hasPrice && livePrice?.price) metrics.appendChild(m('Precio actual', formatMoney(livePrice.price, currency)));
+    metrics.appendChild(m('Cost basis (avg)', fmtI(weightedAvg, currency)));
+    if (hasPrice && livePrice?.price) metrics.appendChild(m('Precio actual', fmtI(livePrice.price, currency)));
     if (purchases.length > 1) metrics.appendChild(m('Compras (DCA)', `${purchases.length} ops.`));
   }
-  metrics.appendChild(m('Total invertido', formatMoney(totalCost, currency)));
+  metrics.appendChild(m('Total invertido', fmtI(totalCost, currency)));
   if (hasPrice && nativeValue !== null) {
     const copVal = toCOP(nativeValue, currency, fxRates);
     if (copVal !== null && currency !== 'COP') metrics.appendChild(m('≈ en COP', formatMoney(copVal, 'COP')));
@@ -514,21 +539,28 @@ export function renderInvestments() {
     mount(bodyMount, wrap);
   }
 
-  root.append(
-    el('div', { class: 'page-header' }, [
+  const headerEl = el('div', { class: 'page-header' });
+  function paintHeader() {
+    const ageLabel = priceAgeLabel();
+    mount(headerEl,
       el('div', { class: 'row-flex between' }, [
         el('div', {}, [
           el('h2', { class: 't-h1', text: 'Inversiones' }),
-          el('p', { class: 'page-header__sub', text: 'DCA · Cost basis · Multimoneda' }),
+          el('p', { class: 'page-header__sub' }, [
+            'DCA · Cost basis · Multimoneda',
+            ageLabel ? el('span', { class: 't-caption text-tertiary', style: 'margin-left:var(--space-3)', text: ageLabel }) : null,
+          ].filter(Boolean)),
         ]),
         el('div', { class: 'row-flex', style: 'gap:var(--space-2)' }, [
-          Button(refreshing ? 'Actualizando…' : 'Actualizar precios', { variant: 'outline', iconName: 'refresh', onClick: refreshPrices }),
+          Button(refreshing ? 'Actualizando…' : 'Actualizar precios', { variant: 'outline', iconName: 'refresh', onClick: async () => { await refreshPrices(); paintHeader(); } }),
           Button('Nueva inversión', { variant: 'primary', iconName: 'plus', onClick: () => openPurchaseModal({ defaultType: 'etf' }) }),
         ]),
-      ]),
-    ]),
-    bodyMount,
-  );
+      ])
+    );
+  }
+  paintHeader();
+
+  root.append(headerEl, bodyMount);
 
   // Guard: si bodyMount ya no está en el DOM (render anterior), ignorar cambios del store.
   store.subscribe(() => { if (bodyMount.isConnected) paint(); });

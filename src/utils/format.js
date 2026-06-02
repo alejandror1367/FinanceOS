@@ -5,11 +5,13 @@ const DEFAULT_LOCALE = 'es-CO';
 
 export function formatMoney(amount, currency = DEFAULT_CURRENCY, opts = {}) {
   const value = Number(amount) || 0;
-  const { compact = false, signed = false } = opts;
+  const { compact = false, signed = false, decimals } = opts;
+  const maxFrac = decimals !== undefined ? decimals : compact ? 1 : 0;
   const nf = new Intl.NumberFormat(DEFAULT_LOCALE, {
     style: 'currency',
     currency,
-    maximumFractionDigits: compact ? 1 : 0,
+    minimumFractionDigits: decimals !== undefined ? decimals : 0,
+    maximumFractionDigits: maxFrac,
     notation: compact ? 'compact' : 'standard',
   });
   const formatted = nf.format(Math.abs(value));

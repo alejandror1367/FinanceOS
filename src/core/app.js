@@ -14,6 +14,8 @@ import { Sidebar, Topbar, BottomNav, SyncPill } from '../components/shell.js';
 import { SkeletonKpis } from '../components/ui.js';
 import { el, mount } from '../utils/dom.js';
 import { toast } from '../services/toast.js';
+import { priceService } from '../services/priceService.js';
+import { apiClient } from '../services/apiClient.js';
 
 const appRoot = document.getElementById('app');
 let router;
@@ -103,6 +105,27 @@ function renderView(route, opts = {}) {
   }
 }
 
+// --- Precios en vivo: refresh silencioso al arrancar ---
+// Evita que el Dashboard muestre $0 en Inversiones en cold-start.
+async function backgroundRefreshPrices() {
+  if (!CONFIG.api.baseUrl || !priceService.isStale) return;
+  const invs = store.get().investments || [];
+  const syms = [...new Set(
+    invs.filter((i) => !i.isDeleted && i.symbol && !['cdt', 'fund'].includes(i.assetType))
+      .map((i) => i.symbol.toUpperCase()),
+  )];
+  if (!syms.length) return;
+  try {
+    const tickers = [...syms, 'USDCOP=X', 'EURCOP=X'].join(',');
+    const quotes = await apiClient.get('getQuotes', { tickers });
+    const prices = {}; const fx = {};
+    Object.entries(quotes || {}).forEach(([k, q]) => { if (q && !q.error) prices[k] = q; });
+    ['USD', 'EUR', 'GBP', 'BRL'].forEach((c) => { if (prices[`${c}COP=X`]?.price) fx[c] = prices[`${c}COP=X`].price; });
+    priceService.update(prices, fx);
+    store.set({ _priceRevision: Date.now() });
+  } catch (_) {}
+}
+
 // --- Service Worker (PWA offline-first) ---
 async function registerSW() {
   if (!('serviceWorker' in navigator)) return;
@@ -176,6 +199,7 @@ async function bootstrap() {
 
   // Cargar datos (mock local o backend) e iniciar el motor de sync.
   const { source } = await dataService.init();
+  backgroundRefreshPrices(); // no-await: background, no bloquea el arranque
 
   // Router.
   router = createRouter({

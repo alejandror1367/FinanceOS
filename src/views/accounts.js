@@ -45,6 +45,12 @@ const PRESETS = [
   { label: 'RappiCard',         type: 'credit_card',    institution: 'Rappi',       currency: 'COP' },
   { label: 'XTB',               type: 'investment',     institution: 'XTB',         currency: 'USD' },
   { label: 'Tyba',              type: 'investment',     institution: 'Tyba',        currency: 'COP' },
+  { label: 'Trii',              type: 'investment',     institution: 'Trii',        currency: 'COP' },
+  { label: 'Interactive Brokers', type: 'investment',   institution: 'IBKR',        currency: 'USD' },
+  { label: 'Trading212',        type: 'investment',     institution: 'Trading212',  currency: 'USD' },
+  { label: 'Bcolombia Valores', type: 'investment',     institution: 'Bancolombia', currency: 'COP' },
+  { label: 'Finandina',         type: 'bank',           institution: 'Finandina',   currency: 'COP' },
+  { label: 'RappiPay',          type: 'digital_wallet', institution: 'Rappi',       currency: 'COP' },
 ];
 
 // Utilización de cupo para tarjetas (balance negativo = deuda).
