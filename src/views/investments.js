@@ -60,16 +60,19 @@ function cdtCurrentValue(group) {
 
 function groupValue(group, livePrices) {
   const { assetType, totalQty, totalCost, symbol } = group;
-  if (assetType === 'cdt') return { value: cdtCurrentValue(group), cost: totalCost };
+  if (assetType === 'cdt') return { value: cdtCurrentValue(group), cost: totalCost, hasPrice: true };
   if (assetType === 'fund') {
     const latest = group.sorted[0];
-    return { value: latest?.currentValue || totalCost, cost: totalCost };
+    const v = latest?.currentValue || 0;
+    return { value: v || null, cost: totalCost, hasPrice: !!v };
   }
   const lp = livePrices[(symbol || '').toUpperCase()];
-  return { value: totalQty * (lp?.price || group.storedPrice || 0), cost: totalCost };
+  const price = lp?.price || group.storedPrice || 0;
+  return { value: price ? totalQty * price : null, cost: totalCost, hasPrice: !!price };
 }
 
 function toCOP(amount, currency, fxRates) {
+  if (amount === null || amount === undefined) return null;
   if (!currency || currency === 'COP') return amount;
   const r = fxRates[currency];
   return r ? amount * r : null;
@@ -173,61 +176,61 @@ function openPurchaseModal({ inv = null, defaultSymbol = '', defaultType = 'etf'
   });
 }
 
-// ─── Tabla de compras individuales (expandible por grupo) ──────────────────
-function purchasesTable(group, livePrice, cur) {
-  const wrap = el('div', { class: 'inv-purchases' });
-  const header = el('div', { class: 'inv-purchases__head' }, [
-    el('span', { class: 'inv-purchases__col', text: 'Fecha' }),
-    el('span', { class: 'inv-purchases__col', text: 'Cantidad' }),
-    el('span', { class: 'inv-purchases__col', text: 'Precio compra' }),
-    el('span', { class: 'inv-purchases__col', text: 'Costo total' }),
-    el('span', { class: 'inv-purchases__col', text: 'Valor actual' }),
-    el('span', { class: 'inv-purchases__col text-right', text: 'P&L' }),
-    el('span', { class: 'inv-purchases__col' }),
-  ]);
-  wrap.appendChild(header);
+// ─── Tabla de compras individuales (compacta, scroll horizontal) ───────────
+function purchasesTable(group, livePrice) {
+  const currency = group.currency || 'USD';
+  const tableWrap = el('div', { class: 'inv-purchases-wrap' });
+  const tbl = el('table', { class: 'inv-purchases-tbl' });
 
-  const currency = group.currency || cur;
+  tbl.appendChild(el('thead', {}, [el('tr', {}, [
+    el('th', {}, ['Fecha']),
+    el('th', { class: 'text-right' }, ['Cant.']),
+    el('th', { class: 'text-right' }, ['P. compra']),
+    el('th', { class: 'text-right' }, ['Invertido']),
+    el('th', { class: 'text-right' }, ['P&L']),
+    el('th', {}),
+  ])]));
+
+  const tbody = el('tbody');
   group.sorted.forEach((p) => {
-    const qty = Number(p.quantity) || 0;
-    const boughtAt = Number(p.purchasePrice || p.avgCost) || 0;
-    const costBasis = qty * boughtAt;
-    const currentP = livePrice?.price || Number(p.currentPrice) || 0;
-    const currentVal = qty * currentP;
-    const pnl = currentVal - costBasis;
-    const pnlPct = costBasis ? pnl / costBasis * 100 : 0;
+    const qty      = Number(p.quantity) || 0;
+    const buyPrice = Number(p.purchasePrice || p.avgCost) || 0;
+    const costBasis = qty * buyPrice;
+    const liveP    = livePrice?.price || 0;
+    const pnl      = liveP ? qty * liveP - costBasis : null;
+    const pnlPct   = pnl !== null && costBasis ? pnl / costBasis * 100 : null;
 
-    const row = el('div', { class: 'inv-purchases__row' });
-    row.appendChild(el('span', { class: 'inv-purchases__col tabular', text: p.purchaseDate || '—' }));
-    row.appendChild(el('span', { class: 'inv-purchases__col tabular', text: qty % 1 === 0 ? String(qty) : qty.toFixed(4) }));
-    row.appendChild(el('span', { class: 'inv-purchases__col tabular', text: formatMoney(boughtAt, currency) }));
-    row.appendChild(el('span', { class: 'inv-purchases__col tabular', text: formatMoney(costBasis, currency) }));
-    row.appendChild(el('span', { class: 'inv-purchases__col tabular', text: currentP ? formatMoney(currentVal, currency) : '—' }));
-    const pnlEl = el('span', { class: `inv-purchases__col tabular text-right ${pnl >= 0 ? 'text-positive' : 'text-negative'}` });
-    pnlEl.textContent = currentP ? `${pnl >= 0 ? '+' : ''}${formatMoney(pnl, currency)}` : '—';
-    row.appendChild(pnlEl);
+    const tr = el('tr', {});
+    tr.appendChild(el('td', {}, [p.purchaseDate || '—']));
+    tr.appendChild(el('td', { class: 'text-right tabular' }, [qty % 1 === 0 ? String(qty) : qty.toFixed(6).replace(/0+$/, '')]));
+    tr.appendChild(el('td', { class: 'text-right tabular' }, [formatMoney(buyPrice, currency)]));
+    tr.appendChild(el('td', { class: 'text-right tabular' }, [formatMoney(costBasis, currency)]));
 
-    const actions = el('span', { class: 'inv-purchases__col inv-purchases__actions' });
-    actions.appendChild(el('button', { class: 'icon-btn', title: 'Editar',
+    const pnlTd = el('td', { class: `text-right tabular ${pnl === null ? '' : pnl >= 0 ? 'text-positive' : 'text-negative'}` });
+    pnlTd.textContent = pnl === null ? '—' : `${pnl >= 0 ? '+' : ''}${pnlPct !== null ? pnlPct.toFixed(1) + '%' : ''}`;
+    tr.appendChild(pnlTd);
+
+    const actionsTd = el('td', { class: 'inv-purchases-actions' });
+    actionsTd.appendChild(el('button', { class: 'icon-btn', title: 'Editar',
       on: { click: () => openPurchaseModal({ inv: p }) }, html: icon('edit') }));
-    actions.appendChild(el('button', { class: 'icon-btn icon-btn--danger', title: 'Eliminar',
+    actionsTd.appendChild(el('button', { class: 'icon-btn icon-btn--danger', title: 'Eliminar',
       on: { click: () => confirmDialog({ title: 'Eliminar compra', message: `¿Eliminar compra del ${p.purchaseDate}?`,
         onConfirm: async () => { try { await dataService.remove('investments', p.id); toast('Eliminado'); } catch(e) { toast('Error', { type: 'negative' }); } }
       }) }, html: icon('trash') }));
-    row.appendChild(actions);
-    wrap.appendChild(row);
+    tr.appendChild(actionsTd);
+    tbody.appendChild(tr);
   });
-  return wrap;
+  tbl.appendChild(tbody);
+  tableWrap.appendChild(tbl);
+  return tableWrap;
 }
 
 // ─── Card de posición agrupada ─────────────────────────────────────────────
 function positionCard(group, livePrice, fxRates, baseCur) {
   const { symbol, name, assetType, totalQty, totalCost, weightedAvg, currency, purchases } = group;
-  const { value: nativeValue } = groupValue(group, { [(symbol || '').toUpperCase()]: livePrice });
-  const gain = nativeValue - totalCost;
-  const gainPct = totalCost ? gain / totalCost * 100 : 0;
-  const isPos = gain >= 0;
-  const currentPrice = livePrice?.price || group.storedPrice || 0;
+  const { value: nativeValue, hasPrice } = groupValue(group, { [(symbol || '').toUpperCase()]: livePrice });
+  const gain    = hasPrice && nativeValue !== null ? nativeValue - totalCost : null;
+  const gainPct = gain !== null && totalCost ? gain / totalCost * 100 : null;
 
   let expanded = false;
   const toggleWrap = el('div');
@@ -235,12 +238,12 @@ function positionCard(group, livePrice, fxRates, baseCur) {
   function renderPurchases() {
     toggleWrap.replaceChildren();
     if (!expanded || isTrivial(assetType)) return;
-    toggleWrap.appendChild(purchasesTable(group, livePrice, baseCur));
+    toggleWrap.appendChild(purchasesTable(group, livePrice));
   }
 
   const card = el('div', { class: 'inv-card' });
 
-  // Header: ticker + nombre + tipo + moneda
+  // ── Header ──
   const head = el('div', { class: 'inv-card__head' });
   const titleWrap = el('div', { class: 'inv-card__title-wrap' });
   if (symbol) titleWrap.appendChild(el('span', { class: 'inv-card__ticker' }, [symbol]));
@@ -250,17 +253,25 @@ function positionCard(group, livePrice, fxRates, baseCur) {
   head.appendChild(titleWrap);
 
   const valWrap = el('div', { class: 'inv-card__value-wrap' });
-  valWrap.appendChild(el('div', { class: 'inv-card__value tabular' }, [formatMoney(nativeValue, currency)]));
-  const gainEl = el('div', { class: `inv-card__gain ${isPos ? 'text-positive' : 'text-negative'}` });
-  gainEl.textContent = `${isPos ? '+' : ''}${formatMoney(gain, currency)}  ${pctFmt(gainPct)}`;
-  valWrap.appendChild(gainEl);
-  if (livePrice?.changePct !== undefined) {
-    valWrap.appendChild(el('div', { class: `t-caption ${livePrice.changePct >= 0 ? 'text-positive' : 'text-negative'}` }, [`Hoy: ${pctFmt(livePrice.changePct)}`]));
+  if (hasPrice && nativeValue !== null) {
+    valWrap.appendChild(el('div', { class: 'inv-card__value tabular' }, [formatMoney(nativeValue, currency)]));
+    if (gain !== null) {
+      const isPos = gain >= 0;
+      valWrap.appendChild(el('div', { class: `inv-card__gain ${isPos ? 'text-positive' : 'text-negative'}` },
+        [`${isPos ? '+' : ''}${formatMoney(gain, currency)}  ${pctFmt(gainPct)}`]));
+    }
+    if (livePrice?.changePct !== undefined) {
+      valWrap.appendChild(el('div', { class: `t-caption ${livePrice.changePct >= 0 ? 'text-positive' : 'text-negative'}` },
+        [`Hoy: ${pctFmt(livePrice.changePct)}`]));
+    }
+  } else {
+    valWrap.appendChild(el('div', { class: 'inv-card__value tabular text-secondary' }, ['— sin precio —']));
+    valWrap.appendChild(el('div', { class: 't-caption text-tertiary' }, ['Pulsa "Actualizar precios"']));
   }
   head.appendChild(valWrap);
   card.appendChild(head);
 
-  // Métricas principales
+  // ── Métricas ──
   const metrics = el('div', { class: 'inv-card__metrics' });
   const m = (lbl, val) => {
     const d = el('div', { class: 'inv-metric' });
@@ -272,28 +283,32 @@ function positionCard(group, livePrice, fxRates, baseCur) {
   if (!isTrivial(assetType)) {
     metrics.appendChild(m('Shares totales', totalQty % 1 === 0 ? String(totalQty) : totalQty.toFixed(6).replace(/0+$/, '')));
     metrics.appendChild(m('Cost basis (avg)', formatMoney(weightedAvg, currency)));
-    if (currentPrice) metrics.appendChild(m('Precio actual', formatMoney(currentPrice, currency)));
-    if (purchases.length > 1) metrics.appendChild(m('Compras (DCA)', `${purchases.length} operaciones`));
+    if (hasPrice && livePrice?.price) metrics.appendChild(m('Precio actual', formatMoney(livePrice.price, currency)));
+    if (purchases.length > 1) metrics.appendChild(m('Compras (DCA)', `${purchases.length} ops.`));
   }
   metrics.appendChild(m('Total invertido', formatMoney(totalCost, currency)));
-  const copVal = toCOP(nativeValue, currency, fxRates);
-  if (copVal !== null && currency !== 'COP') metrics.appendChild(m('≈ en COP', formatMoney(copVal, 'COP')));
+  if (hasPrice && nativeValue !== null) {
+    const copVal = toCOP(nativeValue, currency, fxRates);
+    if (copVal !== null && currency !== 'COP') metrics.appendChild(m('≈ en COP', formatMoney(copVal, 'COP')));
+  }
   if (assetType === 'cdt') {
     const p0 = purchases[0];
     if (p0?.interestRate) metrics.appendChild(m('Tasa E.A.', `${p0.interestRate}%`));
     if (p0?.maturityDate) metrics.appendChild(m('Vencimiento', p0.maturityDate));
   }
   card.appendChild(metrics);
-
-  // Compras individuales (toggle)
   card.appendChild(toggleWrap);
 
-  // Acciones
+  // ── Acciones ──
   const actions = el('div', { class: 'inv-card__actions' });
   if (!isTrivial(assetType)) {
-    const toggleBtn = Button(expanded ? 'Ocultar compras' : `Ver ${purchases.length} compra${purchases.length > 1 ? 's' : ''}`, {
-      variant: 'ghost', size: 'sm',
-      onClick: () => { expanded = !expanded; toggleBtn.textContent = expanded ? 'Ocultar compras' : `Ver ${purchases.length} compra${purchases.length > 1 ? 's' : ''}`; renderPurchases(); },
+    const n = purchases.length;
+    const toggleBtn = Button(`Ver ${n} compra${n > 1 ? 's' : ''}`, { variant: 'ghost', size: 'sm',
+      onClick: () => {
+        expanded = !expanded;
+        toggleBtn.textContent = expanded ? 'Ocultar compras' : `Ver ${n} compra${n > 1 ? 's' : ''}`;
+        renderPurchases();
+      },
     });
     actions.appendChild(toggleBtn);
     actions.appendChild(Button('+ Compra', { variant: 'outline', size: 'sm',
@@ -303,10 +318,7 @@ function positionCard(group, livePrice, fxRates, baseCur) {
     actions.appendChild(Button('Actualizar valor', { variant: 'outline', size: 'sm',
       onClick: () => openPurchaseModal({ inv: purchases[0] }) }));
   }
-  actions.appendChild(el('button', { class: 'icon-btn', title: 'Nueva compra',
-    on: { click: () => openPurchaseModal({ defaultSymbol: symbol || '', defaultType: assetType }) }, html: icon('plus') }));
   card.appendChild(actions);
-
   renderPurchases();
   return card;
 }
@@ -359,9 +371,11 @@ export function renderInvestments() {
       let totalValue = 0, totalCost = 0;
       groups.forEach((g) => {
         const lp = livePrices[(g.symbol || '').toUpperCase()];
-        const { value, cost } = groupValue(g, { [(g.symbol || '').toUpperCase()]: lp });
-        const v = toCOP(value, g.currency, fxRates) ?? value;
-        const c = toCOP(cost,  g.currency, fxRates) ?? cost;
+        const { value, cost, hasPrice } = groupValue(g, { [(g.symbol || '').toUpperCase()]: lp });
+        // Si no hay precio, usamos el costo como valor (P&L = 0 para esa posición)
+        const rawVal = hasPrice && value !== null ? value : cost;
+        const v = toCOP(rawVal, g.currency, fxRates) ?? rawVal;
+        const c = toCOP(cost,   g.currency, fxRates) ?? cost;
         totalValue += v; totalCost += c;
       });
       return { ...sec, groups, totalValue, totalCost, gain: totalValue - totalCost, ret: totalCost ? (totalValue - totalCost) / totalCost * 100 : 0 };
