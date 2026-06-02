@@ -80,10 +80,12 @@ Se descubrió un **módulo nuevo no documentado**: `#/import` — importación d
 - **Archivo:** `src/components/shell.js` — handler del botón Buscar.
 - **Fix recomendado:** Eliminar el botón hasta tener la implementación.
 
-**BUG-A4 — Deudas: KPI "Tarjetas de crédito" muestra $0**
+**BUG-A4 — Deudas: KPI "Tarjetas de crédito" muestra $0** — ✅ RESUELTO (commit `fe961a8`)
 - **Síntoma:** El KPI muestra $0 aunque hay $3.83M en deudas de tarjeta. Las deudas reales aparecen en "Otras deudas" en lugar de "Tarjetas de crédito".
-- **Causa:** La vista no consolida correctamente las cuentas `type='credit_card'` con las `Liabilities`.
+- **Causa:** El KPI solo sumaba cuentas `type='credit_card'`; pero "Nueva deuda" (`openLiabilityModal`) crea Liabilities `credit_card` por defecto, así que la deuda real vivía en `liabilities`.
 - **Archivo:** `src/views/debts.js`
+- **Fix aplicado:** el KPI y el conteo consolidan cuentas `credit_card` + liabilities `credit_card` (saldo>0); cabecera "Otras deudas" → "Detalle de deudas".
+- **Verificación:** Playwright con los datos reales cacheados (2 liabilities = 3.4M + 430k) → KPI muestra $3.830.000.
 
 ### 🟡 Medio
 
@@ -179,7 +181,7 @@ Todas en la raíz del proyecto (generadas por Playwright MCP):
 | 🟠 Alto | BUG-A1 | sameMonth() con slice(0,7) — TD-12 | S (1 línea) |
 | 🟠 Alto | BUG-A2 | Label mes KPI Ingresos | S |
 | 🟠 Alto | BUG-A3 | Quitar botón Buscar muerto — TD-31 | S (1 línea) |
-| 🟠 Alto | BUG-A4 | Deudas: KPI tarjetas consolidar | M |
+| ✅ Hecho | BUG-A4 | Deudas: KPI tarjetas consolida accounts + liabilities credit_card | M |
 | 🟡 Medio | BUG-M1 | Inversiones: auto-load precios | S |
 | 🟡 Medio | BUG-M2 | Purgar snapshots de test en Sheets | Manual |
 | 🟡 Medio | BUG-M3 | Verificar FX rate | S |

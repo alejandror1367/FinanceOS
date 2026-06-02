@@ -531,7 +531,7 @@ Bugs más urgentes identificados en la auditoría:
 - **BUG-C2** (Crítico): Presupuestos — fecha del período renderiza como `Date.toString()` crudo
 - **BUG-A1** (Alto): Presupuestos — consumido siempre $0 (confirma TD-12, fix = 1 línea)
 - **BUG-A3** (Alto): Botón "Buscar" en topbar no hace nada (confirma TD-31)
-- **BUG-A4** (Alto): Deudas — KPI "Tarjetas de crédito" muestra $0 aunque hay $3.83M
+- **BUG-A4** (Alto): Deudas — KPI "Tarjetas de crédito" muestra $0 aunque hay $3.83M — ✅ RESUELTO (`fe961a8`): el KPI consolida cuentas + liabilities `credit_card`
 
 **Sprint de quick wins (~1-2 horas):**
 - BUG-C2: Fecha presupuestos — `formatDate(budget.startDate)` en `src/views/budgets.js`
