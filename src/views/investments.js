@@ -155,7 +155,7 @@ function toCOP(amount, currency, fxRates) {
 }
 
 // ─── Formulario de compra ──────────────────────────────────────────────────
-function openPurchaseModal({ inv = null, defaultSymbol = '', defaultType = 'etf' }) {
+function openPurchaseModal({ inv = null, defaultSymbol = '', defaultType = 'etf', defaultName = '', defaultCurrency = '' }) {
   const s = store.get();
   const mode = inv ? 'edit' : 'create';
   const existingNames = new Set((s.accounts || []).map((a) => a.name.toLowerCase()));
@@ -217,10 +217,10 @@ function openPurchaseModal({ inv = null, defaultSymbol = '', defaultType = 'etf'
       field('Ticker / Símbolo', textInput({ name: 'symbol', value: inv?.symbol || defaultSymbol, placeholder: 'VUG, AAPL, BTC-USD' })),
       field('Tipo', typeEl),
     ]),
-    field('Nombre', textInput({ name: 'name', value: inv?.name || '', placeholder: 'Vanguard Growth ETF' })),
+    field('Nombre', textInput({ name: 'name', value: inv?.name || defaultName, placeholder: 'Vanguard Growth ETF' })),
     el('div', { class: 'field-row' }, [
       field('Cuenta / Broker', select({ name: 'accountId', value: inv?.accountId || '', options: accOpts })),
-      field('Moneda', select({ name: 'currency', value: inv?.currency || 'USD', options: CURRENCIES })),
+      field('Moneda', select({ name: 'currency', value: inv?.currency || defaultCurrency || 'USD', options: CURRENCIES })),
     ]),
     field('Fecha de compra', textInput({ name: 'purchaseDate', value: inv?.purchaseDate || today(), type: 'date' })),
     el('div', { class: 'field-row' }, [
@@ -248,9 +248,13 @@ function openPurchaseModal({ inv = null, defaultSymbol = '', defaultType = 'etf'
           accountId = acc.id;
         } catch (e) { accountId = ''; }
       }
+      const symbolVal = g('symbol').trim().toUpperCase();
       const data = {
-        symbol: g('symbol').trim().toUpperCase() || null,
-        name:   g('name').trim(),
+        symbol: symbolVal || null,
+        // El backend exige `name` no vacío. En "+ Compra" el campo nombre suele
+        // quedar en blanco (solo se prellena el símbolo): si falta, usa el símbolo
+        // como nombre para no romper la sync (Campo requerido: name).
+        name:   g('name').trim() || symbolVal,
         assetType: g('assetType'), accountId,
         quantity:  Number(qtyEl.value) || 0,
         purchasePrice: Number(priceEl.value) || 0,
@@ -429,7 +433,7 @@ function positionCard(group, livePrice, fxRates, baseCur) {
     });
     actions.appendChild(toggleBtn);
     actions.appendChild(Button('+ Compra', { variant: 'outline', size: 'sm',
-      onClick: () => openPurchaseModal({ defaultSymbol: symbol || '', defaultType: assetType }) }));
+      onClick: () => openPurchaseModal({ defaultSymbol: symbol || '', defaultType: assetType, defaultName: name || '', defaultCurrency: currency || '' }) }));
     if (totalQty > 0) {
       actions.appendChild(Button('Vender', { variant: 'outline', size: 'sm',
         onClick: () => openSellModal(group, livePrice) }));
