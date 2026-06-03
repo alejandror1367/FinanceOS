@@ -168,6 +168,16 @@ function repoSoftDelete_(entity, id) {
   return repoUpdate_(entity, id, { isDeleted: true });
 }
 
+// Elimina físicamente la fila por id. Para entidades sin columna `isDeleted`
+// (p. ej. NetWorthSnapshots, datos derivados/recomputables) donde el soft-delete
+// sería un no-op silencioso. Devuelve { id, deleted }.
+function repoHardDelete_(entity, id) {
+  var rowIndex = repoFindRowIndex_(entity, id);
+  if (rowIndex < 0) return { id: id, deleted: false };
+  getSheet_(entity).deleteRow(rowIndex);
+  return { id: id, deleted: true };
+}
+
 function hasKey_(schema, key) {
   return schema.some(function (c) { return c.key === key; });
 }

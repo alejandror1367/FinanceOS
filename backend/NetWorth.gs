@@ -12,7 +12,9 @@ function listNetWorthSnapshots_(p) {
 
 function deleteNetWorthSnapshot_(d) {
   requireFields_(d, ['id']);
-  repoSoftDelete_('NetWorthSnapshots', d.id);
+  // NetWorthSnapshots no tiene columna isDeleted → el soft-delete sería un no-op
+  // (la fila reaparecía al refrescar). Hard delete: los snapshots son recomputables.
+  repoHardDelete_('NetWorthSnapshots', d.id);
   logAudit_('delete', 'NetWorthSnapshots', d.id, 'Snapshot eliminado');
   return { id: d.id, deleted: true };
 }
