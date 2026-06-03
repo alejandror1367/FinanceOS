@@ -107,8 +107,11 @@ export const selectors = {
   },
 
   totalLiabilities(s) {
-    const fromLiabilities = s.liabilities.reduce((sum, l) => sum + (l.balance || 0), 0);
-    // Las tarjetas de crédito registradas como cuentas también son pasivos.
+    // Excluye liabilities de tipo credit_card: las cuentas CC ya las cubren vía fromCC.
+    // Sin este filtro, registrar la misma CC como cuenta Y como liability la contaría doble.
+    const fromLiabilities = s.liabilities
+      .filter((l) => l.type !== 'credit_card')
+      .reduce((sum, l) => sum + (l.balance || 0), 0);
     const fromCC = selectors.creditCardAccounts(s)
       .reduce((sum, a) => sum + Math.abs(a.balance || 0), 0);
     return fromLiabilities + fromCC;

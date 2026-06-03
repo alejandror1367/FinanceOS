@@ -125,6 +125,15 @@ describe('totalLiabilities', () => {
     });
     assert.equal(selectors.totalLiabilities(s), 3_000_000);
   });
+
+  test('liability de tipo credit_card no se suma (evita doble conteo con cuentas CC)', () => {
+    // La misma CC registrada como cuenta Y como liability no debe sumarse dos veces.
+    const s = mkState({
+      accounts: [acc('cc1', 2_000_000, 'credit_card')],
+      liabilities: [{ id: 'l1', balance: 2_000_000, type: 'credit_card' }],
+    });
+    assert.equal(selectors.totalLiabilities(s), 2_000_000); // solo la cuenta, no 4M
+  });
 });
 
 // ── netWorth ──────────────────────────────────────────────────────────────────

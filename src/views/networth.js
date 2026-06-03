@@ -29,7 +29,8 @@ const ASSET_CATEGORIES = [
   { value: 'other', label: 'Otro' },
 ];
 const LIABILITY_TYPES = [
-  { value: 'credit_card', label: 'Tarjeta de crédito' },
+  // credit_card excluido: las CCs se registran como cuentas (tipo credit_card) en Cuentas,
+  // no como liabilities — evita doble conteo en totalLiabilities.
   { value: 'loan', label: 'Préstamo personal' },
   { value: 'mortgage', label: 'Hipoteca' },
   { value: 'auto_loan', label: 'Crédito vehículo' },
@@ -282,28 +283,25 @@ export function renderNetWorth() {
       body: el('div', { class: 'row-list' }, assetItems),
     });
 
-    // Pasivos
-    const liabs = s.liabilities || [];
-    const ccDebtTotal = selectors.creditCardAccounts(s).reduce((sum, a) => sum + Math.abs(a.balance || 0), 0);
-    const liabsBody = liabs.length
-      ? el('div', {}, [
-          el('div', { class: 'row-list' }, liabs.map((l) => {
-            const typeLabel = (LIABILITY_TYPES.find((t) => t.value === l.type) || {}).label || l.type;
-            const sub = `${typeLabel} · ${l.interestRate || 0}%${l.dueDate ? ' · vence ' + formatDate(l.dueDate, 'short') : ''}`;
-            return simpleRow('debts', l.name, sub, formatMoney(l.balance, l.currency || cur), 'text-negative',
-              actionButtons(() => openLiabilityModal({ liability: l, mode: 'edit' }),
-                () => confirmDialog({ title: 'Eliminar deuda', message: `¿Eliminar "${l.name}"?`, onConfirm: () => guardedOp(() => dataService.remove('liabilities', l.id), 'Deuda eliminada') })));
-          })),
-          ccDebtTotal > 0 ? el('p', { class: 't-caption text-secondary', style: 'padding:var(--space-3) var(--space-4) var(--space-2);margin:0' },
-            [`Tarjetas de crédito (${formatMoney(ccDebtTotal, cur)}) incluidas en el KPI Pasivos — detalle en `
-              , el('a', { href: '#/debts', style: 'color:var(--accent)' }, ['Deudas']), '.']) : null,
-        ].filter(Boolean))
-      : el('div', {}, [
-          EmptyState({ title: 'Sin otros pasivos', message: 'Registra hipotecas, créditos u otros pasivos.', iconName: 'debts' }),
-          ccDebtTotal > 0 ? el('p', { class: 't-caption text-secondary mt-2', style: 'text-align:center;padding-bottom:var(--space-3)' },
-            [`Tarjetas de crédito: ${formatMoney(ccDebtTotal, cur)} — ver `
-              , el('a', { href: '#/debts', style: 'color:var(--accent)' }, ['Deudas']), '.']) : null,
-        ].filter(Boolean));
+    // Pasivos: liabilities manuales (excluye credit_card, ya cubiertas por cuentas CC)
+    // + filas de cuentas CC con saldo > 0.
+    const liabs = (s.liabilities || []).filter((l) => l.type !== 'credit_card');
+    const ccAccountRows = selectors.creditCardAccounts(s)
+      .filter((a) => Math.abs(a.balance || 0) > 0)
+      .map((a) => simpleRow('card', a.name, 'Tarjeta de crédito', formatMoney(Math.abs(a.balance || 0), a.currency || cur), 'text-negative'));
+
+    const liabRows = liabs.map((l) => {
+      const typeLabel = (LIABILITY_TYPES.find((t) => t.value === l.type) || {}).label || l.type;
+      const sub = `${typeLabel} · ${l.interestRate || 0}%${l.dueDate ? ' · vence ' + formatDate(l.dueDate, 'short') : ''}`;
+      return simpleRow('debts', l.name, sub, formatMoney(l.balance, l.currency || cur), 'text-negative',
+        actionButtons(() => openLiabilityModal({ liability: l, mode: 'edit' }),
+          () => confirmDialog({ title: 'Eliminar deuda', message: `¿Eliminar "${l.name}"?`, onConfirm: () => guardedOp(() => dataService.remove('liabilities', l.id), 'Deuda eliminada') })));
+    });
+
+    const allLiabRows = [...liabRows, ...ccAccountRows];
+    const liabsBody = allLiabRows.length
+      ? el('div', { class: 'row-list' }, allLiabRows)
+      : EmptyState({ title: 'Sin pasivos', message: 'Registra hipotecas, créditos u otros pasivos. Las tarjetas de crédito aparecen aquí automáticamente.', iconName: 'debts' });
 
     const liabsCard = Card({
       title: 'Pasivos',
