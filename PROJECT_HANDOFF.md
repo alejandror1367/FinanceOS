@@ -23,11 +23,15 @@ Centraliza: patrimonio neto, presupuestos, flujo de caja, inversiones, metas, de
 | PWA instalada en celular | ✅ Funcionando |
 | Google OAuth | ✅ Activo (`patitosalmir@gmail.com` + `alejandrorr1367@gmail.com`) |
 | Backend Apps Script | ✅ Desplegado y verificado en producción |
-| Tests financieros | ✅ 39/39 pasando |
-| Modelo híbrido de saldos (TD-01) | ✅ Código + backend desplegados y verificados |
+| Tests financieros | ✅ **52/52** pasando |
+| Módulo Import | ✅ Completamente funcional (BUG-P0-1/P1-1/P1-2/P1-3 corregidos) |
+| Backend patrimonio neto | ✅ CC incluida como pasivo en `computeNetWorth_` (BUG-P0-2, desplegado) |
+| Snapshots de patrimonio | ✅ Crear · eliminar individual · eliminar masivo · detección outliers |
 | Deuda técnica P0 | ✅ Toda resuelta |
-| Deuda técnica P1 | 🟡 Casi cerrada — hechos TD-10/13/14/15/16/17; pendiente solo TD-18 |
-| Deuda técnica P2 | 🔴 Pendiente (14 ítems) |
+| Deuda técnica P1 | ✅ Toda resuelta (incl. normPeriodKey, config.version, import fixes) |
+| Deuda técnica P2 | ✅ Toda resuelta |
+| Bugs auditoría 2026-06-02 | ✅ P0+P1+P2 corregidos · Sprint 3+4 completados |
+| Pendiente | Sprint 5 (Inversiones avanzadas) → Sprint 9 (ver §18) |
 
 ---
 
@@ -471,26 +475,22 @@ HEAD pasó de `75eacca` a **`b870d6c`**. SW `v0.2.10 → v0.2.13`. Tests `33 →
 ```
 Rama:    main
 Remote:  https://github.com/alejandror1367/FinanceOS.git
-HEAD:    b870d6c  feat: Deudas — tarjetas/créditos en KPIs, abono como transferencia y plan
-SW:      v0.2.13 (auto-bump del pre-commit)
-Status:  limpio · sincronizado con origin/main
+HEAD:    495fe4d  feat(charts): BarChart valores visibles + tooltips · LineChart tooltips
+SW:      v0.2.37  (sincronizado con config.version — hook actualiza ambos)
+Status:  limpio · sincronizado con origin/main (pendiente git push)
 ```
-
-> ⚠️ `src/core/config.js` tiene `version: '0.2.6'` (se muestra en Ajustes → Acerca de),
-> desfasado del SW `v0.2.13`. El hook solo bumpea el SW, no `config.version`. Pendiente
-> menor: alinear `config.version` con el SW (BUG-B1 follow-up).
 
 ### Commits recientes
 ```
-b870d6c feat: Deudas — tarjetas/créditos en KPIs, abono como transferencia y plan priorizado
-9a1cf3c fix: TD-10 dead-letter en la cola de sync (sin head-of-line blocking)
-9eccfa1 docs: actualizar conteo de tests a 35/35 y estado de verificación de Presupuestos
-ba55373 test: regresión BUG-A1/TD-12 — periodKey como Date de Sheets
-21c7c60 docs: sincronizar handoff/deuda/next-session con el estado real
-bccc956 fix: TD-13 flush antes de pull + TD-14 escritura atómica dato+cola
-75eacca docs: marcar TD-17 hecho y confirmar backend de saldos desplegado/verificado
-98f8c19 feat: TD-15 getBootstrap — cargar las 12 colecciones en 1 request
-23009b0 fix: BUG-C1 cold start auth — warm-up + reintento, no destruir sesión válida
+495fe4d feat(charts): BarChart valores visibles + tooltips · LineChart tooltips (Sprint 4.1-4.3)
+5fdc008 feat(goals): forecast usa promedio de 3 meses en lugar del mes actual (Sprint 2.6)
+24ddd80 feat(networth): gestión de snapshots — botón eliminar por snapshot (FIX-10)
+511bf70 fix(api): retry automático en GET para ERR_ABORTED del cold start (BUG-P2-2)
+3aeed11 fix(today): upcomingPayments incluye vencimientos de tarjetas de crédito (BUG-P2-4)
+8e537f8 fix(backend): computeNetWorth_ incluye CC como pasivos (BUG-P0-2)
+32ffa4b fix(analytics): normPeriodKey + curMonthKey en render time (BUG-P1-4)
+848292a fix(config): sincronizar config.version con SW v0.2.30 (BUG-P1-5)
+```
 ```
 
 ---
@@ -564,6 +564,26 @@ La app ya tiene `config.js` con las URLs reales commiteadas. Solo necesitas:
 
 ## 18. Próximos pasos recomendados
 
+**Sesión 2026-06-02 completa:** todos los bugs P0/P1/P2 de la auditoría corregidos; Sprints 1–4 del roadmap implementados y desplegados donde aplica. Tests: 52/52.
+
+**Próximos sprints (orden recomendado, ver `docs/Roadmap-Implementacion-2026-06-02.md`):**
+
+| Sprint | Objetivo | Esfuerzo |
+|---|---|---|
+| **5** | Inversiones avanzadas: withholding (5.1), comisiones (5.2), indicador (5.3) | ~1d |
+| **6** | UX/UI: tooltips all charts, micro-animaciones, validación inline, shortcuts, fix truncamiento Ajustes | ~2d |
+| **7** | Performance: content-visibility, lazy load vistas, paginación IndexedDB | ~1.5d |
+| **8** | Analítica avanzada: selector período, 5 insights adicionales, comparación histórico | ~2d |
+| **9** | Pulido: TD-33–40, WCAG final, actualizar docs, v1.0 | ~2d |
+
+**Sin deploys pendientes** — todos los cambios de esta sesión son frontend puro (excepto los backends ya desplegados por el usuario: Reports.gs, NetWorth.gs, Code.gs).
+
+**No verificado en vivo (sin Playwright en esta sesión):**
+- Módulo Import — fixes aplicados, funcionalidad no confirmada visualmente en producción
+- Vista Hoy — CC vencimientos en `upcomingPayments()` requiere cuenta con `paymentDay` configurado
+- BarChart valor labels — cambio visual no verificado
+- Snapshot outlier detection — requiere datos suficientes (≥4 snapshots)
+
 **Hecho (ya no son pendientes):** backend de saldos + `getBootstrap` desplegados y verificados;
 bypass de auditoría eliminado; auditoría funcional 2026-06-02 (`docs/Audit-Funcional-2026-06-02.md`).
 Bugs resueltos: **BUG-C1** (`23009b0`+`98f8c19`), **BUG-C2** + **BUG-A1**/TD-12 (`8d8d4d9`),
@@ -605,12 +625,25 @@ Transacciones completas — agrupación fecha, filtros mes/categoría, totales, 
 - **TD-31**: verificado — no existía botón muerto; search es live-filter.
 - **TD-32** (`dd68141`): `exports.js` CSS documentado como print stylesheet intencional.
 
+**Sesión 2026-06-02 (auditoría bugs + sprints 1–4):**
+
+- **BUG-P0-1** (`76dcf2c`): `dataService.mutate()` → `create()` — import funcional.
+- **BUG-P0-2** (`8e537f8`): `computeNetWorth_` + `getDashboard_` excluyen CC de activos y las suman a pasivos. Diferencia $3.4M eliminada. Deploy confirmado.
+- **BUG-P1-1/P1-2/P1-3** (`76dcf2c`): Button API · íconos SVG · `appendChild(icon())` en import.js.
+- **BUG-P1-4** (`32ffa4b`): `normPeriodKey` exportada + usada en analytics.js. `curMonthKey` a render-time.
+- **BUG-P1-5** (`848292a`): `config.version` sincronizado. Hook pre-commit también bumpa `config.version`.
+- **BUG-P2-4** (`3aeed11`): `upcomingPayments()` incluye CC con `paymentDay`. 4 tests nuevos.
+- **BUG-P2-2** (`511bf70`): `apiClient.get()` reintenta en `TypeError` (ERR_ABORTED cold start).
+- **FIX-10** (`24ddd80`): `deleteNetWorthSnapshot_` backend + botón 🗑 por snapshot. Deploy confirmado.
+- **Sprint 2.6** (`5fdc008`): `monthlySavingsAvg(s, n=3)` + goals.js usa promedio 3M. 3 tests.
+- **Sprint 3.3+3.4+4.1-4.4** (`495fe4d`): multi-select snapshots · outlier detection (Z-score 2σ) · "Ver todos" toggle · BarChart `valueFormat` + `bars__val` · LineChart dot tooltips.
+
 **Estado actual HEAD:**
 ```
-commit: dd68141 · rama: main · SW: v0.2.28 · tests: 45/45
+commit: 495fe4d · rama: main · SW: v0.2.37 · config.version: 0.2.37 · tests: 52/52
 ```
 
-**Toda la deuda P2 completada. Quedan solo P3 (mejoras incrementales, ver TechnicalDebt.md).**
+**Toda la deuda P0/P1/P2 completada. Quedan Sprints 5–9 del roadmap (ver §18 y NEXT_SESSION.md).**
 
 ---
 
@@ -624,37 +657,43 @@ Copia este prompt al iniciar la nueva sesión:
 Lee PROJECT_HANDOFF.md (§18 para lo último) y CLAUDE.md antes de cualquier cambio.
 
 PROYECTO: FinanceOS — PWA financiera personal y privada de Alejo.
-Repo: https://github.com/alejandror1367/FinanceOS (rama main). Prod: https://alejandror1367.github.io/FinanceOS/
-HEAD: dd68141 · SW v0.2.28 · Tests 45/45 (node --test tests/selectors.test.js).
+Repo: https://github.com/alejandror1367/FinanceOS (rama main).
+Prod: https://alejandror1367.github.io/FinanceOS/
+HEAD: 495fe4d · SW v0.2.37 · config.version 0.2.37 · Tests 52/52
 
-INVARIANTES (ver CLAUDE.md): JS ES Modules sin build step en lo servido · sin frameworks/
-bundlers · cero deps npm en runtime · frontend abstraído tras src/services/ · Apps Script +
+INVARIANTES (ver CLAUDE.md): JS ES Modules sin build step · sin frameworks/bundlers ·
+cero deps npm en runtime · frontend abstraído tras src/services/ · Apps Script +
 Google Sheets (13 hojas) + GitHub Pages + OAuth de Google · offline-first.
 
-HECHO Y DESPLEGADO: roadmap 0–12 · toda la deuda P0, P1 y P2 completada. Sesión 2026-06-02:
-- P2 completa: TD-19 (crud.js guardedOp/guardedSave), TD-20 (ENTITIES+WRITE fusionados),
-  TD-21 (CURRENCY_DECIMALS), TD-22 (roundMoney), TD-24/25 (backend reads explícitos),
-  TD-26 (batchWrite), TD-27 (LockService), TD-28 (purgeDeleted), TD-29/30/31/32 (CSS/DS).
-- Backend a desplegar: Code.gs (batchWrite, purgeDeleted, LockService), Utils.gs
-  (repoUpdate_ rápido, repoReadAll_ con rango explícito, purgeDeleted_).
+HECHO Y DESPLEGADO (sesión 2026-06-02):
+- Todos los bugs P0/P1/P2 de la auditoría corregidos (import, analytics, config,
+  backend patrimonio, upcomingPayments CC, apiClient retry).
+- Sprint 3+4 completos: gestión snapshots (individual/masivo/outliers/"Ver todos"),
+  BarChart con valores visibles + tooltips, LineChart tooltips, monthlySavingsAvg.
+- Hook pre-commit actualiza config.version junto con SW.
+- Backends desplegados: Reports.gs (CC en patrimonio), NetWorth.gs+Code.gs
+  (deleteNetWorthSnapshot).
+- Tests: 52/52 (11 suites, añadidos upcomingPayments y monthlySavingsAvg).
 
-PENDIENTE — EMPEZAR POR AQUÍ:
-1. DESPLEGAR BACKEND: abrir script.google.com → proyecto FinanceOS → subir
-   backend/Code.gs y backend/Utils.gs → Implementar → Nueva versión.
-2. VERIFICACIÓN en producción: login con patitosalmir@gmail.com, verificar que
-   Ajustes → "Purgar eliminados" aparece y funciona; crear/editar/eliminar una
-   cuenta y verificar que el backend confirma sin error.
-3. P3 (opcional): TD-33–TD-40 son mejoras incrementales sin impacto en funcionalidad
-   (ver docs/TechnicalDebt.md). Abordar solo si hay un caso concreto.
+PENDIENTE — SPRINT 5 (empezar aquí):
+Inversiones avanzadas en src/views/investments.js:
+  5.1: Campo "Retención en fuente" (withholdingRate, %) en posición de inversión.
+  5.2: Campo "Comisión por operación" al crear/registrar compra/venta.
+  5.3: Indicador WITHHOLDING% en positionCard si withholdingRate > 0.
+Luego Sprint 6 (UX: tooltips todos los charts, micro-anim, validación inline, shortcuts).
 
-CAVEAT: backend Code.gs y Utils.gs tienen cambios no desplegados (batchWrite, LockService,
-purgeDeleted_, repoUpdate_ optimizado). El frontend ya usa la nueva API — fallará
-limpiamente si el backend es viejo (la acción batchWrite no existe → syncEngine hace
-fallback a op-a-op automáticamente).
+NO verificado en vivo (no hubo Playwright en esta sesión):
+- Import: fixes aplicados pero flujo completo no confirmado visualmente.
+- Vista Hoy / upcomingPayments CC: requiere cuenta con paymentDay configurado.
+- BarChart bars__val: cambio visual no confirmado.
+- Snapshot outlier detection: requiere ≥4 snapshots para activarse.
 
-FORMA DE TRABAJO: fases pequeñas y verificables · explicar qué/por qué · correr tests ·
-commits descriptivos (el pre-commit hook auto-bumpea el SW) · docs en commit docs(...) aparte.
-Empieza con: git log --oneline -8, git status, node --test, claude mcp list.
+SIN DEPLOYS PENDIENTES en backend — todo fue frontend puro.
+
+FORMA DE TRABAJO: fases pequeñas y verificables · explicar qué/por qué ·
+correr `node --test tests/selectors.test.js` tras cada cambio de selector ·
+commits atómicos por feature · el hook auto-bumpa SW + config.version al commitear src/.
+Empezar con: git log --oneline -5 · git status · node --test tests/selectors.test.js.
 ```
 
 ---
