@@ -78,3 +78,26 @@ financial-analyst,documentation-writer,playwright-reviewer,implementation-engine
 `.claude/commands/{audit,roadmap,implement,handoff}.md`.
 
 **Commit:** `e6b3c77 feat(agents): infraestructura de agentes y comandos de auditoría/implementación`.
+
+---
+
+## Sub-sesión (noche) — Config MCP: Playwright + Context7
+
+**Resumen:** en el modo `/handoff in` de este equipo se detectó que solo el GitHub MCP
+estaba conectado; faltaban **Playwright** y **Context7**. Se versionó `.mcp.json` a nivel de
+proyecto con ambos servidores para que sean portables entre los dos PCs. Solo tooling de
+desarrollo: no toca el runtime servido, el SW se mantiene en `v0.2.43`. Cierre en `c06a2ea` · 54/54 tests.
+
+| Cambio | Impacto |
+|---|---|
+| `.mcp.json` con `playwright` (`@playwright/mcp@latest`) | QA en vivo / auditoría funcional e2e disponible tras aprobar + reiniciar |
+| `.mcp.json` con `context7` (`@upstash/context7-mcp@latest`) | Docs de librerías bajo demanda; funciona sin API key (free tier) |
+| Scope de **proyecto** (versionado en el repo) | Portable entre los 2 PCs: tras `git pull` solo hay que aprobar + reiniciar |
+
+**Smoke test:** ambos paquetes resuelven vía `npx` y arrancan (`--help` OK).
+
+**Caveat:** los MCP de scope de proyecto quedan **⏸ Pending approval** y sus tools solo
+se cargan **al reiniciar** Claude Code (la lista de tools se fija al arrancar). Context7
+admite `CONTEXT7_API_KEY` opcional para mayor cuota.
+
+**Commit:** `c06a2ea chore(mcp): añadir Playwright y Context7 MCP (scope de proyecto)`.

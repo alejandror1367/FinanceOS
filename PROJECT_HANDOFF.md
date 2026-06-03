@@ -669,7 +669,10 @@ commit: e6b3c77 · rama: main · SW: v0.2.43 · config.version: 0.2.43 · tests:
 
 > Leer esto antes que cualquier otra sección. Máximo 100 líneas. Fuente de verdad para retomar de inmediato.
 
-**HEAD:** `e6b3c77` · **SW/config.version:** `v0.2.43` · **Tests:** 54/54 · **Rama:** main · **Sync:** origin/main ✅
+**HEAD:** `c06a2ea` · **SW/config.version:** `v0.2.43` · **Tests:** 54/54 · **Rama:** main · **Sync:** origin/main ✅
+
+> **MCP (06-03 noche):** `.mcp.json` versionado con **playwright** + **context7** (scope de proyecto).
+> Tras `git pull`: **aprobar** ambos y **reiniciar Claude Code** (las tools MCP se fijan al arrancar).
 
 ### Estado actual real
 - **App en producción:** https://alejandror1367.github.io/FinanceOS/ (PWA instalada, OAuth activo)
@@ -971,12 +974,17 @@ Copia este prompt al iniciar la nueva sesión:
 ---
 
 ```text
+AVISO MCP: el repo ahora versiona .mcp.json con playwright y context7 (scope de proyecto).
+Tras clonar/pull deben APROBARSE (Claude pedirá confirmación) y REINICIARSE Claude Code:
+la lista de tools MCP se fija al arrancar; aunque `claude mcp list` los muestre conectados,
+sus tools no se cargan en una sesión ya en curso. GitHub MCP ya conecta.
+
 Lee PROJECT_HANDOFF.md (CONTEXTO MÍNIMO primero, luego §18) y CLAUDE.md antes de cualquier cambio.
 
 PROYECTO: FinanceOS — PWA financiera personal y privada de Alejo.
 Repo: https://github.com/alejandror1367/FinanceOS (rama main).
 Prod: https://alejandror1367.github.io/FinanceOS/
-HEAD: e6b3c77 · SW v0.2.43 · config.version 0.2.43 · Tests 54/54
+HEAD: c06a2ea · SW v0.2.43 · config.version 0.2.43 · Tests 54/54
 
 INVARIANTES (ver CLAUDE.md): JS ES Modules sin build step · sin frameworks/bundlers ·
 cero deps npm en runtime · frontend abstraído tras src/services/ · Apps Script +
@@ -999,6 +1007,8 @@ HECHO Y DESPLEGADO (sesión 2026-06-03):
   idempotencia + preservación de id en los 10 create* del backend (helper idempotentHit_).
 - Verificado en vivo (Playwright): 14 rutas sin errores JS; Sprint 5/6 confirmados.
 - Tests: 54/54 (11 suites).
+- CONFIG MCP (sub-sesión 06-03 noche — c06a2ea): se versionó .mcp.json con playwright y
+  context7 (scope de proyecto, portable entre los 2 PCs). Sin secretos; tooling de dev, no runtime.
 
 PENDIENTE (sin sprint asignado — elegir con el dueño):
 - Sprint 7 (Performance): paginación listTransactions_ (>5000 tx), content-visibility,
@@ -1022,4 +1032,5 @@ Empezar con: git log --oneline -5 · git status · node --test tests/selectors.t
 
 *Actualizado el 2026-06-03 por Claude Opus 4.8: Sprint 5 + Sprint 6 completos, cadena de 7 fixes
 de integridad de sync, verificación en vivo con Playwright. Sub-sesión (tarde): infraestructura
-de agentes y comandos (.claude/agents + .claude/commands). HEAD e6b3c77 · v0.2.43 · 54/54 tests.*
+de agentes y comandos (.claude/agents + .claude/commands). Sub-sesión (noche): config MCP
+versionada (.mcp.json: playwright + context7, scope de proyecto). HEAD c06a2ea · v0.2.43 · 54/54 tests.*

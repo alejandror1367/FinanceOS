@@ -1,27 +1,34 @@
 # Prompt de continuación — FinanceOS
-**Generado:** 2026-06-03 (sub-sesión tarde: infraestructura de agentes; tras Sprint 5 + 6 + 7 fixes de sync)
-**HEAD:** `e6b3c77` · **SW:** `v0.2.43` · **Tests:** 54/54
+**Generado:** 2026-06-03 (sub-sesión noche: config MCP playwright + context7; tras agentes/comandos + Sprint 5 + 6 + 7 fixes de sync)
+**HEAD:** `c06a2ea` · **SW:** `v0.2.43` · **Tests:** 54/54
 
 ---
 
 ```text
+AVISO MCP: el repo ahora versiona .mcp.json con playwright y context7 (scope de proyecto).
+Tras clonar/pull deben APROBARSE (Claude pedirá confirmación) y REINICIARSE Claude Code:
+la lista de tools MCP se fija al arrancar; aunque `claude mcp list` los muestre conectados,
+sus tools no se cargan en una sesión ya en curso. GitHub MCP ya conecta.
+
 Lee PROJECT_HANDOFF.md (CONTEXTO MÍNIMO primero, luego §18) y CLAUDE.md antes de cualquier cambio.
 
 PROYECTO: FinanceOS — PWA financiera personal y privada de Alejo.
 Repo: https://github.com/alejandror1367/FinanceOS (rama main).
 Prod: https://alejandror1367.github.io/FinanceOS/
-HEAD: e6b3c77 · SW v0.2.43 · config.version 0.2.43 · Tests 54/54
+HEAD: c06a2ea · SW v0.2.43 · config.version 0.2.43 · Tests 54/54
 
 INVARIANTES (ver CLAUDE.md): JS ES Modules sin build step · sin frameworks/bundlers ·
 cero deps npm en runtime · frontend abstraído tras src/services/ · Apps Script +
 Google Sheets (13 hojas) + GitHub Pages + OAuth de Google · offline-first.
 
-INFRAESTRUCTURA DE AGENTES (NUEVO, e6b3c77): .claude/agents/ (7) + .claude/commands/ (4:
+INFRAESTRUCTURA DE AGENTES (e6b3c77): .claude/agents/ (7) + .claude/commands/ (4:
 /audit, /roadmap, /implement, /handoff). Cada agente reconstruye su contexto desde el repo
 (portable entre equipos). implementation-engineer es el ÚNICO que modifica código.
 Recomendado: estrenar con /audit → /roadmap antes de implementar el siguiente sprint.
 
 HECHO Y DESPLEGADO (sesión 2026-06-03):
+- CONFIG MCP (sub-sesión noche, c06a2ea): .mcp.json versionado con playwright (@playwright/mcp)
+  y context7 (@upstash/context7-mcp), scope de proyecto. Sin secretos; tooling de dev, no runtime.
 - SPRINT 5 (inversiones avanzadas): comisión de compra/venta + retención en fuente
   (withholdingRate) con Badge en positionCard + soporte multicuenta (un ticker, varias cuentas).
 - SPRINT 6 (UX): tooltips Donut/ProgressBar · validación inline en TODOS los formularios
