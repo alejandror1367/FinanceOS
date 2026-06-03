@@ -2,6 +2,7 @@
 import { el } from '../utils/dom.js';
 import { icon } from '../utils/icons.js';
 import { routes, navSections, bottomNavOrder } from '../core/routes.js';
+import { openPalette } from './commandPalette.js';
 
 function navItem(routeId, route, activeId, onNavigate) {
   return el('a', {
@@ -57,6 +58,10 @@ export function Topbar({ title, theme, sync, onToggleTheme, onToggleNav, onRefre
     el('h1', { class: 'topbar__title', text: title }),
     el('div', { class: 'topbar__spacer' }),
     el('div', { class: 'topbar__actions' }, [
+      el('button', {
+        class: 'btn btn--ghost btn--icon', type: 'button', 'aria-label': 'Buscar y navegar (Ctrl K)',
+        title: 'Buscar · ⌘K / Ctrl K', on: { click: () => openPalette() }, html: icon('search'),
+      }),
       SyncPill(sync),
       el('button', {
         class: 'btn btn--ghost btn--icon', type: 'button', 'aria-label': 'Actualizar',

@@ -11,6 +11,7 @@ import { dataService } from '../services/dataService.js';
 import { createRouter } from './router.js';
 import { routes } from './routes.js';
 import { Sidebar, Topbar, BottomNav, SyncPill } from '../components/shell.js';
+import { initShortcuts } from '../components/commandPalette.js';
 import { SkeletonKpis } from '../components/ui.js';
 import { el, mount } from '../utils/dom.js';
 import { toast } from '../services/toast.js';
@@ -196,6 +197,12 @@ async function bootstrap() {
 
   // Suscripción reactiva (antes de cargar datos para reflejar el primer hydrate).
   store.subscribe(onStoreChange);
+
+  // Atajos de teclado globales (Command Palette: ⌘K / Ctrl K · / · ?). Se
+  // registran ANTES de cargar datos: no dependen de la red y deben estar
+  // disponibles de inmediato (si esperaran a dataService.init(), offline o con
+  // backend lento quedarían inactivos hasta que el pull termine/falle).
+  initShortcuts();
 
   // Cargar datos (mock local o backend) e iniciar el motor de sync.
   const { source } = await dataService.init();
