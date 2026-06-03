@@ -1,6 +1,6 @@
 # Prompt de continuación — FinanceOS
-**Generado:** 2026-06-03 (sesión completa: /handoff in → /audit → /roadmap → /implement Sprint 1 → /handoff out)
-**HEAD:** `b23a4f6` · **SW:** `v0.2.46` · **Tests:** 65/65
+**Generado:** 2026-06-03 (sesión tarde: Sprint 2 + Sprint 3 + FIN-014 + Sprint 4)
+**HEAD:** `6b45621` · **SW:** `v0.2.52` · **Tests:** 75/75
 
 ---
 
@@ -13,56 +13,63 @@ Tras git pull deben APROBARSE y REINICIARSE Claude Code: las tools MCP se fijan 
 PROYECTO: FinanceOS — PWA financiera personal y privada de Alejo.
 Repo: https://github.com/alejandror1367/FinanceOS (rama main).
 Prod: https://alejandror1367.github.io/FinanceOS/
-HEAD: b23a4f6 · SW v0.2.46 · config.version 0.2.46 · Tests 65/65
+HEAD: 6b45621 · SW v0.2.52 · config.version 0.2.52 · Tests 75/75
 
 INVARIANTES (ver CLAUDE.md): JS ES Modules sin build step · sin frameworks/bundlers ·
 cero deps npm en runtime · frontend abstraído tras src/services/ · Apps Script +
 Google Sheets (13 hojas) + GitHub Pages + OAuth de Google · offline-first.
 
-HECHO Y COMMITEADO (sesión 2026-06-03, tarde):
+HECHO Y DESPLEGADO (sesión 2026-06-03, tarde):
 
-AUDITORÍA GLOBAL (/audit, 4/5 áreas):
-- 46 hallazgos: P0:5 / P1:12 / P2:19 / P3:10. IDs nuevos TD-41…TD-53.
-- Entregables: Audit-Global / Bugs-Criticos / QuickWins / UX-Recommendations del 2026-06-03.
+SPRINT 2 — Inversiones: ventas parciales y valoración (f1f1bd0, a8dec52):
+- Modal de venta pide qty; soporta parcial (lote remanente) y total
+- lotRealizedPnL: comisión prorateada por fracción vendida (FIN-004/TD-43)
+- cdtCurrentValue: capitaliza sobre capital, topa en maturityDate (FIN-008/TD-44)
+- roundMoney en totales del portafolio (FIN-009)
+- +9 tests → 74 total
 
-ROADMAP (/roadmap):
-- docs/Roadmap-Implementacion-2026-06-03.md: 9 sprints, ~14-17 días, basado en auditoría.
+SPRINT 3 — WCAG AA + Design System (7c38299, b78eff6):
+- --text-tertiary ≥4.5:1 ambos temas; 10/11px → var(--fs-micro); tokens DS limpios
+- esc() en charts SVG; aria-label redundante removido; ProgressBar ARIA; focus en dialogs
+- 10/10 tareas completadas; sin deploy
 
-SPRINT 1 — Integridad de cifras maestras (/implement):
-- BE-001/TD-45 (45b47ec): guard isDeleted en idempotentHit_ → no resucita soft-deletes
-- BE-003/TD-02 (bc4f1fe): getQuotes devuelve fxRates{USD,EUR}; selectores excluyen 1:1
-- FIN-001/TD-41 (8751f9a): computeNetWorth_ filtra vendidos+isDeleted, suma comisión
-- FIN-002/TD-42 (4073ddf): applyWithholding() descuenta retención del P&L realizado
-- BE-002/TD-46 (b23a4f6): _recalcAccountBalance (idempotente) reemplaza ajuste delta
-- +11 tests nuevos (65/65, 13 suites)
+FIN-014 — Doble conteo CC en Patrimonio (cd839e9):
+- totalLiabilities filtra type=credit_card (no duplica con cuentas CC)
+- CC mostradas como filas reales en sección Pasivos
+- credit_card removido de "Nueva deuda"; +1 test → 75 total
 
-⚠ DEPLOY MANUAL PENDIENTE (3 archivos .gs — dueño debe desplegar en Apps Script):
-  backend/Utils.gs    ← commit 45b47ec (guard isDeleted)
-  backend/Quotes.gs   ← commit bc4f1fe (fxRates en getQuotes)
-  backend/Reports.gs  ← commit 8751f9a (computeNetWorth_ paridad FE)
+SPRINT 4 — Backend perf + robustez sync (7a4c43e, 056a5ba, 6b45621) — DESPLEGADO:
+- isTransient: "No autorizado" → dead-letter (TD-10/BE-011)
+- flushBatch: empareja por entityId no por índice (TD-26/BE-010)
+- reconcileAndHydrate: merge {...existing, ...op.data} en updates (TD-47/BE-004)
+- repoReadAll_ caché per-request + repoCacheInvalidate_ tras writes (TD-05/BE-005)
+- purgeDeleted_ en bloque: clearContent+setValues, de N→2 ops Sheets (TD-28/BE-007)
+- truncateAuditLog_(): purga >90 días, acción admin (BE-008)
+- getBootstrap_ ventanea transactions a 24m; listTransactions_ acepta since (TD-25/BE-006)
+
+PENDIENTE DE VERIFICACIÓN EN VIVO (por el dueño):
+1. Flujo venta parcial/total en UI Inversiones (nueva UI con campo qty)
+2. getBootstrap con ventana 24m no rompe historial más antiguo
+3. truncateAuditLog accesible desde Ajustes (si se expuso en UI)
 
 PENDIENTES EN ORDEN:
-1. INMEDIATO: despliega los 3 .gs en Apps Script → recarga prod → verifica en vivo:
-   - getQuotes devuelve {quotes, fxRates} con tasas USDCOP/EURCOP
-   - Patrimonio dashboard coincide con vista Inversiones (sin lotes vendidos inflados)
-   - P&L neto de retención visible en inversiones
-   - Crear tx offline, editarla 2 veces offline, flush → saldo correcto sin doble conteo
-2. Sprint 2 (ventas parciales + valoración CDT) — NO requiere deploy: /implement 2
-3. Sprint 3 (accesibilidad/DS WCAG AA) — NO requiere deploy, ideal primer PR limpio: /implement 3
+1. Sprint 5 (seguridad) — requiere deploy:
+   SEC-002/TD-51: validar iss+exp en verifyGoogleToken_ (Auth.gs)
+   SEC-004: .gitignore += .env*, *.key, .clasp.json, settings.local.json
+   SEC-001/TD-50: mover id_token a POST body (apiClient.js + Code.gs)
+   SEC-005: truncar fileContent antes de enviar a Groq (Import.gs)
+   SEC-006/TD-09: logAudit_ en accesos denegados (Auth.gs)
+2. Sprint 6 (deudas/metas, solo frontend) — NO requiere deploy: /implement 6
+3. Sprint 7 (charts responsive + a11y avanzada) — NO requiere deploy: /implement 7
 4. QA en vivo Playwright (pendiente de la auditoría): /audit playwright
-5. TD-43 (ventas parciales): pedir cantidad a vender en el modal (Sprint 2)
-
-BUGS P1 ABIERTOS:
-- TD-43: ventas parciales rotas (soldQuantity = qty comprada) — Sprint 2
-- TD-44: CDT sobrevaluado (capitaliza sobre totalCost+comisión, sin tope en vencimiento) — Sprint 2
+5. Sprint 8 (avanzado + P3) · Sprint 9 (QA + v1.0)
 
 RIESGOS VIVOS:
-- TD-02 🟡 parcial: FX frontend ok; backend Quotes.gs ⚠ pendiente deploy
-- listTransactions_ sin paginación >5000 tx — Sprint 4
-- TD-47: reconcileAndHydrate reduce update a su patch — Sprint 4
+- getBootstrap_ limita a 24m — historial más antiguo no disponible en bootstrap (intencional)
+- TD-50/51 (seguridad): id_token en URL + validación iss/exp — Sprint 5
 
 FORMA DE TRABAJO: fases pequeñas y verificables · explicar qué/por qué ·
-correr node --test tests/selectors.test.js tras cada cambio de selector (65/65 base) ·
+correr node --test tests/selectors.test.js tras cada cambio de selector (75/75 base) ·
 commits atómicos por feature · hook auto-bumpa SW + config.version al commitear src/.
 Para mensajes de commit multilínea: archivo temporal _commitmsg.txt + git commit -F _commitmsg.txt
 Empezar con: git log --oneline -5 · git status · node --test tests/selectors.test.js.

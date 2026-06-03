@@ -141,11 +141,11 @@ La deuda se concentra en **tres temas de fondo**: (1) **modelo contable** (el le
 
 | ID | Problema | Origen | Impacto | Esf | Estado |
 |----|----------|--------|---------|-----|--------|
-| TD-43 | **Ventas parciales imposibles** — `soldQuantity`=qty comprada; comisión mal prorrateada | FIN-003/004 | Liquidación siempre total; P&L realizado incorrecto en ventas parciales | M | Abierto — Sprint 2 |
-| TD-44 | **`cdtCurrentValue` sobrevalora CDT** — capitaliza sobre `totalCost` (incl. comisión) sin tope en vencimiento | FIN-008 | CDT sobrevalorado; sigue creciendo tras vencer | S | Abierto — Sprint 2 |
-| TD-47 | **`reconcileAndHydrate` reduce `update` a su patch** — `db.put(store, op.data)` reemplaza el registro entero | BE-004 | Pérdida temporal de campos tras refresh con update pendiente | S | Abierto — Sprint 4 |
-| TD-48 | **Inyección de markup en SVG de charts** — labels de usuario interpolados crudos en `<title>`/`aria-label` | FE-001 | Donut/LineChart roto con `&<>"` en nombre de categoría | S | Abierto — Sprint 3 |
-| TD-49 | **`aria-label` técnico sobrescribe label visible** — regresión de TD-08 en `forms.js` | FE-003 | Lector anuncia "amount"/"categoryId"; WCAG 2.5.3/4.1.2 | S | Abierto — Sprint 3 |
+| TD-43 ✅ | **Ventas parciales imposibles** — `soldQuantity`=qty comprada; comisión mal prorrateada | FIN-003/004 | Liquidación siempre total; P&L realizado incorrecto en ventas parciales | M | **HECHO** (`f1f1bd0`+`a8dec52`): modal con campo qty, parcial/total, `lotRealizedPnL` prorateado. |
+| TD-44 ✅ | **`cdtCurrentValue` sobrevalora CDT** — capitaliza sobre `totalCost` (incl. comisión) sin tope en vencimiento | FIN-008 | CDT sobrevalorado; sigue creciendo tras vencer | S | **HECHO** (`a8dec52`): capitaliza sobre `quantity` (capital puro), topa en `maturityDate`. |
+| TD-47 ✅ | **`reconcileAndHydrate` reduce `update` a su patch** — `db.put(store, op.data)` reemplaza el registro entero | BE-004 | Pérdida temporal de campos tras refresh con update pendiente | S | **HECHO** (`7a4c43e`): merge `{...existing, ...op.data}` para ops `update`. |
+| TD-48 ✅ | **Inyección de markup en SVG de charts** — labels de usuario interpolados crudos en `<title>`/`aria-label` | FE-001 | Donut/LineChart roto con `&<>"` en nombre de categoría | S | **HECHO** (`b78eff6`): `esc()` en `dom.js`, aplicado en todos los `<title>` y `aria-label` de charts. |
+| TD-49 ✅ | **`aria-label` técnico sobrescribe label visible** — regresión de TD-08 en `forms.js` | FE-003 | Lector anuncia "amount"/"categoryId"; WCAG 2.5.3/4.1.2 | S | **HECHO** (`b78eff6`): `aria-label` removido de `textInput`/`select`; solo como param opcional. |
 
 ### P2 · Media (nuevos)
 

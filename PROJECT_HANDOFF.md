@@ -23,7 +23,7 @@ Centraliza: patrimonio neto, presupuestos, flujo de caja, inversiones, metas, de
 | PWA instalada en celular | ✅ Funcionando |
 | Google OAuth | ✅ Activo (`patitosalmir@gmail.com` + `alejandrorr1367@gmail.com`) |
 | Backend Apps Script | ✅ Desplegado y verificado en producción |
-| Tests financieros | ✅ **65/65** pasando (13 suites) |
+| Tests financieros | ✅ **75/75** pasando (15 suites) |
 | Módulo Import | ✅ Completamente funcional (BUG-P0-1/P1-1/P1-2/P1-3 corregidos) |
 | Backend patrimonio neto | ✅ CC incluida como pasivo en `computeNetWorth_` (BUG-P0-2, desplegado) |
 | Snapshots de patrimonio | ✅ Crear · eliminar (soft delete) · masivo · outliers — **eliminar arreglado** (sesión 06-03) |
@@ -482,24 +482,22 @@ HEAD pasó de `75eacca` a **`b870d6c`**. SW `v0.2.10 → v0.2.13`. Tests `33 →
 ```
 Rama:    main
 Remote:  https://github.com/alejandror1367/FinanceOS.git
-HEAD:    e6b3c77  feat(agents): infraestructura de agentes y comandos de auditoría/implementación
-SW:      v0.2.43  (sincronizado con config.version — hook actualiza ambos; sin cambios este commit)
+HEAD:    6b45621  perf(backend): Sprint 4 Grupo B-2 — AuditLog archivado y ventana 24m en bootstrap
+SW:      v0.2.52  (sincronizado con config.version)
 Status:  limpio · sincronizado con origin/main (push 0 0)
 ```
 
 ### Commits recientes
 ```
-e6b3c77 feat(agents): infraestructura de agentes y comandos de auditoría/implementación
-a180225 docs: handoff 2026-06-03 — Sprint 5 + Sprint 6 + 7 fixes de sync
-f3e8699 feat(ux): Command Palette ⌘K + atajos de teclado (Sprint 6.4)
-8e2861b feat(ux): validación inline en todos los formularios (Sprint 6.3)
-12e103d fix(backend): idempotencia y preservación de id en todos los create
-8c12920 fix(categories): preservar el id del cliente al crear categoría
-5e46331 fix(accounts): preservar el id del cliente al crear cuenta (broker inline)
-ef740f8 fix(investments): compras multicuenta no sincronizaban (name vacío)
-2fdbc40 fix(sync): acotar reintentos en la ruta batchWrite (evita bucle infinito)
-95bcd51 fix(networth): soft delete de snapshots (rápido) en vez de hard delete
-```
+6b45621 perf(backend): Sprint 4 Grupo B-2 — AuditLog archivado y ventana 24m en bootstrap
+056a5ba perf(backend): Sprint 4 Grupo B-1 — caché per-request y purgeDeleted en bloque
+7a4c43e fix(sync): Sprint 4 Grupo A — robustez del motor de sincronización frontend
+cd839e9 fix(networth): FIN-014 evitar doble conteo CC en totalLiabilities y mejorar UI de Pasivos
+b78eff6 fix(a11y): Sprint 3 — accesibilidad JS (3.2, 3.3, 3.5, 3.6)
+7c38299 fix(a11y/ds): Sprint 3 — contraste, tokens y DS (3.1, 3.7, 3.8, 3.9, 3.10)
+a8dec52 feat(selectors): FIN-004/008/009 selectores puros de lotes CDT y penny-rounding
+f1f1bd0 feat(investments): FIN-003 modal de venta con campo qty y ventas parciales
+40916ad docs: handoff 2026-06-03 (tarde/noche) — auditoría global + roadmap + Sprint 1
 ```
 
 ---
@@ -550,7 +548,7 @@ La app ya tiene `config.js` con las URLs reales commiteadas. Solo necesitas:
 ### En el nuevo equipo (una sola vez — bootstrap)
 - [ ] `git clone https://github.com/alejandror1367/FinanceOS.git`
 - [ ] `cd FinanceOS && git config core.hooksPath .githooks` (activa auto-bump del SW **y** config.version)
-- [ ] `node --test tests/selectors.test.js` → debe dar **65/65** ✅
+- [ ] `node --test tests/selectors.test.js` → debe dar **75/75** ✅
 - [ ] `npx serve .` → verificar que carga en `localhost:3000`
 - [ ] Leer `CLAUDE.md` (invariantes absolutos) + `docs/NEXT_SESSION.md` (estado actual)
 
@@ -566,32 +564,32 @@ Todos los backends han sido desplegados. El estado del backend en producción es
 
 ### Verificación rápida del estado
 ```bash
-git log --oneline -5          # HEAD debe ser e6b3c77
-node --test tests/selectors.test.js  # 65/65
-grep "version" src/core/config.js   # debe coincidir con sw.js VERSION
+git log --oneline -5          # HEAD debe ser 6b45621
+node --test tests/selectors.test.js  # 75/75
+grep "version" src/core/config.js   # debe coincidir con sw.js VERSION (v0.2.52)
 ```
 
 ---
 
 ## 18. Próximos pasos recomendados
 
-**Sesión 2026-06-03 completa:** Sprint 5 (inversiones avanzadas) + Sprint 6 (UX) completos;
-cadena de 7 fixes de integridad de sync corregidos y desplegados; verificación en vivo con
-Playwright (14 rutas sin errores JS). Tests: 54/54. Detalle en §"Cambios realizados en sesión 2026-06-03".
+**Sesión 2026-06-03 (tarde):** Sprint 2 (ventas parciales + CDT) + Sprint 3 (WCAG AA) + fix FIN-014 (doble conteo CC) + Sprint 4 (backend perf + sync robustness). Tests: 75/75. Detalle en §"Cambios 2026-06-03 (tarde)".
 
-**Próximos sprints (orden recomendado, ver `docs/Roadmap-Implementacion-2026-06-02.md`):**
+**Próximos sprints (orden recomendado, ver `docs/Roadmap-Implementacion-2026-06-03.md`):**
 
 | Sprint | Objetivo | Estado |
 |---|---|---|
-| **5** | Inversiones avanzadas: withholding, comisiones, multicuenta | ✅ HECHO (06-03) |
-| **6** | UX/UI: tooltips charts, micro-anim, validación inline, Command Palette ⌘K | ✅ HECHO (06-03) |
-| **7** | Performance: content-visibility, lazy load vistas, paginación IndexedDB | ~1.5d (pendiente) |
-| **8** | Analítica avanzada: selector período, 5 insights adicionales, comparación histórico | ~2d (pendiente) |
-| **9** | Pulido: TD-33–40, WCAG final, fix truncamiento "Apariencia" Ajustes, v1.0 | ~2d (pendiente) |
+| **1** | Integridad de cifras maestras (5 P0) | ✅ HECHO + desplegado |
+| **2** | Inversiones: ventas parciales y valoración | ✅ HECHO |
+| **3** | Accesibilidad WCAG AA + DS | ✅ HECHO |
+| **4** | Backend perf + robustez sync | ✅ HECHO + desplegado |
+| **5** | Seguridad (iss/exp, id_token en POST, secrets) | 🔴 Pendiente ~1d · **deploy requerido** |
+| **6** | Deudas y metas (correctitud financiera) | 🔴 Pendiente ~1.5d · solo frontend |
+| **7** | Charts responsive + a11y avanzada | 🔴 Pendiente ~1d |
+| **8** | Avanzado + limpieza P3 | 🔴 Pendiente ~1d |
+| **9** | QA en vivo Playwright + pulido v1.0 | 🔴 Pendiente ~1d |
 
-**Sin deploys pendientes** — al cierre de la sesión 06-03 el usuario ya redeployó todos los `.gs`
-de backend tocados (Quotes, NetWorth, Config, Utils, Accounts, Categories + los 10 create handlers).
-Sprint 6 (6.3/6.4) es frontend puro.
+**Sin deploys pendientes** — Sprint 4 backend redeployado por el dueño en esta sesión.
 
 **Verificado en vivo (Playwright, sesión 06-03):** 14/14 rutas cargan sin errores JS · campos
 comisión/retención del Sprint 5 · validación inline · Command Palette (⌘K/'/'/botón, filtrar+navegar).
@@ -669,24 +667,19 @@ commit: e6b3c77 · rama: main · SW: v0.2.43 · config.version: 0.2.43 · tests:
 
 > Leer esto antes que cualquier otra sección. Máximo 100 líneas. Fuente de verdad para retomar de inmediato.
 
-**HEAD:** `b23a4f6` · **SW/config.version:** `v0.2.46` · **Tests:** 65/65 · **Rama:** main · **Sync:** 6 commits ahead (no pusheado aún — lo hará el handoff)
+**HEAD:** `6b45621` · **SW/config.version:** `v0.2.52` · **Tests:** 75/75 · **Rama:** main · **Sync:** limpio (pusheado)
 
 > **MCP:** `.mcp.json` versionado con **playwright** + **context7** (scope de proyecto).
 > Tras `git pull`: **aprobar** ambos y **reiniciar Claude Code** (las tools MCP se fijan al arrancar).
 
 ### Estado actual real
 - **App en producción:** https://alejandror1367.github.io/FinanceOS/ (PWA instalada, OAuth activo)
-- **Backend Apps Script:** ⚠ **3 archivos `.gs` pendientes de deploy** por el dueño (ver abajo)
-- **Tests:** **65/65** en `tests/selectors.test.js` — 11 nuevos tests de FX, retención e idempotencia (↑11 vs sesión anterior)
-- **Sesión 2026-06-03 (esta sesión):** auditoría global (46 hallazgos, 4/5 áreas) + roadmap 9 sprints + **Sprint 1 completado** (5 P0 de integridad de cifras)
-- **Sprints completados:** 1–4 (06-02) + 5 (inversiones avanzadas) + 6 (UX) (06-03 mañana) + **Sprint 1 del nuevo ciclo** (06-03 tarde): 5 P0 de cifras
+- **Backend Apps Script:** ✅ **Todo desplegado** — Sprints 1 y 4 redeployados por el dueño en esta sesión
+- **Tests:** **75/75** en `tests/selectors.test.js` — 15 suites (↑10 vs sesión anterior)
+- **Sesión 2026-06-03 (tarde):** Sprint 2 (ventas parciales + CDT) + Sprint 3 (WCAG AA) + fix FIN-014 (doble conteo CC) + Sprint 4 (backend perf + sync)
 
-### ⚠ Deploy manual requerido (dueño)
-```
-backend/Utils.gs    ← BE-001/TD-45: guard isDeleted en idempotentHit_ (commit 45b47ec)
-backend/Quotes.gs   ← BE-003/TD-02: FX rates en getQuotes ({quotes, fxRates}) (bc4f1fe)
-backend/Reports.gs  ← FIN-001/TD-41: computeNetWorth_ paridad FE (filtrar vendidos + comisión) (8751f9a)
-```
+### Sin deploys pendientes
+Todos los `.gs` están actualizados en producción.
 
 ### Arquitectura actual
 ```
@@ -697,59 +690,97 @@ Flujo: `Views → Services → Store → Views` (never direct to net/IndexedDB f
 
 ### Funcionalidades implementadas (completas)
 - Dashboard · Hoy · Transacciones · Cuentas · Presupuestos · Recurrentes
-- Patrimonio (con gestión de snapshots: crear/eliminar individual/masivo/outliers/expandible)
-- Inversiones (DCA, precios vivos, **FX rates reales**, dividendos, ventas, **P&L realizado neto de retención**, comisión, multicuenta)
-- Metas (forecast con promedio 3 meses via `monthlySavingsAvg`)
-- **Command Palette (⌘K / Ctrl K · '/' · '?')** — navegación rápida a los 15 módulos + cambiar tema
-- **Validación inline en todos los formularios** (borde rojo + mensaje junto al campo, `aria-invalid`)
-- Deudas (Snowball/Avalanche, amortización real, panel CC con utilización)
-- Analítica (cashflow, insights, normPeriodKey correcta)
-- Diario · Exportaciones · Ajustes
-- Import extractos bancarios (Bancolombia/NuBank/Nequi/Global66/RappiPay/XTB/AQR) — usa **Groq** (`llama-3.1-8b-instant`), no Gemini
+- Patrimonio (**CC mostradas como filas reales en Pasivos**, sin doble conteo, snapshots)
+- Inversiones (ventas **parciales y totales** con qty, P&L prorateado, CDT con tope de vencimiento, penny-rounding)
+- Metas · Deudas (Snowball/Avalanche, amortización) · Analítica · Diario · Exportaciones · Ajustes
+- **Command Palette (⌘K)** · **Validación inline** en todos los formularios
+- Import extractos bancarios — usa **Groq** (`llama-3.1-8b-instant`), no Gemini
 
 ### Bugs abiertos
-**P1 (no bloquean flujo principal pero cifras afectadas):**
-1. Ventas parciales imposibles — `soldQuantity`=qty comprada (TD-43) — Sprint 2
-2. CDT sobrevaluado — capitaliza sobre totalCost+comisión, sin tope vencimiento (TD-44) — Sprint 2
+**P1** — ninguno (TD-43/44/47/48/49 cerrados esta sesión)
 
 **P3 (cosméticos):**
-3. Proyección de presupuesto irreal días 1–3 del mes (TD-36)
-4. Sin validación de solapamiento de presupuestos (TD-37)
-5. Label "Apariencia" truncado como "T..." en Ajustes (cosmético)
+1. Proyección de presupuesto irreal días 1–3 del mes (TD-36)
+2. Sin validación de solapamiento de presupuestos (TD-37)
 
 ### Riesgos abiertos
-- TD-02 🟡 parcial: FX resuelto en frontend; backend `Quotes.gs` ⚠ pendiente deploy (hasta entonces, FX viene del último refresh en memoria)
-- `listTransactions_` sin paginación → lento >5000 tx (TD-25 / Sprint 4 roadmap)
-- TD-47: `reconcileAndHydrate` reduce `update` a su patch (Sprint 4)
+- `listTransactions_` ahora ventaneada a 24m — histórico más antiguo no carga en bootstrap (intencional, por confirmar impacto)
+- TD-50/51 (seguridad): `id_token` en URL + validación `iss`/`exp` — Sprint 5
 
 ### Decisiones arquitectónicas importantes
-- Hook pre-commit actualiza TANTO `sw.js` como `src/core/config.js` (ambos deben coincidir)
-- **`idempotentHit_` ya guarda soft-deletes**: si `hit.isDeleted===true` → no-hit (continúa al create real)
-- **`getQuotes` devuelve `{quotes, fxRates}`**: shape nuevo desde Sprint 1 (`bc4f1fe`); backend legacy sin este campo degrada a fxRates={}
-- **`_recalcAccountBalance`**: reemplaza ajuste delta en `update` de tx — recalcula desde IndexedDB (idempotente)
-- **`applyWithholding(grossPnL, rate)`**: función pura en `selectors.js` para retención sobre ganancia realizada
-- Quotes: símbolo tal cual y, si no hay datos y tiene punto, reintenta punto→guion (BRK.B→BRK-B)
-- `apiClient.get()` reintenta en `TypeError` (ERR_ABORTED), NO en `AbortError` (timeout propio)
+- `totalLiabilities` excluye liabilities `type=credit_card` (cubiertas por cuentas CC) — FIN-014
+- `reconcileAndHydrate` mergea `{...existing, ...op.data}` para ops `update` (TD-47)
+- `flushBatch` empareja por `entityId`, no por índice (TD-26)
+- `isTransient`: "No autorizado" → dead-letter, no reintenta (TD-10)
+- `repoReadAll_` tiene caché per-request + `repoCacheInvalidate_` tras escrituras (TD-05)
+- `purgeDeleted_` reconstruye hoja en bloque (`clearContent + setValues`) — N→2 ops Sheets
+- `getBootstrap_` limita transactions a ventana 24 meses; `listTransactions_` acepta `since`
 
-### Próximo sprint recomendado: Sprint 2 — Inversiones (ventas parciales y valoración)
+### Próximo sprint recomendado: Sprint 5 — Seguridad
 ```
 Roadmap activo: docs/Roadmap-Implementacion-2026-06-03.md
-Sprint 2: ventas parciales (TD-43/44), roundMoney en acumulados, extraer groupByTicker a módulo testeable
-No requiere deploy de backend.
+Sprint 5: iss/exp en verifyGoogleToken_, .gitignore secretos, id_token en POST, truncar fileContent IA
+Requiere deploy de backend (Auth.gs, Code.gs).
+Alternativa: Sprint 6 (deudas/metas, solo frontend) si no se quiere deploy inmediato.
 ```
 
 ### Archivos críticos
 ```
-CLAUDE.md                   — Invariantes absolutos (leer SIEMPRE primero)
-src/store/selectors.js      — Lógica financiera derivada + applyWithholding + FX exclusion
-src/services/dataService.js — Orquesta local/sync; _recalcAccountBalance (idempotente)
-src/services/priceService.js — FX rates (poblado desde getQuotes respuesta)
-src/services/entities.js    — Mapa colecciones ↔ acciones backend
-src/components/ui.js        — BarChart, KpiCard, Button, Badge
-backend/Reports.gs          — getDashboard, computeNetWorth_ ⚠ pendiente deploy
-backend/Quotes.gs           — getQuotes + fxRates ⚠ pendiente deploy
-backend/Utils.gs            — idempotentHit_ guard ⚠ pendiente deploy
-tests/selectors.test.js     — 65/65 tests financieros (13 suites)
+CLAUDE.md                      — Invariantes absolutos (leer SIEMPRE primero)
+src/store/selectors.js         — Lógica financiera + lotRealizedPnL + cdtCurrentValue + FX
+src/services/dataService.js    — reconcileAndHydrate (merge update), _recalcAccountBalance
+src/services/syncEngine.js     — isTransient (sin "No autorizado"), flushBatch (por entityId)
+src/views/investments.js       — modal venta parcial/total, delegación a selectores
+src/views/networth.js          — pasivos sin credit_card en LIABILITY_TYPES, CC como filas
+backend/Utils.gs               — repoReadAll_ caché, purgeDeleted_ en bloque, repoCacheInvalidate_
+backend/Reports.gs             — getBootstrap_ con ventana 24m
+tests/selectors.test.js        — 75/75 tests financieros (15 suites)
+```
+
+---
+
+## Cambios realizados en sesión 2026-06-03 (tarde — Sprints 2, 3, 4 + FIN-014)
+
+### Mejoras financieras (Sprint 2)
+- `f1f1bd0`: modal de venta con campo **qty a vender**; ventas parciales (lote remanente) y totales
+- `a8dec52`: `lotRealizedPnL` — comisión de compra prorateada por fracción vendida (TD-43/FIN-004)
+- `a8dec52`: `cdtCurrentValue` — capitaliza sobre capital puro, topa en `maturityDate` (TD-44/FIN-008)
+- `a8dec52`: penny-rounding `roundMoney` en acumulados del portafolio (FIN-009/TD-21 inversiones)
+- +9 tests nuevos (64→74 total)
+
+### Accesibilidad y Design System (Sprint 3)
+- `7c38299`: `--text-tertiary` ≥4.5:1 en ambos temas; `10px/11px` → `var(--fs-micro)`; `.preset-chip:hover` usa token; `select` con padding-right; fix truncamiento label "Apariencia"
+- `b78eff6`: `aria-label` redundante removido de inputs/selects (TD-49); `esc()` en SVG charts (TD-48); `ProgressBar` con ARIA completo; `confirmDialog` mueve foco al abrirse
+- SW auto-bumpeado a v0.2.50
+
+### Fix patrimonio (FIN-014)
+- `cd839e9`: `totalLiabilities` filtra `type=credit_card` de liabilities (evita doble conteo con cuentas CC)
+- `cd839e9`: sección Pasivos muestra cada CC como fila real (no nota al pie)
+- `cd839e9`: `credit_card` removido de las opciones del formulario "Nueva deuda"
+- +1 test nuevo (75/75)
+
+### Backend performance + robustez de sync (Sprint 4)
+- `7a4c43e`: `isTransient` — "No autorizado" → dead-letter, no reintenta (TD-10/BE-011)
+- `7a4c43e`: `flushBatch` empareja por `entityId`, no por índice (TD-26/BE-010)
+- `7a4c43e`: `reconcileAndHydrate` mergea `{...existing, ...op.data}` para updates (TD-47/BE-004)
+- `056a5ba`: `repoReadAll_` con caché per-request + `repoCacheInvalidate_` en writes (TD-05/BE-005)
+- `056a5ba`: `purgeDeleted_` reconstruye hoja en bloque — de N→2 ops Sheets (TD-28/BE-007)
+- `6b45621`: `truncateAuditLog_()` purga AuditLog >90 días (TD-05/BE-008); acción admin expuesta
+- `6b45621`: `getBootstrap_` ventanea transactions a 24 meses; `listTransactions_` acepta `since` (TD-25/BE-006)
+
+### Archivos modificados
+`src/store/selectors.js` · `src/services/syncEngine.js` · `src/services/dataService.js` · `src/views/investments.js` · `src/views/networth.js` · `src/styles/themes.css` · `src/styles/components.css` · `src/utils/dom.js` · `src/components/charts.js` · `src/components/forms.js` · `src/components/modal.js` · `src/components/ui.js` · `backend/Utils.gs` · `backend/Accounts.gs` · `backend/Audit.gs` · `backend/Code.gs` · `backend/Reports.gs` · `backend/Transactions.gs` · `tests/selectors.test.js`
+
+### Commits relevantes
+```
+6b45621 perf(backend): Sprint 4 Grupo B-2 — AuditLog archivado y ventana 24m en bootstrap
+056a5ba perf(backend): Sprint 4 Grupo B-1 — caché per-request y purgeDeleted en bloque
+7a4c43e fix(sync): Sprint 4 Grupo A — robustez del motor de sincronización frontend
+cd839e9 fix(networth): FIN-014 evitar doble conteo CC en totalLiabilities y mejorar UI de Pasivos
+b78eff6 fix(a11y): Sprint 3 — accesibilidad JS
+7c38299 fix(a11y/ds): Sprint 3 — contraste, tokens y DS
+a8dec52 feat(selectors): FIN-004/008/009 selectores puros de lotes CDT y penny-rounding
+f1f1bd0 feat(investments): FIN-003 modal de venta con campo qty y ventas parciales
 ```
 
 ---
