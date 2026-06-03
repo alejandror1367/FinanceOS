@@ -21,7 +21,27 @@ function sum_(arr, fn) {
 function computeNetWorth_(ctx) {
   // Excluye cuentas de inversión (TD-03) y tarjetas de crédito (son pasivos, no activos).
   var accountsValue = sum_(ctx.accounts.filter(function (a) { return a.type !== 'investment' && a.type !== 'credit_card'; }), function (a) { return a.balance; });
-  var investmentsValue = sum_(ctx.investments, function (i) { return i.quantity * i.currentPrice; });
+
+  // FIN-001 (TD-41): solo incluir lotes ACTIVOS (sin soldDate y sin isDeleted).
+  // Antes sumaba quantity × currentPrice de todas las filas, incluyendo lotes vendidos
+  // → patrimonio inflado vs. la vista de Inversiones del frontend.
+  // FX: el backend no tiene acceso a las tasas en tiempo real (vienen de Yahoo Finance
+  // vía el frontend). Se suma el valor en la divisa nativa del lote como mejor esfuerzo;
+  // la fuente de verdad de FX es getQuotes_ + priceService (frontend). A largo plazo
+  // (F-17) debe existir una única fuente de verdad para computeNetWorth.
+  var activeInvestments = ctx.investments.filter(function (i) {
+    return !i.soldDate && !i.isDeleted;
+  });
+  var investmentsValue = sum_(activeInvestments, function (i) {
+    return (i.quantity || 0) * (i.currentPrice || 0);
+  });
+
+  // FIN-001: sumar comisión al cost de inversiones activas para paridad con
+  // investmentsCost del frontend (que incluye commission desde Sprint 5).
+  var investmentsCost = sum_(activeInvestments, function (i) {
+    return (i.quantity || 0) * (i.avgCost || i.purchasePrice || 0) + (Number(i.commission) || 0);
+  });
+
   var otherAssets = sum_(ctx.assets, function (a) { return a.value; });
   var totalAssets = accountsValue + investmentsValue + otherAssets;
   var ccDebt = ctx.accounts.filter(function (a) {
@@ -33,6 +53,7 @@ function computeNetWorth_(ctx) {
     totalLiabilities: totalLiabilities,
     netWorth: totalAssets - totalLiabilities,
     investmentsValue: investmentsValue,
+    investmentsCost: investmentsCost,
     accountsValue: accountsValue,
     otherAssets: otherAssets,
   };
@@ -74,7 +95,8 @@ function getDashboard_(p) {
   var expense = sum_(monthTx.filter(function (t) { return t.type === 'expense'; }), function (t) { return t.amount; });
   var savings = income - expense;
 
-  var investmentsCost = sum_(ctx.investments, function (i) { return i.quantity * i.avgCost; });
+  // FIN-001: reutilizar investmentsCost de computeNetWorth_ (ya filtra sold/deleted y suma comisión).
+  var investmentsCost = nw.investmentsCost || 0;
   var investmentsReturnPct = investmentsCost ? ((nw.investmentsValue - investmentsCost) / investmentsCost) * 100 : 0;
 
   var recent = ctx.transactions.slice().sort(function (a, b) {
