@@ -174,10 +174,17 @@ function repoSoftDelete_(entity, id) {
 // secundarios (logAudit_, ajuste de saldos) y, junto con preservar el id del
 // cliente (ULID) en repoCreate_, evita filas duplicadas y referencias colgadas.
 // repoFindRowIndex_ solo lee la columna id → no encarece el create común.
+//
+// BE-001 (TD-45): si el registro encontrado está marcado como soft-deleted, lo
+// tratamos como NO-hit para que el create real continúe y aplique los efectos
+// secundarios (ajuste de saldo, auditLog). Devolver el registro borrado causaría
+// un fantasma sin saldo aplicado → elegimos continuar al create como si no existiera.
 function idempotentHit_(entity, id) {
   if (!id) return null;
   if (repoFindRowIndex_(entity, id) <= 0) return null;
-  return repoGet_(entity, id);
+  var hit = repoGet_(entity, id);
+  if (hit && hit.isDeleted === true) return null;
+  return hit;
 }
 
 function hasKey_(schema, key) {
