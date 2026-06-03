@@ -72,13 +72,19 @@ function groupByTicker(investments) {
   return Object.values(map).map((g) => {
     const sorted    = [...g.purchases].sort((a, b) => (b.purchaseDate || '').localeCompare(a.purchaseDate || ''));
     const totalQty  = g.purchases.reduce((s, p) => s + (Number(p.quantity) || 0), 0);
-    const totalCost = g.purchases.reduce((s, p) => s + (Number(p.quantity) || 0) * (Number(p.purchasePrice || p.avgCost) || 0), 0);
-    // P&L realizado de las compras vendidas
+    // Cost basis incluye la comisión de compra de cada lote (Sprint 5).
+    const totalCommission = g.purchases.reduce((s, p) => s + (Number(p.commission) || 0), 0);
+    const totalCost = g.purchases.reduce((s, p) => s + (Number(p.quantity) || 0) * (Number(p.purchasePrice || p.avgCost) || 0), 0) + totalCommission;
+    // P&L realizado de las compras vendidas, neto de comisiones de compra y venta (Sprint 5).
     const realizedPnL = g.sold.reduce((s, p) => {
       const qty = Number(p.soldQuantity || p.quantity) || 0;
-      return s + qty * (Number(p.soldPrice) || 0) - qty * (Number(p.purchasePrice || p.avgCost) || 0);
+      const fees = (Number(p.commission) || 0) + (Number(p.soldCommission) || 0);
+      return s + qty * (Number(p.soldPrice) || 0) - qty * (Number(p.purchasePrice || p.avgCost) || 0) - fees;
     }, 0);
-    return { ...g, sorted, totalQty, totalCost, weightedAvg: totalQty ? totalCost / totalQty : 0,
+    // Retención en fuente de la posición: la del lote más reciente que la tenga definida.
+    const withholdingRate = sorted.find((p) => Number(p.withholdingRate) > 0)?.withholdingRate || 0;
+    return { ...g, sorted, totalQty, totalCost, totalCommission, withholdingRate,
+      weightedAvg: totalQty ? totalCost / totalQty : 0,
       storedPrice: Number(sorted[0]?.currentPrice) || 0, realizedPnL };
   });
 }
@@ -89,10 +95,12 @@ function openSellModal(group, livePrice) {
   const currentPrice = livePrice?.price || group.storedPrice || 0;
   const priceEl = numberInput({ name: 'soldPrice', value: currentPrice ? currentPrice.toFixed(currency !== 'COP' ? 2 : 0) : '', placeholder: 'Precio por unidad' });
   const dateEl  = textInput({ name: 'soldDate', value: today(), type: 'date' });
+  const commEl  = numberInput({ name: 'soldCommission', value: '', placeholder: 'Opcional' });
 
   const body = el('div', {}, [
     el('p', { class: 't-caption text-secondary', text: `${totalQty.toFixed(6).replace(/\.?0+$/, '')} unidades · costo total ${fmtI(totalCost, currency)}` }),
     el('div', { class: 'field-row' }, [field('Precio de venta', priceEl), field('Fecha de venta', dateEl)]),
+    field(`Comisión de venta (${currency})`, commEl),
   ]);
 
   openModal({
@@ -102,11 +110,17 @@ function openSellModal(group, livePrice) {
     onSubmit: async () => {
       const soldPrice = Number(priceEl.value) || 0;
       const soldDate  = dateEl.value;
+      const totalComm = Number(commEl.value) || 0;
       if (soldPrice <= 0) { toast('Ingresa el precio de venta', { type: 'negative' }); return false; }
       if (!soldDate)      { toast('Selecciona una fecha', { type: 'negative' }); return false; }
+      // Prorratea la comisión de venta entre lotes por participación de cantidad,
+      // así el P&L realizado neto sobrevive si luego se borra un lote individual.
+      const qtyTotal = purchases.reduce((s, p) => s + (Number(p.quantity) || 0), 0) || 1;
       return guardedSave(async () => {
         for (const p of purchases) {
-          await dataService.update('investments', p.id, { ...p, soldPrice, soldDate, soldQuantity: Number(p.quantity) || 0 });
+          const qty = Number(p.quantity) || 0;
+          const soldCommission = totalComm * (qty / qtyTotal);
+          await dataService.update('investments', p.id, { ...p, soldPrice, soldDate, soldQuantity: qty, soldCommission });
         }
       }, `Venta de ${symbol || name} registrada`, 'Error al registrar');
     },
@@ -209,6 +223,10 @@ function openPurchaseModal({ inv = null, defaultSymbol = '', defaultType = 'etf'
       field('Moneda', select({ name: 'currency', value: inv?.currency || 'USD', options: CURRENCIES })),
     ]),
     field('Fecha de compra', textInput({ name: 'purchaseDate', value: inv?.purchaseDate || today(), type: 'date' })),
+    el('div', { class: 'field-row' }, [
+      field('Comisión de compra', numberInput({ name: 'commission', value: inv?.commission ?? '', placeholder: 'Opcional' })),
+      field('Retención en fuente (%)', numberInput({ name: 'withholdingRate', value: inv?.withholdingRate ?? '', placeholder: 'Ej: 4' })),
+    ]),
     el('div', { style: 'margin:var(--space-2) 0' }, [modeSeg]),
     qtyRow, amtRow, calcEl, extraEl,
   ]);
@@ -238,6 +256,8 @@ function openPurchaseModal({ inv = null, defaultSymbol = '', defaultType = 'etf'
         purchasePrice: Number(priceEl.value) || 0,
         purchaseDate: g('purchaseDate'),
         currency: (g('currency') || 'USD').toUpperCase().slice(0, 3),
+        commission: Number(g('commission')) || 0,
+        withholdingRate: Number(g('withholdingRate')) || 0,
       };
       if (isTrivial(typeEl.value)) {
         data.quantity = 1;
@@ -315,7 +335,7 @@ function purchasesTable(group, livePrice) {
 
 // ─── Card de posición agrupada ─────────────────────────────────────────────
 function positionCard(group, livePrice, fxRates, baseCur) {
-  const { symbol, name, assetType, totalQty, totalCost, weightedAvg, currency, purchases } = group;
+  const { symbol, name, assetType, totalQty, totalCost, weightedAvg, currency, purchases, totalCommission, withholdingRate } = group;
   const { value: nativeValue, hasPrice } = groupValue(group, { [(symbol || '').toUpperCase()]: livePrice });
   const gain    = hasPrice && nativeValue !== null ? nativeValue - totalCost : null;
   const gainPct = gain !== null && totalCost ? gain / totalCost * 100 : null;
@@ -338,6 +358,7 @@ function positionCard(group, livePrice, fxRates, baseCur) {
   titleWrap.appendChild(el('span', { class: 'inv-card__name' }, [name || symbol || '—']));
   titleWrap.appendChild(Badge(typeLabel(assetType), 'info'));
   if (currency && currency !== baseCur) titleWrap.appendChild(Badge(currency, ''));
+  if (withholdingRate > 0) titleWrap.appendChild(Badge(`Ret. ${withholdingRate}%`, 'warning'));
   head.appendChild(titleWrap);
 
   const valWrap = el('div', { class: 'inv-card__value-wrap' });
@@ -375,6 +396,8 @@ function positionCard(group, livePrice, fxRates, baseCur) {
     if (purchases.length > 1) metrics.appendChild(m('Compras (DCA)', `${purchases.length} ops.`));
   }
   metrics.appendChild(m('Total invertido', fmtI(totalCost, currency)));
+  if (totalCommission > 0) metrics.appendChild(m('Comisiones', fmtI(totalCommission, currency)));
+  if (withholdingRate > 0) metrics.appendChild(m('Retención fuente', `${withholdingRate}%`));
   if (hasPrice && nativeValue !== null) {
     const copVal = toCOP(nativeValue, currency, fxRates);
     if (copVal !== null && currency !== 'COP') metrics.appendChild(m('≈ en COP', formatMoney(copVal, 'COP')));

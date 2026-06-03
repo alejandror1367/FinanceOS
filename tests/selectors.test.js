@@ -245,6 +245,21 @@ describe('inversiones', () => {
     });
     assert.equal(selectors.investmentsReturnPct(s), -20);
   });
+
+  test('investmentsCost: incluye la comisión de compra (Sprint 5)', () => {
+    const s = mkState({
+      investments: [{ id: 'i1', quantity: 10, avgCost: 100_000, commission: 50_000 }],
+    });
+    // 10 × 100.000 + 50.000 de comisión
+    assert.equal(selectors.investmentsCost(s), 1_050_000);
+  });
+
+  test('investmentsCost: sin comisión se comporta como antes', () => {
+    const s = mkState({
+      investments: [{ id: 'i1', quantity: 10, avgCost: 100_000 }],
+    });
+    assert.equal(selectors.investmentsCost(s), 1_000_000);
+  });
 });
 
 // ── monthlyIncome / monthlyExpense / monthlySavings / savingsRate ─────────────

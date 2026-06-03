@@ -112,6 +112,15 @@ var SCHEMAS = {
     { key: 'isDeleted', type: 'b' },
     { key: 'createdAt', type: 'ts' },
     { key: 'updatedAt', type: 'ts' },
+    // NOTA: estos campos se APPENDEAN al final (después de los timestamps) a propósito.
+    // El repositorio mapea columnas por posición (rowToObject_ usa schema[c]); insertarlos
+    // antes de createdAt/updatedAt desalinearía los datos ya escritos en la hoja.
+    { key: 'soldPrice', type: 'n' },       // precio de venta por unidad (posición cerrada)
+    { key: 'soldDate', type: 'd' },        // fecha de venta
+    { key: 'soldQuantity', type: 'n' },    // cantidad vendida
+    { key: 'commission', type: 'n' },      // comisión de la compra (Sprint 5)
+    { key: 'soldCommission', type: 'n' },  // comisión de la venta, prorrateada por lote (Sprint 5)
+    { key: 'withholdingRate', type: 'n' }, // retención en fuente % de la posición (Sprint 5)
   ],
   Assets: [
     { key: 'id', type: 's' },

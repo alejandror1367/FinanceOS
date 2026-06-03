@@ -60,7 +60,8 @@ export const selectors = {
     const fx   = priceService.fxRates;
     const base = s.baseCurrency || 'COP';
     const sum = s.investments.filter((i) => !i.isDeleted).reduce((acc, i) => {
-      const native = (i.quantity || 0) * (i.avgCost || i.purchasePrice || 0);
+      // Cost basis = (cantidad × precio de compra) + comisión de la operación (Sprint 5).
+      const native = (i.quantity || 0) * (i.avgCost || i.purchasePrice || 0) + (Number(i.commission) || 0);
       if (!native) return acc;
       const cur = i.currency || base;
       if (cur === base) return acc + native;
