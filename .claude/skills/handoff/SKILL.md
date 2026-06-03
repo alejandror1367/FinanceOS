@@ -1,6 +1,6 @@
 ---
 name: handoff
-description: Cambiar de equipo y seguir trabajando en FinanceOS con un solo comando. Modo SALIDA (default) — commitea el trabajo pendiente, sincroniza la documentación (PROJECT_HANDOFF, TechnicalDebt, NEXT_SESSION) al estado real, hace push y entrega el prompt de continuación para el otro PC. Modo ENTRADA (`in`) — al llegar al otro equipo: pull, hooks, tests, MCPs y resumen del estado para retomar. Usar cuando se diga "cambiar de pc", "me voy al trabajo/casa", "entrega", "guardar y seguir en otro equipo", "retomar aquí", o al cerrar/abrir una sesión de trabajo.
+description: Cambiar de equipo y seguir trabajando en FinanceOS con un solo comando. Modo SALIDA (default) — commitea el trabajo pendiente, sincroniza la documentación (PROJECT_HANDOFF, TechnicalDebt, NEXT_SESSION, SESSION_SUMMARY) al estado real, hace push y entrega el prompt de continuación para el otro PC. Modo ENTRADA (`in`) — al llegar al otro equipo: pull, hooks, tests, MCPs y resumen del estado para retomar. Usar cuando se diga "cambiar de pc", "me voy al trabajo/casa", "entrega", "guardar y seguir en otro equipo", "retomar aquí", o al cerrar/abrir una sesión de trabajo.
 ---
 
 # Handoff — FinanceOS (cambiar de PC sin perder contexto)
@@ -29,6 +29,7 @@ git diff --stat
 git log --oneline -8
 ```
 Lee la versión real: `version` en `src/core/config.js` y `VERSION` en `sw.js`.
+Anota: HEAD, SW version, conteo de tests actual.
 
 ### 2. Tests — puerta de calidad
 ```
@@ -42,25 +43,40 @@ Si **falla**, DETENTE: reporta el fallo y no commitees nada roto. El handoff exi
 - Stagea archivos **intencionales** (código en `src/`, `tests/`, `backend/`; docs en `docs/`,
   raíz). No hagas `git add -A` a ciegas: si hay untracked dudosos (temporales, `_*.mjs`,
   `*.output`), exclúyelos o pregúntalo.
-- El hook `pre-commit` auto-bumpea el SW al tocar `src/`/`index.html`/`manifest.json`/`assets/`
-  — es esperado; deja que ocurra.
+- El hook `pre-commit` auto-bumpea el SW **y** `config.version` al tocar `src/`/`index.html`/
+  `manifest.json`/`assets/` — es esperado; deja que ocurra.
 - Cierra los mensajes con:
-  `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`
+  `Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>`
 
 ### 4. Sincronizar la documentación al estado real
 Aplica el criterio de la skill **documentation-generator** (deriva del repo, no inventes):
-- **`PROJECT_HANDOFF.md`**:
-  - §2 (tabla de estado): conteo de tests, estado de deuda P0/P1/P2.
-  - §15 (bloque de git): `HEAD`, `SW` version y los ~8 commits recientes reales.
-  - Añade/actualiza una **sección fechada** (`## 14X. Cambios — sesión <fecha>`) con lo hecho,
-    lo verificado y lo NO verificado.
-  - §18/§19: refresca pendientes y el prompt (ver paso 5).
-- **`docs/TechnicalDebt.md`**: marca ✅ HECHO los TD cerrados esta sesión (con su commit).
-- **Cross-check** de coincidencias stale antes de cerrar:
+
+**`PROJECT_HANDOFF.md`** — debe ser la fuente de verdad completa. Actualizar:
+- `## CONTEXTO MÍNIMO PARA /HANDOFF`: tabla de estado, arquitectura, funcionalidades,
+  bugs abiertos, riesgos, decisiones, próximo sprint, archivos críticos. Máximo 100 líneas.
+  Si no existe la sección, créala antes de `## 19. Prompt de nueva sesión`.
+- `## 2. Estado actual real`: conteo de tests, estado de módulos, qué deploys hay pendientes.
+- `## 10/11/12. Trabajo pendiente / Bugs / Deuda`: actualizar ítems cerrados esta sesión.
+- `## 15. Estado de Git`: `HEAD`, `SW` version y los ~8 commits recientes reales.
+- `## 17. Checklist`: actualizar si cambió el estado del backend o los pasos de bootstrap.
+- `## 18. Próximos pasos`: refrescar sprint pendiente + lo NO verificado en vivo.
+- Añadir **`## Cambios realizados en sesión YYYY-MM-DD`** con subsecciones:
+  Auditorías realizadas · Bugs corregidos · Bugs pendientes · Refactors · Mejoras UX/UI ·
+  Mejoras financieras · Mejoras backend · Mejoras sync · Decisiones arquitectónicas ·
+  Riesgos mitigados · Riesgos pendientes · Archivos modificados · Commits relevantes.
+- Añadir **`## Estado posterior a la auditoría`** con: Completado ✅ · Parcialmente 🟡 · Pendiente 🔴.
+- `## 19. Prompt de nueva sesión`: ver paso 5.
+
+**`docs/TechnicalDebt.md`**: marca ✅ HECHO los TD cerrados esta sesión (con su commit).
+
+**Cross-check de referencias stale** antes de cerrar (ajusta los números al estado real):
 ```
-git grep -nE "33/33|pendiente de subir|ACCIÓN MANUAL" -- PROJECT_HANDOFF.md README.md DEPLOY.md docs/ || true
+git grep -nE "[0-9]{2}/[0-9]{2} tests|v0\.[0-9]+\.[0-9]+ \(SW\)|pendiente de subir|ACCIÓN MANUAL|Sin desplegar" \
+  -- PROJECT_HANDOFF.md docs/NEXT_SESSION.md || true
 ```
-  (Ajusta los patrones a lo que pudo quedar viejo; no reescribas auditorías fechadas, márcalas.)
+Busca específicamente el conteo de tests anterior (p. ej. si ahora son 52, busca `45/45`, `39/39`)
+y la versión SW anterior. Las menciones en secciones fechadas históricas son correctas — solo
+corrige las del "estado actual". No reescribas auditorías fechadas; márcalas como históricas.
 
 ### 5. Regenerar el prompt de continuación
 Escribe en **`docs/NEXT_SESSION.md`** y replica en **`PROJECT_HANDOFF.md` §19** un bloque
@@ -69,10 +85,21 @@ Escribe en **`docs/NEXT_SESSION.md`** y replica en **`PROJECT_HANDOFF.md` §19**
 forma de trabajo. Si en esta sesión un MCP (p. ej. Playwright/GitHub) conectaba pero sus
 tools no se cargaron, **incluye el aviso de reiniciar Claude Code** al inicio del bloque.
 
-### 6. Commit de docs + push
+### 6. Crear el resumen de sesión
+Crea **`docs/SESSION_SUMMARY_YYYY-MM-DD.md`** con:
+- Resumen ejecutivo (2–3 oraciones)
+- Hallazgos principales de auditoría (si la hubo)
+- Tabla de cambios implementados (cambio → impacto)
+- Archivos modificados
+- Commits realizados
+- Trabajo pendiente y no verificado en vivo
+- **Próximas 5 tareas prioritarias** (específicas y accionables)
+
+### 7. Commit de docs + push
 ```
-git add PROJECT_HANDOFF.md docs/TechnicalDebt.md docs/NEXT_SESSION.md   # + lo que tocaste
-git commit -m "docs: handoff al estado actual + prompt de continuación"  # mensaje real
+git add PROJECT_HANDOFF.md docs/TechnicalDebt.md docs/NEXT_SESSION.md \
+        docs/SESSION_SUMMARY_YYYY-MM-DD.md   # + cualquier otro doc tocado
+git commit -m "docs: handoff YYYY-MM-DD — <resumen de lo que se hizo>"
 git push origin main
 ```
 Si el push falla por **red transitoria** (`Failed to connect`, `RPC failed`), reintenta
@@ -81,8 +108,8 @@ Si el push falla por **red transitoria** (`Failed to connect`, `RPC failed`), re
 git fetch origin && git rev-list --left-right --count origin/main...main   # debe dar 0  0
 ```
 
-### 7. Entregar al usuario
-- Confirma: HEAD subido, SW version, tests N/N, push OK.
+### 8. Entregar al usuario
+- Confirma: HEAD subido, SW version, tests N/N, push `0 0`.
 - **Imprime el prompt** de `docs/NEXT_SESSION.md` para copiar/pegar en el otro PC.
 - Recuerda el bootstrap del otro equipo (ver "Primera vez en un equipo").
 
@@ -100,10 +127,10 @@ git config core.hooksPath .githooks    # idempotente (necesario 1 vez por clon)
 node --test tests/selectors.test.js     # debe pasar
 claude mcp list                          # github/playwright/context7 deben conectar
 ```
-Luego **lee** `PROJECT_HANDOFF.md` (última sección fechada + §19) y `docs/NEXT_SESSION.md`,
-**resume** el estado y los pendientes en orden, y **propón el primer paso**. Si las tools de
-un MCP no aparecen aunque `claude mcp list` diga conectado, avisa que hay que **reiniciar
-Claude Code** (la lista de tools se fija al arrancar).
+Luego **lee** `PROJECT_HANDOFF.md` (sección `## CONTEXTO MÍNIMO PARA /HANDOFF` primero,
+luego §18/§19) y `docs/NEXT_SESSION.md`, **resume** el estado y los pendientes en orden,
+y **propón el primer paso**. Si las tools de un MCP no aparecen aunque `claude mcp list`
+diga conectado, avisa que hay que **reiniciar Claude Code** (la lista de tools se fija al arrancar).
 
 ---
 
@@ -124,5 +151,8 @@ Después, en cada cambio de equipo basta `/handoff` (al salir) y `/handoff in` (
 - **No inventes estado** en los docs: deriva de git/código; lo no verificable va como "por confirmar".
 - Docs siempre en commit `docs(...)` aparte del código.
 - Trabaja solo en `main` salvo que el usuario pida una rama.
+- El hook pre-commit actualiza **tanto `sw.js` como `src/core/config.js`** — ambos deben coincidir al cerrar.
 - Confirma con el usuario solo si: hay untracked ambiguos, el árbol tiene cambios que no
   entiendes, o `git status` revela algo inesperado. En lo demás, ejecuta de corrido.
+- La sección `## CONTEXTO MÍNIMO PARA /HANDOFF` en PROJECT_HANDOFF.md es la primera que
+  debe leer una nueva sesión — mantenla siempre actualizada y ≤100 líneas.

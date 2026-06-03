@@ -1,0 +1,36 @@
+{
+  "enabledPlugins": {
+    "frontend-design@claude-plugins-official": true
+  },
+  "permissions": {
+    "allow": [
+      "Bash(git fetch *)",
+      "Bash(git pull *)",
+      "Bash(git push *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git config *)",
+      "Bash(git rev-list *)",
+      "Bash(git check-ignore *)",
+      "Bash(node *)",
+      "Bash(npx serve *)",
+      "Bash(npx @playwright/mcp@latest --version)",
+      "Bash(npx @upstash/context7-mcp@latest --version)",
+      "Bash(claude mcp *)",
+      "Bash(curl -s http://localhost:3000/)",
+      "Bash(echo \"PID=$!\")",
+      "Bash(Start-Sleep -Seconds 2)",
+      "Bash(Write-Output \"Server ready\")",
+      "PowerShell($env:GITHUB_PERSONAL_ACCESS_TOKEN; $env:GITHUB_TOKEN)",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_take_screenshot",
+      "mcp__playwright__browser_evaluate",
+      "mcp__playwright__browser_snapshot",
+      "mcp__playwright__browser_click",
+      "mcp__playwright__browser_console_messages",
+      "mcp__playwright__browser_resize",
+      "mcp__playwright__browser_wait_for",
+      "mcp__playwright__browser_network_requests"
+    ]
+  }
+}
