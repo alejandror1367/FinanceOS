@@ -31,17 +31,19 @@ async function refreshPending() {
   }
 }
 
-// TD-10: distingue un error TRANSITORIO (sin red, timeout, 5xx, token frío) —que
-// conviene reintentar— de un error de NEGOCIO (4xx, validación) —que no se resolverá
-// reintentando y debe ir a dead-letter para no bloquear la cola (head-of-line blocking)—.
+// TD-10: distingue un error TRANSITORIO (sin red, timeout, 5xx) —que conviene reintentar—
+// de un error de NEGOCIO (4xx, validación, autorización) —que no se resolverá reintentando
+// y debe ir a dead-letter para no bloquear la cola (head-of-line blocking)—.
+// BE-011: "No autorizado" es un error de negocio (401/403): el backend rechazó la operación
+// por credenciales inválidas o permisos insuficientes. Reintentarlo infinitamente solo atasca
+// la cola; debe ir a dead-letter para que el usuario sea notificado y decida si reintentar.
 function isTransient(err) {
   if (!navigator.onLine) return true;
   if (err && err.name === 'AbortError') return true;                 // timeout del cliente
   const msg = String((err && err.message) || err || '');
   if (/Failed to fetch|NetworkError|load failed|ERR_NETWORK|network/i.test(msg)) return true;
   if (/HTTP 5\d\d/.test(msg)) return true;                            // error del servidor
-  if (/No autorizado/i.test(msg)) return true;                       // token frío en cold start
-  return false;                                                       // 4xx / validación / negocio
+  return false;                                                       // 4xx / auth / negocio → dead-letter
 }
 
 // Reemplaza la colección de un store en memoria desde IndexedDB.
@@ -68,12 +70,19 @@ async function reconcile(op, record) {
 
 // TD-26: intenta enviar N ops en 1 request batchWrite; si falla (backend sin batchWrite
 // o error de red), hace fallback a envío individual op por op.
+// BE-010: el emparejamiento op↔resultado se hace por entityId, no por índice posicional.
+// El backend puede devolver resultados en distinto orden o con gaps; el índice [i] sería
+// incorrecto en esos casos. entityId es la clave estable que ambos lados comparten.
 async function flushBatch(ops) {
   const payload = ops.map((op) => ({ action: op.action, data: op.data, entityId: op.entityId }));
   const { results } = await apiClient.post('batchWrite', { ops: payload });
-  for (let i = 0; i < ops.length; i++) {
-    const op = ops[i];
-    const res = results[i] || { ok: false, error: 'sin resultado' };
+  // Construir un mapa entityId → resultado para emparejar por clave, no por posición.
+  const resultMap = {};
+  for (const res of results) {
+    if (res.entityId) resultMap[res.entityId] = res;
+  }
+  for (const op of ops) {
+    const res = resultMap[op.entityId] || { ok: false, error: 'sin resultado del servidor' };
     if (res.ok) {
       await reconcile(op, res.data);
       await syncQueue.remove(op.seq);

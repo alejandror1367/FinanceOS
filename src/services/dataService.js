@@ -64,6 +64,9 @@ function settle(promise) {
 // Reaplica la cola pendiente sobre patch + IndexedDB y finaliza el hydrate del store.
 // TD-13: tras un pull (clear+replace) re-aplicamos las operaciones encoladas para que
 // los creates/updates locales no se pierdan hasta que el backend los confirme.
+// BE-004: para ops de tipo `update`, op.data contiene solo el PATCH (campos modificados),
+// no el registro completo. Guardarlo directamente con db.put sobreescribiría el registro
+// eliminando los campos no incluidos en el patch. Se lee el registro existente y se mergea.
 async function reconcileAndHydrate(patch, colls) {
   try {
     const { ENTITY_TO_STORE } = await import('./entities.js');
@@ -76,11 +79,19 @@ async function reconcileAndHydrate(patch, colls) {
         await db.delete(storeName, op.entityId);
         if (patch[coll]) patch[coll] = patch[coll].filter((r) => r.id !== op.entityId);
       } else if (op.data && op.data.id) {
-        await db.put(storeName, op.data);
+        // BE-004: para updates, mergear el patch sobre el registro existente para no perder
+        // campos no modificados. Para creates, op.data ya es el registro completo.
+        const isUpdate = op.action && op.action.toLowerCase().includes('update');
+        let record = op.data;
+        if (isUpdate) {
+          const existing = await db.get(storeName, op.data.id);
+          if (existing) record = { ...existing, ...op.data };
+        }
+        await db.put(storeName, record);
         if (patch[coll]) {
-          const idx = patch[coll].findIndex((r) => r.id === op.data.id);
-          if (idx >= 0) patch[coll][idx] = op.data;
-          else patch[coll].push(op.data);
+          const idx = patch[coll].findIndex((r) => r.id === record.id);
+          if (idx >= 0) patch[coll][idx] = record;
+          else patch[coll].push(record);
         }
       }
     }
