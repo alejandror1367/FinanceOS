@@ -233,7 +233,6 @@ export const dataService = {
   async update(coll, id, patch) {
     const cfg = ENTITIES[coll];
     const current = await db.get(cfg.store, id);
-    if (coll === 'transactions' && current) await this._adjustAccountBalances(current, -1);
     const record = { ...(current || { id }), ...patch, id, updatedAt: new Date().toISOString() };
     const op = syncQueue.makeRecord({ action: ENTITIES[coll].update, entity: cfg.entity, entityId: id, data: { id, ...patch } });
     await db.transact([cfg.store, 'syncQueue'], 'readwrite', (s) => {   // TD-14: atómico
@@ -241,7 +240,24 @@ export const dataService = {
       s.syncQueue.put(op);
     });
     await this._refreshStore(coll);
-    if (coll === 'transactions') await this._adjustAccountBalances(record, +1);
+    // BE-002 (TD-46): para transacciones, recalcular el saldo de las cuentas afectadas
+    // desde las transacciones locales en lugar de aplicar deltas manualmente.
+    // La razón: si el usuario edita la misma tx N veces offline antes del flush, el
+    // enfoque de deltas acumula N ajustes sobre el saldo; la recalculación desde cero
+    // es idempotente ante cualquier número de ediciones entre pulls.
+    // Trade-off: requiere leer todas las tx de la cuenta afectada (O(n) local, IndexedDB
+    // en memoria); es aceptable porque este path solo ocurre en edición, no en lectura.
+    // El optimistic UI para creates NO se ve afectado (usa _adjustAccountBalances).
+    if (coll === 'transactions') {
+      const accountsToRecalc = new Set();
+      if (current)                          accountsToRecalc.add(current.accountId);
+      if (current && current.toAccountId)   accountsToRecalc.add(current.toAccountId);
+      if (record.accountId)                 accountsToRecalc.add(record.accountId);
+      if (record.toAccountId)               accountsToRecalc.add(record.toAccountId);
+      for (const accountId of accountsToRecalc) {
+        await this._recalcAccountBalance(accountId);
+      }
+    }
     await syncEngine.refreshPending();
     syncEngine.flush();
     return record;
@@ -295,6 +311,7 @@ export const dataService = {
   // Ajusta el saldo de las cuentas afectadas por una transacción en IndexedDB.
   // sign: +1 para aplicar, -1 para revertir. Solo actualiza local —
   // el backend hace lo mismo al procesar la transacción vía sync.
+  // Usado solo por create/remove (donde el delta es siempre idempotente).
   async _adjustAccountBalances(tx, sign) {
     if (!tx || !tx.amount || !tx.type) return;
     const amount = tx.amount || 0;
@@ -313,6 +330,31 @@ export const dataService = {
     const account = await db.get('accounts', accountId);
     if (!account) return;
     const updated = { ...account, balance: Math.round((account.balance || 0) + delta), updatedAt: new Date().toISOString() };
+    await db.put('accounts', updated);
+    await this._refreshStore('accounts');
+  },
+
+  // BE-002 (TD-46): recalcula el saldo de una cuenta leyendo TODAS sus transacciones
+  // locales no borradas. Idempotente: da el mismo resultado sin importar cuántas
+  // ediciones offline se hicieron antes del flush. Usado por update() de transacciones.
+  async _recalcAccountBalance(accountId) {
+    if (!accountId) return;
+    const account = await db.get('accounts', accountId);
+    if (!account) return;
+    const allTx = await db.getAll('transactions');
+    let balance = 0;
+    for (const tx of allTx) {
+      if (tx.isDeleted) continue;
+      if (tx.type === 'income' && tx.accountId === accountId) {
+        balance += tx.amount || 0;
+      } else if (tx.type === 'expense' && tx.accountId === accountId) {
+        balance -= tx.amount || 0;
+      } else if (tx.type === 'transfer') {
+        if (tx.accountId === accountId) balance -= tx.amount || 0;
+        if (tx.toAccountId === accountId) balance += tx.amount || 0;
+      }
+    }
+    const updated = { ...account, balance: Math.round(balance), updatedAt: new Date().toISOString() };
     await db.put('accounts', updated);
     await this._refreshStore('accounts');
   },
