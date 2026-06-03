@@ -154,6 +154,9 @@ var SCHEMAS = {
     { key: 'currency', type: 's' },
     { key: 'createdAt', type: 'ts' },
     { key: 'updatedAt', type: 'ts' },
+    // Append al final (tras los timestamps) por compatibilidad posicional con datos
+    // ya escritos. Permite soft-delete rápido (setValues) en vez de deleteRow lento.
+    { key: 'isDeleted', type: 'b' },
   ],
   RecurringTransactions: [
     { key: 'id', type: 's' },
