@@ -9,7 +9,7 @@ import { dataService } from '../services/dataService.js';
 import { formatMoney } from '../utils/format.js';
 import { Button, Badge, KpiCard, ProgressBar, EmptyState } from '../components/ui.js';
 import { openModal, confirmDialog } from '../components/modal.js';
-import { field, numberInput, select, segmented, textInput } from '../components/forms.js';
+import { field, numberInput, select, segmented, textInput, setFieldError, focusFieldError } from '../components/forms.js';
 import { toast } from '../services/toast.js';
 import { guardedOp, guardedSave } from '../components/crud.js';
 
@@ -94,9 +94,14 @@ function openBudgetModal({ budget = {}, mode = 'create' }) {
     submitLabel: mode === 'edit' ? 'Guardar' : 'Crear',
     onSubmit: async () => {
       const data = ctl.getData();
-      if (!data.categoryId) { toast('Selecciona una categoría', { type: 'negative' }); return false; }
-      if (!data.amount || data.amount <= 0) { toast('El monto debe ser mayor a cero', { type: 'negative' }); return false; }
-      if (!data.periodKey) { toast('Indica el periodo', { type: 'negative' }); return false; }
+      const mark = (name, msg) => {
+        const c = ctl.body.querySelector(`[name="${name}"]`);
+        if (c) { focusFieldError(c); return setFieldError(c, msg); }
+        toast(msg, { type: 'negative' }); return false;
+      };
+      if (!data.categoryId) return mark('categoryId', 'Selecciona una categoría');
+      if (!data.amount || data.amount <= 0) return mark('amount', 'El monto debe ser mayor a cero');
+      if (!data.periodKey) return mark('periodKey', 'Indica el periodo');
       return guardedSave(
         () => mode === 'edit' ? dataService.update('budgets', budget.id, data) : dataService.create('budgets', data),
         mode === 'edit' ? 'Presupuesto actualizado' : 'Presupuesto creado',

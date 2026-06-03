@@ -9,7 +9,7 @@ import { dataService } from '../services/dataService.js';
 import { formatMoney, formatDate } from '../utils/format.js';
 import { KpiCard, Badge, EmptyState, Button } from '../components/ui.js';
 import { openModal, confirmDialog } from '../components/modal.js';
-import { field, textInput, numberInput, select } from '../components/forms.js';
+import { field, textInput, numberInput, select, setFieldError, focusFieldError } from '../components/forms.js';
 import { openLiabilityModal, LIABILITY_TYPE_LIST } from './networth.js';
 import { openTxModal } from './transactions.js';
 import { openAccountModal } from './accounts.js';
@@ -181,7 +181,7 @@ function openLiabilityAbono(d) {
     submitLabel: 'Registrar abono',
     onSubmit: async () => {
       const amount = Number(amountEl.value) || 0;
-      if (amount <= 0) { toast('El monto debe ser mayor a cero', { type: 'negative' }); return false; }
+      if (amount <= 0) { focusFieldError(amountEl); return setFieldError(amountEl, 'El monto debe ser mayor a cero'); }
       return guardedSave(async () => {
         const acctId = acctEl.value;
         if (acctId) {

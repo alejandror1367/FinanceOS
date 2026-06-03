@@ -8,7 +8,7 @@ import { dataService } from '../services/dataService.js';
 import { formatMoney, relativeDay } from '../utils/format.js';
 import { Card, Badge, EmptyState, Button } from '../components/ui.js';
 import { openModal, confirmDialog } from '../components/modal.js';
-import { field, numberInput, textarea, select, segmented } from '../components/forms.js';
+import { field, numberInput, textarea, select, segmented, setFieldError, focusFieldError } from '../components/forms.js';
 import { toast } from '../services/toast.js';
 import { guardedOp, guardedSave } from '../components/crud.js';
 
@@ -85,10 +85,15 @@ function openRecurringModal({ item = {}, mode = 'create' }) {
     submitLabel: mode === 'edit' ? 'Guardar' : 'Crear',
     onSubmit: async () => {
       const data = ctl.getData();
-      if (!data.amount || data.amount <= 0) { toast('Monto inválido', { type: 'negative' }); return false; }
-      if (!data.nextRunDate) { toast('Indica la próxima ejecución', { type: 'negative' }); return false; }
-      if (data.type !== 'transfer' && !data.categoryId) { toast('Selecciona categoría', { type: 'negative' }); return false; }
-      if (data.type === 'transfer' && (!data.toAccountId || data.toAccountId === data.accountId)) { toast('Cuentas destino inválida', { type: 'negative' }); return false; }
+      const mark = (name, msg) => {
+        const c = ctl.body.querySelector(`[name="${name}"]`);
+        if (c) { focusFieldError(c); return setFieldError(c, msg); }
+        toast(msg, { type: 'negative' }); return false;
+      };
+      if (!data.amount || data.amount <= 0) return mark('amount', 'El monto debe ser mayor a cero');
+      if (!data.nextRunDate) return mark('nextRunDate', 'Indica la próxima ejecución');
+      if (data.type !== 'transfer' && !data.categoryId) return mark('categoryId', 'Selecciona una categoría');
+      if (data.type === 'transfer' && (!data.toAccountId || data.toAccountId === data.accountId)) return mark('toAccountId', 'La cuenta destino debe ser distinta');
       return guardedSave(
         () => mode === 'edit' ? dataService.update('recurring', item.id, data) : dataService.create('recurring', data),
         mode === 'edit' ? 'Recurrente actualizado' : 'Recurrente creado',

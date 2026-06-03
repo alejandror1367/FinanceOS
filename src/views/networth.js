@@ -11,7 +11,7 @@ import { formatMoney, formatDate } from '../utils/format.js';
 import { Card, KpiCard, Badge, BarChart, EmptyState, Button } from '../components/ui.js';
 import { Donut, Legend, CHART_PALETTE } from '../components/charts.js';
 import { openModal, confirmDialog } from '../components/modal.js';
-import { field, textInput, numberInput, select } from '../components/forms.js';
+import { field, textInput, numberInput, select, setFieldError, focusFieldError } from '../components/forms.js';
 import { toast } from '../services/toast.js';
 import { guardedOp, guardedSave } from '../components/crud.js';
 
@@ -60,7 +60,7 @@ function openAssetModal({ asset = {}, mode = 'create' }) {
         category: body.querySelector('[name="category"]').value,
         value: Number(body.querySelector('[name="value"]').value) || 0,
       };
-      if (!data.name) { toast('El nombre es obligatorio', { type: 'negative' }); return false; }
+      if (!data.name) { const c = body.querySelector('[name="name"]'); focusFieldError(c); return setFieldError(c, 'El nombre es obligatorio'); }
       return guardedSave(
         () => mode === 'edit' ? dataService.update('assets', asset.id, data) : dataService.create('assets', data),
         mode === 'edit' ? 'Activo actualizado' : 'Activo creado',
@@ -97,7 +97,7 @@ export function openLiabilityModal({ liability = {}, mode = 'create' }) {
         minimumPayment: Number(body.querySelector('[name="minimumPayment"]').value) || 0,
         dueDate: body.querySelector('[name="dueDate"]').value,
       };
-      if (!data.name) { toast('El nombre es obligatorio', { type: 'negative' }); return false; }
+      if (!data.name) { const c = body.querySelector('[name="name"]'); focusFieldError(c); return setFieldError(c, 'El nombre es obligatorio'); }
       return guardedSave(
         () => mode === 'edit' ? dataService.update('liabilities', liability.id, data) : dataService.create('liabilities', data),
         mode === 'edit' ? 'Deuda actualizada' : 'Deuda creada',

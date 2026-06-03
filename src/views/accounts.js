@@ -9,7 +9,7 @@ import { dataService } from '../services/dataService.js';
 import { formatMoney } from '../utils/format.js';
 import { Button, Badge, EmptyState, KpiCard } from '../components/ui.js';
 import { openModal, confirmDialog } from '../components/modal.js';
-import { field, textInput, numberInput, select } from '../components/forms.js';
+import { field, textInput, numberInput, select, setFieldError, focusFieldError } from '../components/forms.js';
 import { toast } from '../services/toast.js';
 import { guardedOp, guardedSave } from '../components/crud.js';
 
@@ -141,7 +141,7 @@ export function openAccountModal(existing, { defaults = null } = {}) {
         data.minPayment   = Number(get('minPayment')?.value)   || 0;
         data.totalDue     = Number(get('totalDue')?.value)     || 0;
       }
-      if (!data.name) { toast('El nombre es obligatorio', { type: 'negative' }); return false; }
+      if (!data.name) { focusFieldError(get('name')); return setFieldError(get('name'), 'El nombre es obligatorio'); }
       return guardedSave(
         () => existing ? dataService.update('accounts', existing.id, data) : dataService.create('accounts', data),
         existing ? 'Cuenta actualizada' : 'Cuenta creada',

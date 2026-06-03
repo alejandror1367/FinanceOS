@@ -8,7 +8,7 @@ import { dataService } from '../services/dataService.js';
 import { formatDate } from '../utils/format.js';
 import { Card, Badge, EmptyState, Button } from '../components/ui.js';
 import { openModal, confirmDialog } from '../components/modal.js';
-import { field, textInput, textarea, select } from '../components/forms.js';
+import { field, textInput, textarea, select, setFieldError, focusFieldError } from '../components/forms.js';
 import { toast } from '../services/toast.js';
 import { guardedOp, guardedSave } from '../components/crud.js';
 
@@ -37,7 +37,7 @@ function openEntryModal({ entry = {}, mode = 'create' }) {
     onSubmit: async () => {
       const g = (n) => body.querySelector(`[name="${n}"]`).value;
       const data = { category: g('category'), date: g('date'), title: g('title').trim(), content: g('content').trim() };
-      if (!data.title) { toast('El título es obligatorio', { type: 'negative' }); return false; }
+      if (!data.title) { const c = body.querySelector('[name="title"]'); focusFieldError(c); return setFieldError(c, 'El título es obligatorio'); }
       return guardedSave(
         () => mode === 'edit' ? dataService.update('journal', entry.id, data) : dataService.create('journal', data),
         mode === 'edit' ? 'Entrada actualizada' : 'Entrada creada',

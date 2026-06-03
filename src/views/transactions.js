@@ -8,7 +8,7 @@ import { dataService } from '../services/dataService.js';
 import { formatMoney, formatDate } from '../utils/format.js';
 import { Button, EmptyState } from '../components/ui.js';
 import { openModal, confirmDialog } from '../components/modal.js';
-import { field, textInput, numberInput, textarea, select, segmented } from '../components/forms.js';
+import { field, textInput, numberInput, textarea, select, segmented, setFieldError, focusFieldError } from '../components/forms.js';
 import { toast } from '../services/toast.js';
 import { guardedOp, guardedSave } from '../components/crud.js';
 
@@ -80,15 +80,16 @@ function buildTxForm(prefill) {
   return { body, getData };
 }
 
+// Devuelve { name, message } del primer campo inválido (para marcado inline), o null.
 function validateTx(d) {
-  if (!d.amount || d.amount <= 0) return 'El monto debe ser mayor a cero.';
-  if (!d.accountId) return 'Selecciona una cuenta.';
-  if (!d.date) return 'Selecciona una fecha.';
+  if (!d.amount || d.amount <= 0) return { name: 'amount', message: 'El monto debe ser mayor a cero.' };
+  if (!d.accountId) return { name: 'accountId', message: 'Selecciona una cuenta.' };
+  if (!d.date) return { name: 'date', message: 'Selecciona una fecha.' };
   if (d.type === 'transfer') {
-    if (!d.toAccountId) return 'Selecciona la cuenta destino.';
-    if (d.toAccountId === d.accountId) return 'Las cuentas deben ser distintas.';
+    if (!d.toAccountId) return { name: 'toAccountId', message: 'Selecciona la cuenta destino.' };
+    if (d.toAccountId === d.accountId) return { name: 'toAccountId', message: 'Las cuentas deben ser distintas.' };
   } else if (!d.categoryId) {
-    return 'Selecciona una categoría.';
+    return { name: 'categoryId', message: 'Selecciona una categoría.' };
   }
   return null;
 }
@@ -105,7 +106,11 @@ export function openTxModal({ tx = {}, mode = 'create' }) {
     onSubmit: async () => {
       const data = formCtl.getData();
       const err = validateTx(data);
-      if (err) { toast(err, { type: 'negative' }); return false; }
+      if (err) {
+        const ctrl = formCtl.body.querySelector(`[name="${err.name}"]`);
+        if (ctrl) { focusFieldError(ctrl); return setFieldError(ctrl, err.message); }
+        toast(err.message, { type: 'negative' }); return false;
+      }
       return guardedSave(
         () => mode === 'edit' ? dataService.update('transactions', tx.id, data) : dataService.create('transactions', data),
         mode === 'edit' ? 'Transacción actualizada' : 'Transacción creada',

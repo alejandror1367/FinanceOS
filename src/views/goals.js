@@ -9,7 +9,7 @@ import { dataService } from '../services/dataService.js';
 import { formatMoney, formatDate } from '../utils/format.js';
 import { Card, Badge, ProgressBar, EmptyState, Button } from '../components/ui.js';
 import { openModal, confirmDialog } from '../components/modal.js';
-import { field, textInput, numberInput, select } from '../components/forms.js';
+import { field, textInput, numberInput, select, setFieldError, focusFieldError } from '../components/forms.js';
 import { toast } from '../services/toast.js';
 import { guardedOp, guardedSave } from '../components/crud.js';
 
@@ -95,8 +95,13 @@ function openGoalModal({ goal = {}, mode = 'create' }) {
         targetDate: g('targetDate'),
         linkedAccountId: g('linkedAccountId'),
       };
-      if (!data.name) { toast('El nombre es obligatorio', { type: 'negative' }); return false; }
-      if (data.targetAmount <= 0) { toast('La meta debe ser mayor a cero', { type: 'negative' }); return false; }
+      const mark = (n, msg) => {
+        const c = body.querySelector(`[name="${n}"]`);
+        if (c) { focusFieldError(c); return setFieldError(c, msg); }
+        toast(msg, { type: 'negative' }); return false;
+      };
+      if (!data.name) return mark('name', 'El nombre es obligatorio');
+      if (data.targetAmount <= 0) return mark('targetAmount', 'La meta debe ser mayor a cero');
       return guardedSave(
         () => mode === 'edit' ? dataService.update('goals', goal.id, data) : dataService.create('goals', data),
         mode === 'edit' ? 'Meta actualizada' : 'Meta creada',
@@ -122,8 +127,9 @@ function openContributeModal(goal) {
     body,
     submitLabel: 'Registrar aporte',
     onSubmit: async () => {
-      const amount = Number(body.querySelector('[name="amount"]').value) || 0;
-      if (amount <= 0) { toast('Ingresa un monto válido', { type: 'negative' }); return false; }
+      const amountEl = body.querySelector('[name="amount"]');
+      const amount = Number(amountEl.value) || 0;
+      if (amount <= 0) { focusFieldError(amountEl); return setFieldError(amountEl, 'Ingresa un monto válido'); }
       const next = (goal.currentAmount || 0) + amount;
       const status = next >= (goal.targetAmount || 0) ? 'completed' : goal.status;
       return guardedSave(() => dataService.update('goals', goal.id, { currentAmount: next, status }), 'Aporte registrado', 'Error al aportar');
