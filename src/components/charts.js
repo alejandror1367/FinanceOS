@@ -54,15 +54,20 @@ export function LineChart({ labels = [], series = [], height = 210, showValues =
 }
 
 // segments: [{ label, value, color }]
-export function Donut(segments = [], { size = 168, centerTop = '', centerSub = '', ariaLabel } = {}) {
+export function Donut(segments = [], { size = 168, centerTop = '', centerSub = '', ariaLabel, valueFormat } = {}) {
   const total = segments.reduce((a, s) => a + (s.value || 0), 0) || 1;
+  const fmt = valueFormat || ((v) => String(Math.round(v)));
   const r = 56, cx = 84, cy = 84;
   const circ = 2 * Math.PI * r;
   let offset = 0;
+  // Cada segmento es un <circle> completo cuyo dash deja visible solo su arco. Como el
+  // pointer-events por defecto solo cuenta el trazo pintado, el <title> se muestra al
+  // pasar sobre el arco visible de ese segmento (tooltip nativo por porción).
   const arcs = segments.map((s) => {
     const frac = (s.value || 0) / total;
     const len = frac * circ;
-    const seg = `<circle r="${r}" cx="${cx}" cy="${cy}" fill="none" stroke="${s.color}" stroke-width="20" stroke-dasharray="${len.toFixed(2)} ${(circ - len).toFixed(2)}" stroke-dashoffset="${(-offset).toFixed(2)}" transform="rotate(-90 ${cx} ${cy})"/>`;
+    const pct = (frac * 100).toFixed(1);
+    const seg = `<circle r="${r}" cx="${cx}" cy="${cy}" fill="none" stroke="${s.color}" stroke-width="20" stroke-dasharray="${len.toFixed(2)} ${(circ - len).toFixed(2)}" stroke-dashoffset="${(-offset).toFixed(2)}" transform="rotate(-90 ${cx} ${cy})" style="cursor:default"><title>${s.label}: ${fmt(s.value || 0)} · ${pct}%</title></circle>`;
     offset += len;
     return seg;
   }).join('');

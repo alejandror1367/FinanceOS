@@ -178,6 +178,7 @@ export function renderNetWorth() {
             Donut(allocSegments, {
               centerTop: formatMoney(netWorth, cur, { compact: true }),
               centerSub: 'neto',
+              valueFormat: (v) => formatMoney(v, cur, { compact: true }),
               ariaLabel: `Composición: ${allocSegments.map((s) => `${s.label} ${formatMoney(s.value, cur, { compact: true })}`).join(', ')}`,
             }),
             Legend(allocSegments.map((seg) => ({

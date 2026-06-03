@@ -9,7 +9,7 @@ import { apiClient } from '../services/apiClient.js';
 import { formatMoney, formatDate } from '../utils/format.js';
 import { KpiCard, Badge, Trend, ProgressBar, EmptyState, Button } from '../components/ui.js';
 import { openModal, confirmDialog } from '../components/modal.js';
-import { field, textInput, numberInput, select, segmented } from '../components/forms.js';
+import { field, textInput, numberInput, select, segmented, setFieldError, focusFieldError } from '../components/forms.js';
 import { toast } from '../services/toast.js';
 import { guardedOp, guardedSave } from '../components/crud.js';
 import { priceService } from '../services/priceService.js';
@@ -111,8 +111,8 @@ function openSellModal(group, livePrice) {
       const soldPrice = Number(priceEl.value) || 0;
       const soldDate  = dateEl.value;
       const totalComm = Number(commEl.value) || 0;
-      if (soldPrice <= 0) { toast('Ingresa el precio de venta', { type: 'negative' }); return false; }
-      if (!soldDate)      { toast('Selecciona una fecha', { type: 'negative' }); return false; }
+      if (soldPrice <= 0) { focusFieldError(priceEl); return setFieldError(priceEl, 'Ingresa el precio de venta'); }
+      if (!soldDate)      { focusFieldError(dateEl);  return setFieldError(dateEl, 'Selecciona una fecha'); }
       // Prorratea la comisión de venta entre lotes por participación de cantidad,
       // así el P&L realizado neto sobrevive si luego se borra un lote individual.
       const qtyTotal = purchases.reduce((s, p) => s + (Number(p.quantity) || 0), 0) || 1;
@@ -265,8 +265,14 @@ function openPurchaseModal({ inv = null, defaultSymbol = '', defaultType = 'etf'
         if (typeEl.value === 'cdt') { data.interestRate = Number(g('interestRate')) || 0; data.maturityDate = g('maturityDate'); }
         if (typeEl.value === 'fund') data.currentValue = Number(g('currentValue')) || 0;
       }
-      if (!data.name && !data.symbol) { toast('Ingresa nombre o ticker', { type: 'negative' }); return false; }
-      if (data.quantity <= 0) { toast('Cantidad o monto mayor a 0', { type: 'negative' }); return false; }
+      if (!data.name && !data.symbol) {
+        const nameEl = body.querySelector('[name="name"]');
+        focusFieldError(nameEl); return setFieldError(nameEl, 'Ingresa un nombre o un ticker');
+      }
+      if (data.quantity <= 0) {
+        const target = inputMode === 'qty' ? qtyEl : amountEl;
+        focusFieldError(target); return setFieldError(target, 'Debe ser mayor a 0');
+      }
       return guardedSave(
         () => mode === 'edit' && inv ? dataService.update('investments', inv.id, data) : dataService.create('investments', data),
         mode === 'edit' ? 'Actualizado' : 'Compra registrada',
@@ -472,9 +478,9 @@ function openDividendModal(group) {
     submitLabel: 'Registrar dividendo',
     onSubmit: async () => {
       const amount = Number(amountEl.value) || 0;
-      if (amount <= 0) { toast('Ingresa el monto', { type: 'negative' }); return false; }
+      if (amount <= 0) { focusFieldError(amountEl); return setFieldError(amountEl, 'Ingresa el monto del dividendo'); }
       const acctId = acctEl.value;
-      if (!acctId) { toast('Selecciona una cuenta', { type: 'negative' }); return false; }
+      if (!acctId) { focusFieldError(acctEl); return setFieldError(acctEl, 'Selecciona una cuenta'); }
       return guardedSave(() => dataService.create('transactions', {
         type: 'income', amount, date: dateEl.value, accountId: acctId,
         categoryId: catEl.value || (incomeCats[0]?.id || ''),

@@ -226,6 +226,9 @@
   transition: border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
 }
 .input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--focus-ring); }
+.input--error { border-color: var(--negative); }
+.input--error:focus { border-color: var(--negative); box-shadow: 0 0 0 3px var(--negative-bg); }
+.field__error:not(:empty) { margin-top: calc(var(--space-1) * -1); animation: fade-in var(--dur-fast) var(--ease-out); }
 textarea.input { height: auto; min-height: 76px; padding: var(--space-3); resize: vertical; }
 select.input { appearance: none; cursor: pointer;
   background-image: linear-gradient(45deg, transparent 50%, var(--text-tertiary) 50%), linear-gradient(135deg, var(--text-tertiary) 50%, transparent 50%);

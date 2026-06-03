@@ -130,7 +130,7 @@ export function renderAnalytics() {
     title: 'Gastos por categoría',
     body: spend.length
       ? el('div', { class: 'donut-wrap' }, [
-          Donut(segments, { centerTop: formatMoney(totalSpend, cur, { compact: true }), centerSub: 'este mes' }),
+          Donut(segments, { centerTop: formatMoney(totalSpend, cur, { compact: true }), centerSub: 'este mes', valueFormat: (v) => formatMoney(v, cur, { compact: true }) }),
           Legend(segments.map((seg) => ({ label: seg.label, color: seg.color, value: formatMoney(seg.value, cur, { compact: true }) }))),
         ])
       : EmptyState({ title: 'Sin gastos este mes', iconName: 'shopping' }),

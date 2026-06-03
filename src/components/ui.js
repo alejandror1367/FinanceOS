@@ -87,9 +87,9 @@ export function BarChart(data = [], { ariaLabel, valueFormat } = {}) {
     ])));
 }
 
-export function ProgressBar(pct, variant = '') {
+export function ProgressBar(pct, variant = '', { title } = {}) {
   const clamped = Math.max(0, Math.min(100, pct));
-  return el('div', { class: 'progress', role: 'progressbar', 'aria-valuenow': Math.round(clamped) }, [
+  return el('div', { class: 'progress', role: 'progressbar', 'aria-valuenow': Math.round(clamped), title: title || `${Math.round(clamped)}%` }, [
     el('div', { class: `progress__bar${variant ? ' progress__bar--' + variant : ''}`, style: { width: `${clamped}%` } }),
   ]);
 }

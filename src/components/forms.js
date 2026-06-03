@@ -52,6 +52,41 @@ export function segmented({ value, options, onChange }) {
   return wrap;
 }
 
+// Validación inline: marca/limpia el error de un campo concreto (junto al control),
+// en lugar de solo lanzar un toast. Usa la zona `.field__error` que ya pinta field().
+// Devuelve false para encadenar: `if (!cond) return setFieldError(ctrl, 'msg');`
+export function setFieldError(control, message) {
+  const wrap = control?.closest?.('.field');
+  if (wrap) {
+    const errEl = wrap.querySelector('.field__error');
+    if (errEl) errEl.textContent = message || '';
+  }
+  control.classList.toggle('input--error', !!message);
+  if (message) {
+    control.setAttribute('aria-invalid', 'true');
+    // Auto-limpia en cuanto el usuario corrige (una sola vez).
+    control.addEventListener('input', () => clearFieldError(control), { once: true });
+  } else {
+    control.removeAttribute('aria-invalid');
+  }
+  return false;
+}
+
+export function clearFieldError(control) {
+  const wrap = control?.closest?.('.field');
+  if (wrap) {
+    const errEl = wrap.querySelector('.field__error');
+    if (errEl) errEl.textContent = '';
+  }
+  control.classList.remove('input--error');
+  control.removeAttribute('aria-invalid');
+}
+
+// Enfoca el control con error y desplaza si hace falta (mejor feedback en modales largos).
+export function focusFieldError(control) {
+  try { control.focus({ preventScroll: false }); } catch (e) { control.focus(); }
+}
+
 // Lee los valores de un formulario por name.
 export function readForm(formEl) {
   const data = {};
