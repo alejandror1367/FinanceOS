@@ -23,15 +23,16 @@ Centraliza: patrimonio neto, presupuestos, flujo de caja, inversiones, metas, de
 | PWA instalada en celular | ✅ Funcionando |
 | Google OAuth | ✅ Activo (`patitosalmir@gmail.com` + `alejandrorr1367@gmail.com`) |
 | Backend Apps Script | ✅ Desplegado y verificado en producción |
-| Tests financieros | ✅ **52/52** pasando |
+| Tests financieros | ✅ **54/54** pasando (11 suites) |
 | Módulo Import | ✅ Completamente funcional (BUG-P0-1/P1-1/P1-2/P1-3 corregidos) |
 | Backend patrimonio neto | ✅ CC incluida como pasivo en `computeNetWorth_` (BUG-P0-2, desplegado) |
-| Snapshots de patrimonio | ✅ Crear · eliminar individual · eliminar masivo · detección outliers |
-| Deuda técnica P0 | ✅ Toda resuelta |
-| Deuda técnica P1 | ✅ Toda resuelta (incl. normPeriodKey, config.version, import fixes) |
-| Deuda técnica P2 | ✅ Toda resuelta |
-| Bugs auditoría 2026-06-02 | ✅ P0+P1+P2 corregidos · Sprint 3+4 completados |
-| Pendiente | Sprint 5 (Inversiones avanzadas) → Sprint 9 (ver §18) |
+| Snapshots de patrimonio | ✅ Crear · eliminar (soft delete) · masivo · outliers — **eliminar arreglado** (sesión 06-03) |
+| Inversiones avanzadas (Sprint 5) | ✅ Comisión + retención en fuente + multicuenta |
+| Integridad de sync | ✅ Idempotencia + preservación de id en TODOS los `create` (backend, desplegado) |
+| UX (Sprint 6) | ✅ Tooltips charts · validación inline (todos los forms) · **Command Palette ⌘K** |
+| Bugs sesión 2026-06-03 | ✅ 7 fixes de sync/datos corregidos y desplegados (ver §"Cambios 2026-06-03") |
+| Verificación en vivo | ✅ Playwright: 14 rutas sin errores JS · Sprint 5/6 confirmados |
+| Pendiente | Sin sprint asignado. Bugs P3 (TD-36/TD-37) + ver §18 |
 
 ---
 
@@ -69,7 +70,7 @@ Centraliza: patrimonio neto, presupuestos, flujo de caja, inversiones, metas, de
 FinanceOS/
 ├── index.html              # Entry point PWA
 ├── manifest.json           # PWA manifest
-├── sw.js                   # Service Worker v0.2.37 (cache-first shell)
+├── sw.js                   # Service Worker v0.2.43 (cache-first shell)
 ├── package.json            # { "type": "module" } — solo para node --test
 ├── .githooks/
 │   └── pre-commit          # Auto-bump SW version al commitear src/*
@@ -481,21 +482,23 @@ HEAD pasó de `75eacca` a **`b870d6c`**. SW `v0.2.10 → v0.2.13`. Tests `33 →
 ```
 Rama:    main
 Remote:  https://github.com/alejandror1367/FinanceOS.git
-HEAD:    495fe4d  feat(charts): BarChart valores visibles + tooltips · LineChart tooltips
-SW:      v0.2.37  (sincronizado con config.version — hook actualiza ambos)
-Status:  limpio · sincronizado con origin/main (pendiente git push)
+HEAD:    f3e8699  feat(ux): Command Palette ⌘K + atajos de teclado (Sprint 6.4)
+SW:      v0.2.43  (sincronizado con config.version — hook actualiza ambos)
+Status:  limpio · sincronizado con origin/main (push 0 0)
 ```
 
 ### Commits recientes
 ```
-495fe4d feat(charts): BarChart valores visibles + tooltips · LineChart tooltips (Sprint 4.1-4.3)
-5fdc008 feat(goals): forecast usa promedio de 3 meses en lugar del mes actual (Sprint 2.6)
-24ddd80 feat(networth): gestión de snapshots — botón eliminar por snapshot (FIX-10)
-511bf70 fix(api): retry automático en GET para ERR_ABORTED del cold start (BUG-P2-2)
-3aeed11 fix(today): upcomingPayments incluye vencimientos de tarjetas de crédito (BUG-P2-4)
-8e537f8 fix(backend): computeNetWorth_ incluye CC como pasivos (BUG-P0-2)
-32ffa4b fix(analytics): normPeriodKey + curMonthKey en render time (BUG-P1-4)
-848292a fix(config): sincronizar config.version con SW v0.2.30 (BUG-P1-5)
+f3e8699 feat(ux): Command Palette ⌘K + atajos de teclado (Sprint 6.4)
+8e2861b feat(ux): validación inline en todos los formularios (Sprint 6.3)
+12e103d fix(backend): idempotencia y preservación de id en todos los create
+8c12920 fix(categories): preservar el id del cliente al crear categoría
+5e46331 fix(accounts): preservar el id del cliente al crear cuenta (broker inline)
+ef740f8 fix(investments): compras multicuenta no sincronizaban (name vacío)
+2fdbc40 fix(sync): acotar reintentos en la ruta batchWrite (evita bucle infinito)
+95bcd51 fix(networth): soft delete de snapshots (rápido) en vez de hard delete
+9a6fc31 fix(quotes): soportar clases de acción tipo BRK.B (punto→guion en Yahoo)
+00ac288 feat(ux): tooltips en Donut/ProgressBar + validación inline (Sprint 6 fase 1)
 ```
 ```
 
@@ -547,7 +550,7 @@ La app ya tiene `config.js` con las URLs reales commiteadas. Solo necesitas:
 ### En el nuevo equipo (una sola vez — bootstrap)
 - [ ] `git clone https://github.com/alejandror1367/FinanceOS.git`
 - [ ] `cd FinanceOS && git config core.hooksPath .githooks` (activa auto-bump del SW **y** config.version)
-- [ ] `node --test tests/selectors.test.js` → debe dar **52/52** ✅
+- [ ] `node --test tests/selectors.test.js` → debe dar **54/54** ✅
 - [ ] `npx serve .` → verificar que carga en `localhost:3000`
 - [ ] Leer `CLAUDE.md` (invariantes absolutos) + `docs/NEXT_SESSION.md` (estado actual)
 
@@ -563,8 +566,8 @@ Todos los backends han sido desplegados. El estado del backend en producción es
 
 ### Verificación rápida del estado
 ```bash
-git log --oneline -5          # HEAD debe ser 629e1f4
-node --test tests/selectors.test.js  # 52/52
+git log --oneline -5          # HEAD debe ser f3e8699
+node --test tests/selectors.test.js  # 54/54
 grep "version" src/core/config.js   # debe coincidir con sw.js VERSION
 ```
 
@@ -572,25 +575,32 @@ grep "version" src/core/config.js   # debe coincidir con sw.js VERSION
 
 ## 18. Próximos pasos recomendados
 
-**Sesión 2026-06-02 completa:** todos los bugs P0/P1/P2 de la auditoría corregidos; Sprints 1–4 del roadmap implementados y desplegados donde aplica. Tests: 52/52.
+**Sesión 2026-06-03 completa:** Sprint 5 (inversiones avanzadas) + Sprint 6 (UX) completos;
+cadena de 7 fixes de integridad de sync corregidos y desplegados; verificación en vivo con
+Playwright (14 rutas sin errores JS). Tests: 54/54. Detalle en §"Cambios realizados en sesión 2026-06-03".
 
 **Próximos sprints (orden recomendado, ver `docs/Roadmap-Implementacion-2026-06-02.md`):**
 
-| Sprint | Objetivo | Esfuerzo |
+| Sprint | Objetivo | Estado |
 |---|---|---|
-| **5** | Inversiones avanzadas: withholding (5.1), comisiones (5.2), indicador (5.3) | ~1d |
-| **6** | UX/UI: tooltips all charts, micro-animaciones, validación inline, shortcuts, fix truncamiento Ajustes | ~2d |
-| **7** | Performance: content-visibility, lazy load vistas, paginación IndexedDB | ~1.5d |
-| **8** | Analítica avanzada: selector período, 5 insights adicionales, comparación histórico | ~2d |
-| **9** | Pulido: TD-33–40, WCAG final, actualizar docs, v1.0 | ~2d |
+| **5** | Inversiones avanzadas: withholding, comisiones, multicuenta | ✅ HECHO (06-03) |
+| **6** | UX/UI: tooltips charts, micro-anim, validación inline, Command Palette ⌘K | ✅ HECHO (06-03) |
+| **7** | Performance: content-visibility, lazy load vistas, paginación IndexedDB | ~1.5d (pendiente) |
+| **8** | Analítica avanzada: selector período, 5 insights adicionales, comparación histórico | ~2d (pendiente) |
+| **9** | Pulido: TD-33–40, WCAG final, fix truncamiento "Apariencia" Ajustes, v1.0 | ~2d (pendiente) |
 
-**Sin deploys pendientes** — todos los cambios de esta sesión son frontend puro (excepto los backends ya desplegados por el usuario: Reports.gs, NetWorth.gs, Code.gs).
+**Sin deploys pendientes** — al cierre de la sesión 06-03 el usuario ya redeployó todos los `.gs`
+de backend tocados (Quotes, NetWorth, Config, Utils, Accounts, Categories + los 10 create handlers).
+Sprint 6 (6.3/6.4) es frontend puro.
 
-**No verificado en vivo (sin Playwright en esta sesión):**
-- Módulo Import — fixes aplicados, funcionalidad no confirmada visualmente en producción
-- Vista Hoy — CC vencimientos en `upcomingPayments()` requiere cuenta con `paymentDay` configurado
-- BarChart valor labels — cambio visual no verificado
-- Snapshot outlier detection — requiere datos suficientes (≥4 snapshots)
+**Verificado en vivo (Playwright, sesión 06-03):** 14/14 rutas cargan sin errores JS · campos
+comisión/retención del Sprint 5 · validación inline · Command Palette (⌘K/'/'/botón, filtrar+navegar).
+
+**Pendiente de verificar por el dueño (happy-path autenticado real, con datos):**
+- Borrado masivo de snapshots tras el redeploy (debe completar sin "sincronizando" en bucle)
+- Broker creado inline desde "+ Compra" (la cuenta debe quedar bien vinculada, sin referencia colgada)
+- Compras multicuenta del mismo ticker (deben agruparse y sincronizar)
+- Ticker `BRK.B` debe traer precio tras el redeploy de Quotes.gs
 
 **Hecho (ya no son pendientes):** backend de saldos + `getBootstrap` desplegados y verificados;
 bypass de auditoría eliminado; auditoría funcional 2026-06-02 (`docs/Audit-Funcional-2026-06-02.md`).
@@ -648,10 +658,10 @@ Transacciones completas — agrupación fecha, filtros mes/categoría, totales, 
 
 **Estado actual HEAD:**
 ```
-commit: 495fe4d · rama: main · SW: v0.2.37 · config.version: 0.2.37 · tests: 52/52
+commit: f3e8699 · rama: main · SW: v0.2.43 · config.version: 0.2.43 · tests: 54/54
 ```
 
-**Toda la deuda P0/P1/P2 completada. Quedan Sprints 5–9 del roadmap (ver §18 y NEXT_SESSION.md).**
+**Toda la deuda P0/P1/P2 + Sprints 5 y 6 completados. Quedan Sprints 7–9 del roadmap (ver §18 y NEXT_SESSION.md).**
 
 ---
 
@@ -659,15 +669,16 @@ commit: 495fe4d · rama: main · SW: v0.2.37 · config.version: 0.2.37 · tests:
 
 > Leer esto antes que cualquier otra sección. Máximo 100 líneas. Fuente de verdad para retomar de inmediato.
 
-**HEAD:** `629e1f4` · **SW/config.version:** `v0.2.37` · **Tests:** 52/52 · **Rama:** main · **Sync:** origin/main ✅
+**HEAD:** `f3e8699` · **SW/config.version:** `v0.2.43` · **Tests:** 54/54 · **Rama:** main · **Sync:** origin/main ✅
 
 ### Estado actual real
 - **App en producción:** https://alejandror1367.github.io/FinanceOS/ (PWA instalada, OAuth activo)
-- **Backend Apps Script:** Desplegado y funcionando. Reports.gs v final (CC en patrimonio). NetWorth.gs con deleteNetWorthSnapshot.
-- **Todos los bugs P0/P1/P2 resueltos.** Toda la deuda técnica P0/P1/P2 completada.
-- **Tests:** 52/52 en `tests/selectors.test.js` (node --test)
-- **Sprints completados:** 1 (bugs críticos) + 2 (integridad) + 3 (snapshots) + 4 (charts)
-- **Próximo sprint:** Sprint 5 — Inversiones avanzadas (sin deploy pendiente)
+- **Backend Apps Script:** Desplegado y al día. Toda la cadena de fixes 06-03 ya redeployada por el dueño.
+- **Todos los bugs P0/P1/P2 resueltos** + 7 fixes de sync de la sesión 06-03 (ver §"Cambios 2026-06-03").
+- **Tests:** 54/54 en `tests/selectors.test.js` (node --test)
+- **Sprints completados:** 1–4 (sesión 06-02) + **5 (inversiones avanzadas) + 6 (UX)** (sesión 06-03)
+- **Próximo sprint:** Sin asignar. Candidatos: Sprint 7 (performance) u 8 (analítica). Bugs P3 abiertos.
+- **Verificado en vivo (Playwright 06-03):** 14 rutas sin errores JS · Sprint 5/6 confirmados.
 
 ### Arquitectura actual
 ```
@@ -679,8 +690,10 @@ Flujo: `Views → Services → Store → Views` (never direct to net/IndexedDB f
 ### Funcionalidades implementadas (completas)
 - Dashboard · Hoy · Transacciones · Cuentas · Presupuestos · Recurrentes
 - Patrimonio (con gestión de snapshots: crear/eliminar individual/masivo/outliers/expandible)
-- Inversiones (DCA, precios vivos, FX, dividendos, ventas, P&L realizado)
+- Inversiones (DCA, precios vivos, FX, dividendos, ventas, P&L realizado, **comisión + retención en fuente, multicuenta**)
 - Metas (forecast con promedio 3 meses via `monthlySavingsAvg`)
+- **Command Palette (⌘K / Ctrl K · '/' · '?')** — navegación rápida a los 15 módulos + cambiar tema
+- **Validación inline en todos los formularios** (borde rojo + mensaje junto al campo, `aria-invalid`)
 - Deudas (Snowball/Avalanche, amortización real, panel CC con utilización)
 - Analítica (cashflow, insights, normPeriodKey correcta)
 - Diario · Exportaciones · Ajustes
@@ -691,31 +704,32 @@ Flujo: `Views → Services → Store → Views` (never direct to net/IndexedDB f
 2. Sin validación de solapamiento de presupuestos (TD-37)
 3. Label "Apariencia" truncado como "T..." en Ajustes (cosmético)
 
-### No verificado en vivo (sin Playwright esta sesión)
-- Módulo Import: bugs corregidos pero flujo completo no confirmado visualmente
-- Vista Hoy CC vencimientos: requiere `account.paymentDay` configurado
-- BarChart bars__val: cambio visual no confirmado
-- Snapshot outlier detection: requiere ≥4 snapshots para activarse
+### Pendiente de verificar por el dueño (happy-path autenticado, con datos)
+- Borrado masivo de snapshots tras redeploy (sin "sincronizando" en bucle)
+- Broker creado inline desde "+ Compra" (cuenta bien vinculada, sin referencia colgada)
+- Ticker `BRK.B` debe traer precio (Yahoo usa `BRK-B`; el backend reintenta punto→guion)
 
 ### Riesgos abiertos
 - `priceService` sin FX rates → inversiones en USD se suman sin conversión (silent error)
-- `listTransactions_` retorna TODOS sin paginación → lento con >5000 tx (escala)
+- `listTransactions_` retorna TODOS sin paginación → lento con >5000 tx (escala) — Sprint 7
 - Forecast de metas: `monthlySavingsAvg` con 0 meses completos retorna 0 (inicio de app)
 
 ### Decisiones arquitectónicas importantes
 - Hook pre-commit actualiza TANTO `sw.js` como `src/core/config.js` (ambos deben coincidir)
-- `normPeriodKey` exportada de `selectors.js` para reutilizar en otras vistas
+- **Todos los `create*` del backend preservan el id (ULID) del cliente y son idempotentes**
+  (`idempotentHit_` en Utils.gs) → sin referencias colgadas ni duplicados en reintentos de sync
+- **Snapshots: soft delete** (necesita columna `isDeleted`, ya en schema); hard delete era lento
+- `syncEngine` ruta batchWrite ahora acota reintentos (no bucle infinito en fallo persistente)
+- `initShortcuts()` se registra ANTES de `dataService.init()` (no debe esperar a la red)
+- Quotes: símbolo tal cual y, si no hay datos y tiene punto, reintenta punto→guion (BRK.B→BRK-B)
 - `apiClient.get()` reintenta en `TypeError` (ERR_ABORTED), NO en `AbortError` (timeout propio)
-- Outlier detection: Z-score 2σ, requiere mínimo 4 snapshots
-- `monthlySavingsAvg(s, n=3)` usa `cashflow(s, n+1).slice(0, n)` para excluir mes actual
 
-### Próximo sprint recomendado: Sprint 5 — Inversiones avanzadas
+### Próximo sprint recomendado: Sprint 7 — Performance
 ```
-src/views/investments.js:
-  5.1: Campo withholdingRate (%) en posición · se muestra en positionCard
-  5.2: Campo commission en compra/venta
-  5.3: Indicador WITHHOLDING% si withholdingRate > 0
-Sin deploy backend necesario.
+- Paginación / lazy de listTransactions_ (>5000 tx)
+- content-visibility + lazy load de vistas pesadas (analytics, charts)
+- Revisar cold-start del backend y caché de precios
+Ver docs/Roadmap-Implementacion-2026-06-02.md.
 ```
 
 ### Archivos críticos
@@ -727,8 +741,65 @@ src/services/entities.js    — Mapa colecciones ↔ acciones backend
 src/components/ui.js        — BarChart, KpiCard, Button, Badge
 backend/Reports.gs          — getDashboard, computeNetWorth_ (CC como pasivos)
 backend/Code.gs             — Router de acciones, ROUTES map
-tests/selectors.test.js     — 52/52 tests financieros
+tests/selectors.test.js     — 54/54 tests financieros
 ```
+
+---
+
+## Cambios realizados en sesión 2026-06-03
+
+> Sesión larga: Sprint 5 + Sprint 6 completos + cadena de 7 fixes de integridad de sync +
+> verificación en vivo con Playwright. Cierre en HEAD `f3e8699` · v0.2.43 · 54/54 tests.
+
+### Mejoras financieras (Sprint 5 — Inversiones avanzadas)
+- `ef740f8` (parte) y commit Sprint 5: campo **`commission`** (compra) y **`soldCommission`** (venta,
+  prorrateada por lote) · campo **`withholdingRate`** (retención en fuente %) con métrica + Badge
+  `Ret. X%` en `positionCard`. Cost basis y P&L realizado netos de comisiones.
+- `selectors.investmentsCost` ahora suma la comisión (consistencia con el Dashboard). +2 tests (54/54).
+
+### Bugs corregidos (7 fixes de sync/datos — todos desplegados)
+| Bug | Commit | Causa / Fix |
+|---|---|---|
+| Ticker `BRK.B` sin precio | `9a6fc31` | Yahoo usa guion (`BRK-B`). Backend reintenta punto→guion si no hay datos |
+| Snapshots reaparecían al borrar | `95bcd51` | Faltaba columna `isDeleted`; se añadió + soft delete (rápido) en vez de hard delete |
+| Borrado masivo snapshots: loop "sincronizando" | `2fdbc40`+`95bcd51` | Ruta batchWrite no acotaba reintentos transitorios → bucle. Ahora cuenta intentos → dead-letter |
+| Compras multicuenta no sincronizaban | `ef740f8` | `name` vacío en "+ Compra" → backend lo exige. Fallback a símbolo + prellena nombre/moneda |
+| Broker inline → referencia colgada | `5e46331` | `createAccount_` reasignaba id. Ahora preserva el ULID del cliente + idempotente |
+| Categoría offline → "Categoría inexistente" | `8c12920` | Mismo patrón en `createCategory_` |
+| Duplicados/saldo doble en reintentos de sync | `12e103d` | Idempotencia + preservación de id en los 10 `create*` (helper `idempotentHit_`) |
+
+### Mejoras UX/UI (Sprint 6)
+- `00ac288`: tooltips por segmento en **Donut** + tooltip de % en **ProgressBar** (completa el set de charts).
+- `00ac288`/`8e2861b`: **validación inline** reutilizable (`setFieldError`/`focusFieldError`) aplicada
+  a Inversiones + Transacciones, Presupuestos, Metas, Patrimonio, Cuentas, Diario, Recurrentes, Deudas.
+- `f3e8699`: **Command Palette** (`commandPalette.js`) — ⌘K/Ctrl K · '/' · '?' · botón lupa en topbar.
+  Navega a los 15 módulos + cambiar tema. Teclado completo (↑↓/↵/esc), accesible.
+
+### Mejoras backend
+- Backend estricto al SCHEMA documentado; `idempotentHit_` + `repoHardDelete_` (luego retirado) en Utils.gs.
+- Schema `Investments` ampliado (commission/soldCommission/withholdingRate/soldPrice/soldDate/soldQuantity).
+- Schema `NetWorthSnapshots` con `isDeleted`. Todos los `.gs` tocados redeployados por el dueño.
+
+### Decisiones arquitectónicas
+- Preservar el id (ULID) del cliente en todo `create*` → elimina remapeo de ids en reconciliación.
+- Idempotencia de creación vía `repoFindRowIndex_` (lee solo la columna id, barato).
+- `initShortcuts()` antes de la carga de datos (atajos no dependen de la red).
+
+### Verificación en vivo (Playwright + Chromium, JWT de prueba)
+- 14/14 rutas sin errores JS (pageerror). Sprint 5 (campos comisión/retención) y validación inline
+  confirmados visualmente. Command Palette: abre/filtra/navega/cierra. **Detectó y corrigió** que los
+  atajos quedaban inactivos esperando `dataService.init()` (movidos antes de la carga).
+
+### Archivos modificados
+`backend/` (Quotes, NetWorth, Config, Utils, Accounts, Categories, Assets, Goals, Liabilities, Journal,
+Recurring, Budgets, Investments, Transactions) · `src/views/` (investments, transactions, budgets, goals,
+networth, accounts, journal, recurring, debts, analytics) · `src/components/` (commandPalette [nuevo],
+shell, ui, charts, forms) · `src/services/syncEngine.js` · `src/store/selectors.js` · `src/core/app.js` ·
+`src/styles/components.css` · `tests/selectors.test.js`.
+
+### Riesgos pendientes
+- Happy-path autenticado real con datos no verificable sin login del dueño (ver lista en CONTEXTO MÍNIMO).
+- Paginación de transacciones sigue pendiente (Sprint 7).
 
 ---
 
@@ -895,42 +966,41 @@ Copia este prompt al iniciar la nueva sesión:
 
 ---
 
-```
-Lee PROJECT_HANDOFF.md (§18 para lo último) y CLAUDE.md antes de cualquier cambio.
+```text
+Lee PROJECT_HANDOFF.md (CONTEXTO MÍNIMO primero, luego §18) y CLAUDE.md antes de cualquier cambio.
 
 PROYECTO: FinanceOS — PWA financiera personal y privada de Alejo.
 Repo: https://github.com/alejandror1367/FinanceOS (rama main).
 Prod: https://alejandror1367.github.io/FinanceOS/
-HEAD: 495fe4d · SW v0.2.37 · config.version 0.2.37 · Tests 52/52
+HEAD: f3e8699 · SW v0.2.43 · config.version 0.2.43 · Tests 54/54
 
 INVARIANTES (ver CLAUDE.md): JS ES Modules sin build step · sin frameworks/bundlers ·
 cero deps npm en runtime · frontend abstraído tras src/services/ · Apps Script +
 Google Sheets (13 hojas) + GitHub Pages + OAuth de Google · offline-first.
 
-HECHO Y DESPLEGADO (sesión 2026-06-02):
-- Todos los bugs P0/P1/P2 de la auditoría corregidos (import, analytics, config,
-  backend patrimonio, upcomingPayments CC, apiClient retry).
-- Sprint 3+4 completos: gestión snapshots (individual/masivo/outliers/"Ver todos"),
-  BarChart con valores visibles + tooltips, LineChart tooltips, monthlySavingsAvg.
-- Hook pre-commit actualiza config.version junto con SW.
-- Backends desplegados: Reports.gs (CC en patrimonio), NetWorth.gs+Code.gs
-  (deleteNetWorthSnapshot).
-- Tests: 52/52 (11 suites, añadidos upcomingPayments y monthlySavingsAvg).
+HECHO Y DESPLEGADO (sesión 2026-06-03):
+- SPRINT 5 (inversiones avanzadas): comisión de compra/venta + retención en fuente
+  (withholdingRate) con Badge en positionCard + soporte multicuenta (un ticker, varias cuentas).
+- SPRINT 6 (UX): tooltips Donut/ProgressBar · validación inline en TODOS los formularios
+  (setFieldError/focusFieldError) · Command Palette (⌘K/Ctrl K · '/' · '?' · botón lupa).
+- 7 FIXES DE SYNC, todos redeployados por el dueño:
+  BRK.B (Yahoo punto→guion) · snapshots soft-delete (+ columna isDeleted) · loop batchWrite
+  acotado · compras multicuenta (name vacío) · preservar id cliente en cuentas/categorías ·
+  idempotencia + preservación de id en los 10 create* del backend (helper idempotentHit_).
+- Verificado en vivo (Playwright): 14 rutas sin errores JS; Sprint 5/6 confirmados.
+- Tests: 54/54 (11 suites).
 
-PENDIENTE — SPRINT 5 (empezar aquí):
-Inversiones avanzadas en src/views/investments.js:
-  5.1: Campo "Retención en fuente" (withholdingRate, %) en posición de inversión.
-  5.2: Campo "Comisión por operación" al crear/registrar compra/venta.
-  5.3: Indicador WITHHOLDING% en positionCard si withholdingRate > 0.
-Luego Sprint 6 (UX: tooltips todos los charts, micro-anim, validación inline, shortcuts).
+PENDIENTE (sin sprint asignado — elegir con el dueño):
+- Sprint 7 (Performance): paginación listTransactions_ (>5000 tx), content-visibility,
+  lazy load de vistas pesadas, cold-start backend.
+- Sprint 8 (Analítica avanzada) · Sprint 9 (pulido + WCAG + fix truncamiento "Apariencia" Ajustes, v1.0).
+- Bugs P3 abiertos: TD-36 (proyección presupuesto días 1–3) · TD-37 (solapamiento presupuestos).
 
-NO verificado en vivo (no hubo Playwright en esta sesión):
-- Import: fixes aplicados pero flujo completo no confirmado visualmente.
-- Vista Hoy / upcomingPayments CC: requiere cuenta con paymentDay configurado.
-- BarChart bars__val: cambio visual no confirmado.
-- Snapshot outlier detection: requiere ≥4 snapshots para activarse.
+PENDIENTE DE VERIFICAR POR EL DUEÑO (happy-path autenticado con datos):
+- Borrado masivo de snapshots (sin "sincronizando" en bucle) · broker inline bien vinculado ·
+  compras multicuenta · BRK.B trae precio.
 
-SIN DEPLOYS PENDIENTES en backend — todo fue frontend puro.
+SIN DEPLOYS PENDIENTES — el dueño ya redeployó todos los .gs de backend tocados.
 
 FORMA DE TRABAJO: fases pequeñas y verificables · explicar qué/por qué ·
 correr `node --test tests/selectors.test.js` tras cada cambio de selector ·
@@ -940,6 +1010,5 @@ Empezar con: git log --oneline -5 · git status · node --test tests/selectors.t
 
 ---
 
-*Actualizado el 2026-06-02 (tarde) por Claude Opus 4.8: TD-10/13/14 + rediseño de Deudas
-(`b870d6c`), HEAD/SW v0.2.13/tests 39 sincronizados, §14d añadida y §19 con el prompt de
-reinicio + nueva sesión (verificación visual de Deudas/Presupuestos pendiente).*
+*Actualizado el 2026-06-03 por Claude Opus 4.8: Sprint 5 + Sprint 6 completos, cadena de 7 fixes
+de integridad de sync, verificación en vivo con Playwright. HEAD f3e8699 · v0.2.43 · 54/54 tests.*

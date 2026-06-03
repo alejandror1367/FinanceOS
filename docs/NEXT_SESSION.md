@@ -1,45 +1,44 @@
 # Prompt de continuación — FinanceOS
-**Generado:** 2026-06-02 (fin de sesión bugs + Sprints 1–4)
-**HEAD:** `495fe4d` · **SW:** `v0.2.37` · **Tests:** 52/52
+**Generado:** 2026-06-03 (fin de sesión Sprint 5 + Sprint 6 + 7 fixes de sync)
+**HEAD:** `f3e8699` · **SW:** `v0.2.43` · **Tests:** 54/54
 
 ---
 
 ```text
-Lee PROJECT_HANDOFF.md (§18 para lo último) y CLAUDE.md antes de cualquier cambio.
+Lee PROJECT_HANDOFF.md (CONTEXTO MÍNIMO primero, luego §18) y CLAUDE.md antes de cualquier cambio.
 
 PROYECTO: FinanceOS — PWA financiera personal y privada de Alejo.
 Repo: https://github.com/alejandror1367/FinanceOS (rama main).
 Prod: https://alejandror1367.github.io/FinanceOS/
-HEAD: 495fe4d · SW v0.2.37 · config.version 0.2.37 · Tests 52/52
+HEAD: f3e8699 · SW v0.2.43 · config.version 0.2.43 · Tests 54/54
 
 INVARIANTES (ver CLAUDE.md): JS ES Modules sin build step · sin frameworks/bundlers ·
 cero deps npm en runtime · frontend abstraído tras src/services/ · Apps Script +
 Google Sheets (13 hojas) + GitHub Pages + OAuth de Google · offline-first.
 
-HECHO Y DESPLEGADO (sesión 2026-06-02):
-- Todos los bugs P0/P1/P2 de la auditoría corregidos (import, analytics, config,
-  backend patrimonio, upcomingPayments CC, apiClient retry).
-- Sprint 3+4 completos: gestión snapshots (individual/masivo/outliers/"Ver todos"),
-  BarChart con valores visibles + tooltips, LineChart tooltips, monthlySavingsAvg.
-- Hook pre-commit actualiza config.version junto con SW.
-- Backends desplegados: Reports.gs (CC en patrimonio), NetWorth.gs+Code.gs
-  (deleteNetWorthSnapshot).
-- Tests: 52/52 (11 suites, añadidos upcomingPayments y monthlySavingsAvg).
+HECHO Y DESPLEGADO (sesión 2026-06-03):
+- SPRINT 5 (inversiones avanzadas): comisión de compra/venta + retención en fuente
+  (withholdingRate) con Badge en positionCard + soporte multicuenta (un ticker, varias cuentas).
+- SPRINT 6 (UX): tooltips Donut/ProgressBar · validación inline en TODOS los formularios
+  (setFieldError/focusFieldError) · Command Palette (⌘K/Ctrl K · '/' · '?' · botón lupa).
+- 7 FIXES DE SYNC, todos redeployados por el dueño:
+  BRK.B (Yahoo punto→guion) · snapshots soft-delete (+ columna isDeleted) · loop batchWrite
+  acotado · compras multicuenta (name vacío) · preservar id cliente en cuentas/categorías ·
+  idempotencia + preservación de id en los 10 create* del backend (helper idempotentHit_).
+- Verificado en vivo (Playwright): 14 rutas sin errores JS; Sprint 5/6 confirmados.
+- Tests: 54/54 (11 suites).
 
-PENDIENTE — SPRINT 5 (empezar aquí):
-Inversiones avanzadas en src/views/investments.js:
-  5.1: Campo "Retención en fuente" (withholdingRate, %) en posición de inversión.
-  5.2: Campo "Comisión por operación" al crear/registrar compra/venta.
-  5.3: Indicador WITHHOLDING% en positionCard si withholdingRate > 0.
-Luego Sprint 6 (UX: tooltips todos los charts, micro-anim, validación inline, shortcuts).
+PENDIENTE (sin sprint asignado — elegir con el dueño):
+- Sprint 7 (Performance): paginación listTransactions_ (>5000 tx), content-visibility,
+  lazy load de vistas pesadas, cold-start backend.
+- Sprint 8 (Analítica avanzada) · Sprint 9 (pulido + WCAG + fix truncamiento "Apariencia" Ajustes, v1.0).
+- Bugs P3 abiertos: TD-36 (proyección presupuesto días 1–3) · TD-37 (solapamiento presupuestos).
 
-NO verificado en vivo (no hubo Playwright en esta sesión):
-- Import: fixes aplicados pero flujo completo no confirmado visualmente.
-- Vista Hoy / upcomingPayments CC: requiere cuenta con paymentDay configurado.
-- BarChart bars__val: cambio visual no confirmado.
-- Snapshot outlier detection: requiere ≥4 snapshots para activarse.
+PENDIENTE DE VERIFICAR POR EL DUEÑO (happy-path autenticado con datos):
+- Borrado masivo de snapshots (sin "sincronizando" en bucle) · broker inline bien vinculado ·
+  compras multicuenta · BRK.B trae precio.
 
-SIN DEPLOYS PENDIENTES en backend — todo fue frontend puro.
+SIN DEPLOYS PENDIENTES — el dueño ya redeployó todos los .gs de backend tocados.
 
 FORMA DE TRABAJO: fases pequeñas y verificables · explicar qué/por qué ·
 correr `node --test tests/selectors.test.js` tras cada cambio de selector ·
@@ -53,53 +52,40 @@ Empezar con: git log --oneline -5 · git status · node --test tests/selectors.t
 
 ### Lo que se hizo (en orden)
 
-**Sprint 1 — Bugs críticos**
-
-| Commit | Fix |
-|--------|-----|
-| `76dcf2c` | BUG-P0-1: `dataService.mutate()` → `create()` · BUG-P1-1/P1-2/P1-3: Button API, SVG icons, appendChild |
-| `848292a` | BUG-P1-5: `config.version` sincronizado |
-| `32ffa4b` | BUG-P1-4: `normPeriodKey` exportada + analytics.js + hook mejorado |
-| `8e537f8` | BUG-P0-2: `computeNetWorth_` excluye CC de activos, los suma a pasivos — **deploy confirmado** |
-
-**Sprint 2+3 — Integridad + snapshots**
-
-| Commit | Fix |
-|--------|-----|
-| `3aeed11` | BUG-P2-4: `upcomingPayments()` incluye CC con paymentDay · 4 tests |
-| `511bf70` | BUG-P2-2: `apiClient.get()` retry en TypeError (ERR_ABORTED) |
-| `24ddd80` | FIX-10: `deleteNetWorthSnapshot_` + botón 🗑 por snapshot — **deploy confirmado** |
-
-**Sprint 2.6 + restante Sprint 3 + Sprint 4**
+**Sprint 5 — Inversiones avanzadas**
 
 | Commit | Feature |
 |--------|---------|
-| `5fdc008` | `monthlySavingsAvg(s, n=3)` + goals.js usa promedio 3M · 3 tests · 52/52 |
-| `495fe4d` | multi-select snapshots · outlier Z-score · "Ver todos" toggle · BarChart `bars__val` + `valueFormat` · LineChart dot tooltips |
+| (Sprint 5) | `commission`/`soldCommission`/`withholdingRate` en inversiones · Badge `Ret. X%` · cost basis y P&L netos de comisiones · `investmentsCost` suma comisión · +2 tests |
+
+**Cadena de 7 fixes de integridad de sync** (todos redeployados)
+
+| Commit | Fix |
+|--------|-----|
+| `9a6fc31` | Quotes: símbolos de clase `BRK.B` → reintento punto→guion en Yahoo |
+| `95bcd51` | Snapshots: columna `isDeleted` + soft delete (rápido) en vez de hard delete |
+| `2fdbc40` | syncEngine: ruta batchWrite acota reintentos (no bucle "sincronizando") |
+| `ef740f8` | Inversiones: "+ Compra" prellena nombre/moneda + fallback a símbolo (name vacío) |
+| `5e46331` | `createAccount_` preserva id del cliente (broker inline) + idempotente |
+| `8c12920` | `createCategory_` igual (categoría offline referenciada) |
+| `12e103d` | Idempotencia + preservación de id en los 10 `create*` (`idempotentHit_`) |
+
+**Sprint 6 — UX**
+
+| Commit | Feature |
+|--------|---------|
+| `00ac288` | Tooltips Donut por segmento + ProgressBar % · validación inline (infra + inversiones) |
+| `8e2861b` | Validación inline en transacciones, presupuestos, metas, patrimonio, cuentas, diario, recurrentes, deudas |
+| `f3e8699` | Command Palette ⌘K + atajos globales + botón lupa en topbar |
 
 ### Decisiones técnicas relevantes
-- `normPeriodKey` ahora exportada de `selectors.js`
-- `monthlySavingsAvg` usa `cashflow(s, n+1).slice(0, n)` — excluye el mes en curso (incompleto)
-- Outlier detection: Z-score con umbral 2σ, mínimo 4 snapshots para activarse
-- `apiClient.get()` solo reintenta en `TypeError` (network), NO en `AbortError` (timeout propio)
-- Hook pre-commit: ahora actualiza `version: 'X.Y.Z'` en `config.js` además de `sw.js`
+- Todos los `create*` del backend preservan el id (ULID) del cliente y son idempotentes
+  (`idempotentHit_` en Utils.gs) → sin referencias colgadas ni duplicados en reintentos.
+- Snapshots: soft delete (necesita columna `isDeleted`). Hard delete era lento → causaba timeout/loop.
+- `initShortcuts()` se registra ANTES de `dataService.init()` (los atajos no esperan a la red).
+- Quotes: intenta el símbolo tal cual; si no hay datos y tiene punto, reintenta punto→guion.
 
-### Archivos clave modificados esta sesión
-```
-src/views/import.js          — 4 bugs corregidos (P0-1, P1-1, P1-2, P1-3)
-src/views/analytics.js       — normPeriodKey + now/curMonthKey a render-time
-src/views/goals.js           — monthlySavingsAvg en lugar de monthlySavings
-src/views/networth.js        — multi-select · outliers · toggle · BarChart valueFormat
-src/store/selectors.js       — export normPeriodKey · monthlySavingsAvg · upcomingPayments CC
-src/services/apiClient.js    — retry en get()
-src/services/entities.js     — remove: 'deleteNetWorthSnapshot' en netWorthSnapshots
-src/components/ui.js         — BarChart + valueFormat + bars__val
-src/components/charts.js     — LineChart dots con <title> tooltip
-src/styles/components.css    — bars__val · bars height 160px · hover opacity
-src/core/config.js           — version: '0.2.37' (gestionado por hook)
-backend/Reports.gs           — computeNetWorth_ + getDashboard_ excluyen CC de activos
-backend/NetWorth.gs          — deleteNetWorthSnapshot_()
-backend/Code.gs              — ruta deleteNetWorthSnapshot
-.githooks/pre-commit         — también bumpa config.version
-tests/selectors.test.js      — monthlySavingsAvg · upcomingPayments (52/52)
-```
+### Verificación en vivo (Playwright + Chromium)
+- 14/14 rutas sin errores JS. Sprint 5 (campos comisión/retención) y validación inline confirmados.
+- Command Palette: abre con ⌘K/'/'/botón, filtra, navega ("patri" + ↵ → #/networth), cierra.
+- Detectó y corrigió: los atajos quedaban inactivos esperando `dataService.init()` (movidos antes).
