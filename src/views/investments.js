@@ -13,6 +13,7 @@ import { field, textInput, numberInput, select, segmented, setFieldError, focusF
 import { toast } from '../services/toast.js';
 import { guardedOp, guardedSave } from '../components/crud.js';
 import { priceService } from '../services/priceService.js';
+import { selectors } from '../store/selectors.js';
 
 // Brokers predefinidos que aparecen como quick-create si no existen como cuenta
 const DEFAULT_BROKERS = [
@@ -75,14 +76,20 @@ function groupByTicker(investments) {
     // Cost basis incluye la comisión de compra de cada lote (Sprint 5).
     const totalCommission = g.purchases.reduce((s, p) => s + (Number(p.commission) || 0), 0);
     const totalCost = g.purchases.reduce((s, p) => s + (Number(p.quantity) || 0) * (Number(p.purchasePrice || p.avgCost) || 0), 0) + totalCommission;
-    // P&L realizado de las compras vendidas, neto de comisiones de compra y venta (Sprint 5).
+    // P&L realizado neto: comisiones de compra/venta + retención en fuente (FIN-002/TD-42).
+    // La retención solo descuenta sobre la ganancia bruta del lote (max(0, gananciaLote));
+    // no aplica si el lote tuvo pérdida. Usa la tasa del lote vendido cuando está definida;
+    // de lo contrario, la tasa del lote de compra más reciente con retención configurada.
+    const fallbackWithholdingRate = sorted.find((p) => Number(p.withholdingRate) > 0)?.withholdingRate || 0;
     const realizedPnL = g.sold.reduce((s, p) => {
-      const qty = Number(p.soldQuantity || p.quantity) || 0;
-      const fees = (Number(p.commission) || 0) + (Number(p.soldCommission) || 0);
-      return s + qty * (Number(p.soldPrice) || 0) - qty * (Number(p.purchasePrice || p.avgCost) || 0) - fees;
+      const qty     = Number(p.soldQuantity || p.quantity) || 0;
+      const fees    = (Number(p.commission) || 0) + (Number(p.soldCommission) || 0);
+      const grossPnL = qty * (Number(p.soldPrice) || 0) - qty * (Number(p.purchasePrice || p.avgCost) || 0) - fees;
+      const rate    = Number(p.withholdingRate) || fallbackWithholdingRate;
+      return s + selectors.applyWithholding(grossPnL, rate);
     }, 0);
     // Retención en fuente de la posición: la del lote más reciente que la tenga definida.
-    const withholdingRate = sorted.find((p) => Number(p.withholdingRate) > 0)?.withholdingRate || 0;
+    const withholdingRate = fallbackWithholdingRate;
     return { ...g, sorted, totalQty, totalCost, totalCommission, withholdingRate,
       weightedAvg: totalQty ? totalCost / totalQty : 0,
       storedPrice: Number(sorted[0]?.currentPrice) || 0, realizedPnL };
