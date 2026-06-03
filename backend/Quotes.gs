@@ -4,21 +4,39 @@
  *
  * Soporta: acciones US/globales, ETFs, crypto (BTC-USD), BVC Colombia (.CL)
  * Acción: getQuotes?tickers=AAPL,VUG,BTC-USD,PFBANCOL.CL
+ *
+ * BE-003 (TD-02): incluye siempre los pares FX USDCOP=X y EURCOP=X para que
+ * priceService.fxRates se pueble en cada refresh de Inversiones. Los tickers FX
+ * se inyectan internamente sin aparecer en la respuesta de quotes; el mapa
+ * fxRates se devuelve como campo separado del mismo JSON {success,data}.
  */
 
 var QUOTE_CACHE_TTL_ = 900; // 15 minutos
 
+// Tickers de pares FX que siempre se incluyen al llamar a getQuotes_.
+// Yahoo Finance los expresa como USDCOP=X, EURCOP=X, etc.
+var FX_TICKERS_ = ['USDCOP=X', 'EURCOP=X'];
+
+// Divisa base local (COP). Si en el futuro cambia, ajustar aquí y en Config.gs.
+var FX_BASE_CURRENCY_ = 'COP';
+
 function getQuotes_(params) {
   var raw     = params.tickers || params.ticker || '';
   var tickers = raw.split(',').map(function(t) { return t.trim().toUpperCase(); }).filter(Boolean);
-  if (!tickers.length) return {};
+  if (!tickers.length) return { quotes: {}, fxRates: {} };
 
   var cache   = CacheService.getScriptCache();
   var results = {};
   var toFetch = [];
 
+  // Combinar los tickers del usuario con los de FX (sin duplicar)
+  var allTickers = tickers.slice();
+  FX_TICKERS_.forEach(function(fx) {
+    if (allTickers.indexOf(fx) < 0) allTickers.push(fx);
+  });
+
   // Leer caché primero
-  tickers.forEach(function(ticker) {
+  allTickers.forEach(function(ticker) {
     var hit = cache.get('q_' + ticker);
     if (hit) {
       try { results[ticker] = JSON.parse(hit); } catch(e) { toFetch.push(ticker); }
@@ -27,12 +45,29 @@ function getQuotes_(params) {
     }
   });
 
-  // Fetching paralelo (Apps Script no tiene Promise.all, pero el loop es rápido)
+  // Fetching (Apps Script no tiene Promise.all, pero el loop es rápido)
   toFetch.forEach(function(ticker) {
     results[ticker] = fetchYahoo_(ticker, cache);
   });
 
-  return results;
+  // Separar quotes de acciones/ETF/crypto del mapa de tasas FX.
+  // fxRates: { USD: 4200, EUR: 4600 } → factor de conversión a COP.
+  var quotes  = {};
+  var fxRates = {};
+
+  tickers.forEach(function(t) {
+    if (results[t]) quotes[t] = results[t];
+  });
+
+  FX_TICKERS_.forEach(function(fxTicker) {
+    var q = results[fxTicker];
+    if (!q || q.error) return;
+    // USDCOP=X → currency key = "USD", price = tasa USD→COP
+    var currencyKey = fxTicker.replace(FX_BASE_CURRENCY_ + '=X', '');
+    if (currencyKey && q.price) fxRates[currencyKey] = q.price;
+  });
+
+  return { quotes: quotes, fxRates: fxRates };
 }
 
 function fetchYahoo_(ticker, cache) {

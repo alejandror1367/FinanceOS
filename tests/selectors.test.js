@@ -4,9 +4,10 @@
  * Requiere Node 18+. Sin dependencias npm (node:test nativo).
  */
 
-import { test, describe } from 'node:test';
+import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { selectors } from '../src/store/selectors.js';
+import { priceService } from '../src/services/priceService.js';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -577,5 +578,118 @@ describe('hasMixedCurrencies', () => {
 
   test('false con estado vacío', () => {
     assert.equal(selectors.hasMixedCurrencies(mkState()), false);
+  });
+});
+
+// ── FX: investmentsValue con y sin tasas (FIN-005 / TD-02) ────────────────────
+
+describe('inversiones FX (TD-02)', () => {
+  // Limpia el estado de priceService antes y después de cada grupo de tests FX
+  // para no contaminar otros suites que no inyectan tasas.
+  before(() => { priceService.update({}, {}); });
+  after(() => { priceService.update({}, {}); });
+
+  function inv(id, qty, price, currency, opts = {}) {
+    return { id, quantity: qty, currentPrice: price, currency, avgCost: price, ...opts };
+  }
+
+  test('posición USD con fxRates={USD:4000} → contribuye qty×price×4000 COP', () => {
+    priceService.update({}, { USD: 4000 });
+    const s = mkState({
+      investments: [inv('i1', 100, 10, 'USD')], // US$1000 → 4.000.000 COP
+      baseCurrency: 'COP',
+    });
+    assert.equal(selectors.investmentsValue(s), 4_000_000);
+  });
+
+  test('posición USD sin fxRates → contribuye 0 COP (no sumar nativo)', () => {
+    priceService.update({}, {}); // sin tasas
+    const s = mkState({
+      investments: [inv('i1', 100, 10, 'USD')],
+      baseCurrency: 'COP',
+    });
+    assert.equal(selectors.investmentsValue(s), 0);
+  });
+
+  test('investmentsIncompleteCount > 0 cuando hay posición USD sin tasa', () => {
+    priceService.update({}, {}); // sin tasas
+    const s = mkState({
+      investments: [inv('i1', 100, 10, 'USD')],
+      baseCurrency: 'COP',
+    });
+    assert.ok(selectors.investmentsIncompleteCount(s) > 0, 'debe reportar posiciones incompletas');
+  });
+
+  test('investmentsIncompleteCount = 0 cuando todas tienen tasa FX', () => {
+    priceService.update({}, { USD: 4000 });
+    const s = mkState({
+      investments: [inv('i1', 100, 10, 'USD')],
+      baseCurrency: 'COP',
+    });
+    assert.equal(selectors.investmentsIncompleteCount(s), 0);
+  });
+
+  test('posición en base (COP) siempre se suma sin importar fxRates', () => {
+    priceService.update({}, {}); // sin tasas
+    const s = mkState({
+      investments: [inv('i1', 100, 10_000, 'COP')],
+      baseCurrency: 'COP',
+    });
+    assert.equal(selectors.investmentsValue(s), 1_000_000);
+  });
+
+  test('lote con soldDate excluido de investmentsValue', () => {
+    priceService.update({}, { USD: 4000 });
+    const s = mkState({
+      investments: [
+        inv('i1', 10, 100_000, 'COP'),                     // activo → suma
+        inv('i2', 10, 100_000, 'COP', { soldDate: '2026-01-01' }), // vendido → excluir
+      ],
+      baseCurrency: 'COP',
+    });
+    // Solo el lote activo: 10 × 100.000 = 1.000.000
+    assert.equal(selectors.investmentsValue(s), 1_000_000);
+  });
+
+  test('investmentsCost excluye lotes con soldDate', () => {
+    priceService.update({}, { USD: 4000 });
+    const s = mkState({
+      investments: [
+        inv('i1', 10, 100_000, 'COP'),                     // activo → suma
+        inv('i2', 10, 100_000, 'COP', { soldDate: '2026-01-01' }), // vendido → excluir
+      ],
+      baseCurrency: 'COP',
+    });
+    assert.equal(selectors.investmentsCost(s), 1_000_000);
+  });
+});
+
+// ── P&L neto de retención (FIN-002 / TD-42) ───────────────────────────────────
+
+describe('realizedPnLNet (TD-42)', () => {
+  test('ganancia bruta $1M con withholdingRate=4% → P&L neto $960.000', () => {
+    // La fórmula: pnlNeto = pnlBruto - max(0, pnlBruto) * withholdingRate/100
+    // Con pnlBruto=1.000.000 y rate=4% → 1.000.000 - 40.000 = 960.000
+    const pnlBruto = 1_000_000;
+    const withholdingRate = 4;
+    const pnlNeto = selectors.applyWithholding(pnlBruto, withholdingRate);
+    assert.equal(pnlNeto, 960_000);
+  });
+
+  test('pérdida no descuenta retención (solo aplica sobre ganancia)', () => {
+    const pnlBruto = -500_000; // pérdida
+    const withholdingRate = 4;
+    const pnlNeto = selectors.applyWithholding(pnlBruto, withholdingRate);
+    assert.equal(pnlNeto, -500_000); // sin cambio
+  });
+
+  test('withholdingRate=0 no cambia el P&L', () => {
+    const pnlBruto = 1_000_000;
+    assert.equal(selectors.applyWithholding(pnlBruto, 0), 1_000_000);
+  });
+
+  test('withholdingRate indefinido no cambia el P&L', () => {
+    const pnlBruto = 1_000_000;
+    assert.equal(selectors.applyWithholding(pnlBruto, undefined), 1_000_000);
   });
 });

@@ -504,25 +504,37 @@ export function renderInvestments() {
   let livePrices = { ...priceService.prices };
   let fxRates    = { ...priceService.fxRates };
 
-  function buildFxRates() {
-    const r = {};
-    ['USD', 'EUR', 'GBP', 'BRL'].forEach((c) => { const k = c + 'COP=X'; if (livePrices[k]?.price) r[c] = livePrices[k].price; });
-    return r;
-  }
-
   async function refreshPrices() {
     if (refreshing) return;
     const groups = groupByTicker(store.get().investments);
     const tickers = groups.filter((g) => g.symbol && !isTrivial(g.assetType)).map((g) => g.symbol.toUpperCase());
-    const fx = ['USDCOP=X', 'EURCOP=X'];
-    const all = [...new Set([...tickers, ...fx])];
+    // BE-003 (TD-02): el backend ya inyecta USDCOP=X/EURCOP=X internamente; seguimos
+    // pidiéndolos por si el backend no está actualizado (degradación gradual).
+    const all = [...new Set(tickers)];
     refreshing = true; paint(true);
     try {
-      const quotes = await apiClient.get('getQuotes', { tickers: all.join(',') });
-      Object.entries(quotes || {}).forEach(([tk, q]) => {
+      const resp = await apiClient.get('getQuotes', { tickers: all.join(',') });
+
+      // BE-003: el backend ahora devuelve { quotes: {...}, fxRates: { USD: rate, EUR: rate } }.
+      // Si resp tiene la clave 'quotes' usamos la nueva forma; si no (backend viejo) tratamos
+      // todo el objeto como mapa plano de quotes para compatibilidad hacia atrás.
+      const quotesMap  = (resp && typeof resp.quotes === 'object') ? resp.quotes  : (resp || {});
+      const fxFromBack = (resp && typeof resp.fxRates === 'object') ? resp.fxRates : {};
+
+      Object.entries(quotesMap).forEach(([tk, q]) => {
         if (q && !q.error) livePrices[tk] = q;
       });
-      fxRates = buildFxRates();
+
+      // Construir fxRates: preferir las tasas del backend (campo fxRates) que se
+      // basan en el ticker USDCOP=X real; degradar a las que ya teníamos si falta.
+      const newFxRates = { ...fxRates }; // conservar tasas previas (offline-first)
+      Object.entries(fxFromBack).forEach(([cur, rate]) => { if (rate) newFxRates[cur] = rate; });
+      // Fallback legacy: leer de livePrices si el backend no devolvió fxRates
+      if (!Object.keys(fxFromBack).length) {
+        ['USD', 'EUR', 'GBP', 'BRL'].forEach((c) => { const k = c + 'COP=X'; if (livePrices[k]?.price) newFxRates[c] = livePrices[k].price; });
+      }
+      fxRates = newFxRates;
+
       // Persiste en priceService (localStorage + memoria compartida con selectors)
       priceService.update(livePrices, fxRates);
       store.set({ _priceRevision: Date.now() }); // notifica a Dashboard y Patrimonio

@@ -44,28 +44,49 @@ export const selectors = {
   investmentsValue(s) {
     const fx   = priceService.fxRates;
     const base = s.baseCurrency || 'COP';
-    const sum = s.investments.filter((i) => !i.isDeleted).reduce((acc, i) => {
+    // FIN-005 (TD-02): si falta la tasa FX para la divisa de una posición, excluirla
+    // de la suma en lugar de sumar el valor nativo 1:1 (error silencioso ×~4000).
+    const sum = s.investments.filter((i) => !i.isDeleted && !i.soldDate).reduce((acc, i) => {
       const lp    = priceService.priceFor(i.symbol);
       const price = lp?.price || i.currentPrice || 0;
       const native = (i.quantity || 0) * price;
       if (!native) return acc;
       const cur = i.currency || base;
       if (cur === base) return acc + native;
-      return fx[cur] ? acc + native * fx[cur] : acc + native;
+      if (!fx[cur]) return acc; // excluir — no sumar nativo sin tasa (sería error ×~4000)
+      return acc + native * fx[cur];
     }, 0);
     return roundMoney(sum, base);
+  },
+
+  // FIN-005 (TD-02): devuelve el conteo de posiciones activas cuya divisa carece de
+  // tasa FX en priceService. La vista debe mostrar un aviso cuando > 0.
+  investmentsIncompleteCount(s) {
+    const fx   = priceService.fxRates;
+    const base = s.baseCurrency || 'COP';
+    return s.investments.filter((i) => {
+      if (i.isDeleted || i.soldDate) return false;
+      const cur = i.currency || base;
+      if (cur === base) return false;
+      const lp    = priceService.priceFor(i.symbol);
+      const price = lp?.price || i.currentPrice || 0;
+      const native = (i.quantity || 0) * price;
+      return native > 0 && !fx[cur];
+    }).length;
   },
 
   investmentsCost(s) {
     const fx   = priceService.fxRates;
     const base = s.baseCurrency || 'COP';
-    const sum = s.investments.filter((i) => !i.isDeleted).reduce((acc, i) => {
+    // FIN-005 (TD-02): misma política que investmentsValue — excluir posiciones sin tasa FX.
+    const sum = s.investments.filter((i) => !i.isDeleted && !i.soldDate).reduce((acc, i) => {
       // Cost basis = (cantidad × precio de compra) + comisión de la operación (Sprint 5).
       const native = (i.quantity || 0) * (i.avgCost || i.purchasePrice || 0) + (Number(i.commission) || 0);
       if (!native) return acc;
       const cur = i.currency || base;
       if (cur === base) return acc + native;
-      return fx[cur] ? acc + native * fx[cur] : acc + native;
+      if (!fx[cur]) return acc; // excluir — no sumar nativo sin tasa
+      return acc + native * fx[cur];
     }, 0);
     return roundMoney(sum, base);
   },
@@ -462,6 +483,16 @@ export const selectors = {
       monthlyExpense: selectors.monthlyExpense(s),
       totalBudget,
     };
+  },
+
+  // FIN-002 (TD-42): aplica la retención en fuente sobre una ganancia realizada.
+  // La retención solo descuenta sobre ganancias (pnl > 0); las pérdidas no se ven afectadas.
+  // Semántica: el estado retiene withholdingRate% del ingreso al vender con ganancia.
+  // Ejemplo: ganancia bruta $1M, rate 4% → P&L neto $960.000.
+  applyWithholding(pnlBruto, withholdingRate) {
+    const rate = Number(withholdingRate) || 0;
+    if (!rate || pnlBruto <= 0) return pnlBruto;
+    return pnlBruto - pnlBruto * (rate / 100);
   },
 
   // Detecta si hay entidades con divisas distintas a baseCurrency (TD-02).
