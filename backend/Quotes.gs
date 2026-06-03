@@ -36,9 +36,29 @@ function getQuotes_(params) {
 }
 
 function fetchYahoo_(ticker, cache) {
+  // Yahoo representa las CLASES de acción con guion (BRK.B → BRK-B), pero conserva
+  // los SUFIJOS de bolsa con punto (PFBANCOL.CL, SAP.DE, BP.L). Como un punto puede
+  // ser cualquiera de los dos y distinguirlos por heurística es ambiguo, se intenta
+  // el símbolo tal cual y, si no hay datos y contiene punto, se reintenta con
+  // punto→guion. La clave del resultado sigue siendo el ticker original.
+  var res = yahooChart_(ticker);
+  if (!res.quote && ticker.indexOf('.') >= 0) {
+    res = yahooChart_(ticker.replace(/\./g, '-'));
+  }
+  if (!res.quote) return { error: res.error || 'Sin datos de Yahoo Finance', ticker: ticker };
+
+  var quote = res.quote;
+  quote.ticker = ticker; // clave estable para el frontend (lo busca por el símbolo guardado)
+  cache.put('q_' + ticker, JSON.stringify(quote), QUOTE_CACHE_TTL_);
+  return quote;
+}
+
+// Consulta el chart de Yahoo para un símbolo concreto.
+// Devuelve { quote } si hay datos, o { error } si no. No cachea (lo hace fetchYahoo_).
+function yahooChart_(symbol) {
   try {
     var url = 'https://query1.finance.yahoo.com/v8/finance/chart/' +
-              encodeURIComponent(ticker) +
+              encodeURIComponent(symbol) +
               '?interval=1d&range=2d&includePrePost=false';
 
     var resp = UrlFetchApp.fetch(url, {
@@ -52,20 +72,20 @@ function fetchYahoo_(ticker, cache) {
     });
 
     if (resp.getResponseCode() !== 200) {
-      return { error: 'HTTP ' + resp.getResponseCode(), ticker: ticker };
+      return { error: 'HTTP ' + resp.getResponseCode() };
     }
 
     var data   = JSON.parse(resp.getContentText());
     var result = data && data.chart && data.chart.result && data.chart.result[0];
-    if (!result) return { error: 'Sin datos de Yahoo Finance', ticker: ticker };
+    if (!result) return { error: 'Sin datos de Yahoo Finance' };
 
     var meta   = result.meta;
     var closes = result.indicators && result.indicators.quote && result.indicators.quote[0] && result.indicators.quote[0].close;
     var prevClose = (closes && closes.length >= 2) ? closes[closes.length - 2] : (meta.previousClose || meta.chartPreviousClose);
 
     var quote = {
-      ticker:    ticker,
-      name:      meta.shortName || meta.longName || ticker,
+      ticker:    symbol,
+      name:      meta.shortName || meta.longName || symbol,
       price:     meta.regularMarketPrice || meta.previousClose || 0,
       prevClose: prevClose || meta.regularMarketPrice || 0,
       currency:  (meta.currency || 'USD').toUpperCase(),
@@ -76,10 +96,9 @@ function fetchYahoo_(ticker, cache) {
     quote.changeAbs = quote.price - quote.prevClose;
     quote.changePct = quote.prevClose ? (quote.changeAbs / quote.prevClose) * 100 : 0;
 
-    cache.put('q_' + ticker, JSON.stringify(quote), QUOTE_CACHE_TTL_);
-    return quote;
+    return { quote: quote };
 
   } catch(e) {
-    return { error: e.message, ticker: ticker };
+    return { error: e.message };
   }
 }
