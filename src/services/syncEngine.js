@@ -103,8 +103,19 @@ async function flush() {
         if (!isTransient(batchErr)) {
           // El backend rechazó el lote como negocio: procesa op a op
           for (const op of ops) await flushSingle(op);
+        } else {
+          // Error transitorio (timeout, red, token frío): cuenta intentos por op.
+          // Antes se dejaba la cola intacta SIN contar intentos → si el fallo era
+          // persistente (p. ej. el lote excede el timeout), reintentaba en bucle
+          // infinito ("sincronizando" eterno). Ahora se acota a MAX_ATTEMPTS y luego
+          // va a dead-letter, igual que flushSingle.
+          const msg = String((batchErr && batchErr.message) || batchErr);
+          for (const op of ops) {
+            const attempts = (op.attempts || 0) + 1;
+            if (attempts >= MAX_ATTEMPTS) await syncQueue.markDead(op.seq, msg);
+            else await syncQueue.update(op.seq, { attempts, lastError: msg });
+          }
         }
-        // Error de red: deja la cola intacta y reintenta en el próximo ciclo
       }
     } else {
       for (const op of ops) await flushSingle(op);
