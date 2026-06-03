@@ -482,13 +482,15 @@ HEAD pasó de `75eacca` a **`b870d6c`**. SW `v0.2.10 → v0.2.13`. Tests `33 →
 ```
 Rama:    main
 Remote:  https://github.com/alejandror1367/FinanceOS.git
-HEAD:    f3e8699  feat(ux): Command Palette ⌘K + atajos de teclado (Sprint 6.4)
-SW:      v0.2.43  (sincronizado con config.version — hook actualiza ambos)
+HEAD:    e6b3c77  feat(agents): infraestructura de agentes y comandos de auditoría/implementación
+SW:      v0.2.43  (sincronizado con config.version — hook actualiza ambos; sin cambios este commit)
 Status:  limpio · sincronizado con origin/main (push 0 0)
 ```
 
 ### Commits recientes
 ```
+e6b3c77 feat(agents): infraestructura de agentes y comandos de auditoría/implementación
+a180225 docs: handoff 2026-06-03 — Sprint 5 + Sprint 6 + 7 fixes de sync
 f3e8699 feat(ux): Command Palette ⌘K + atajos de teclado (Sprint 6.4)
 8e2861b feat(ux): validación inline en todos los formularios (Sprint 6.3)
 12e103d fix(backend): idempotencia y preservación de id en todos los create
@@ -497,8 +499,6 @@ f3e8699 feat(ux): Command Palette ⌘K + atajos de teclado (Sprint 6.4)
 ef740f8 fix(investments): compras multicuenta no sincronizaban (name vacío)
 2fdbc40 fix(sync): acotar reintentos en la ruta batchWrite (evita bucle infinito)
 95bcd51 fix(networth): soft delete de snapshots (rápido) en vez de hard delete
-9a6fc31 fix(quotes): soportar clases de acción tipo BRK.B (punto→guion en Yahoo)
-00ac288 feat(ux): tooltips en Donut/ProgressBar + validación inline (Sprint 6 fase 1)
 ```
 ```
 
@@ -566,7 +566,7 @@ Todos los backends han sido desplegados. El estado del backend en producción es
 
 ### Verificación rápida del estado
 ```bash
-git log --oneline -5          # HEAD debe ser f3e8699
+git log --oneline -5          # HEAD debe ser e6b3c77
 node --test tests/selectors.test.js  # 54/54
 grep "version" src/core/config.js   # debe coincidir con sw.js VERSION
 ```
@@ -658,7 +658,7 @@ Transacciones completas — agrupación fecha, filtros mes/categoría, totales, 
 
 **Estado actual HEAD:**
 ```
-commit: f3e8699 · rama: main · SW: v0.2.43 · config.version: 0.2.43 · tests: 54/54
+commit: e6b3c77 · rama: main · SW: v0.2.43 · config.version: 0.2.43 · tests: 54/54
 ```
 
 **Toda la deuda P0/P1/P2 + Sprints 5 y 6 completados. Quedan Sprints 7–9 del roadmap (ver §18 y NEXT_SESSION.md).**
@@ -669,7 +669,7 @@ commit: f3e8699 · rama: main · SW: v0.2.43 · config.version: 0.2.43 · tests:
 
 > Leer esto antes que cualquier otra sección. Máximo 100 líneas. Fuente de verdad para retomar de inmediato.
 
-**HEAD:** `f3e8699` · **SW/config.version:** `v0.2.43` · **Tests:** 54/54 · **Rama:** main · **Sync:** origin/main ✅
+**HEAD:** `e6b3c77` · **SW/config.version:** `v0.2.43` · **Tests:** 54/54 · **Rama:** main · **Sync:** origin/main ✅
 
 ### Estado actual real
 - **App en producción:** https://alejandror1367.github.io/FinanceOS/ (PWA instalada, OAuth activo)
@@ -677,7 +677,11 @@ commit: f3e8699 · rama: main · SW: v0.2.43 · config.version: 0.2.43 · tests:
 - **Todos los bugs P0/P1/P2 resueltos** + 7 fixes de sync de la sesión 06-03 (ver §"Cambios 2026-06-03").
 - **Tests:** 54/54 en `tests/selectors.test.js` (node --test)
 - **Sprints completados:** 1–4 (sesión 06-02) + **5 (inversiones avanzadas) + 6 (UX)** (sesión 06-03)
+- **Infraestructura de agentes (06-03, tarde):** `.claude/agents/` (7) y `.claude/commands/` (4)
+  — sistema permanente de auditoría/planificación/implementación/documentación portable entre
+  equipos. Comandos: `/audit`, `/roadmap`, `/implement`, `/handoff`. NO toca runtime (tooling dev).
 - **Próximo sprint:** Sin asignar. Candidatos: Sprint 7 (performance) u 8 (analítica). Bugs P3 abiertos.
+  Recomendado estrenar el sistema con `/audit` → `/roadmap` antes de implementar.
 - **Verificado en vivo (Playwright 06-03):** 14 rutas sin errores JS · Sprint 5/6 confirmados.
 
 ### Arquitectura actual
@@ -972,11 +976,17 @@ Lee PROJECT_HANDOFF.md (CONTEXTO MÍNIMO primero, luego §18) y CLAUDE.md antes 
 PROYECTO: FinanceOS — PWA financiera personal y privada de Alejo.
 Repo: https://github.com/alejandror1367/FinanceOS (rama main).
 Prod: https://alejandror1367.github.io/FinanceOS/
-HEAD: f3e8699 · SW v0.2.43 · config.version 0.2.43 · Tests 54/54
+HEAD: e6b3c77 · SW v0.2.43 · config.version 0.2.43 · Tests 54/54
 
 INVARIANTES (ver CLAUDE.md): JS ES Modules sin build step · sin frameworks/bundlers ·
 cero deps npm en runtime · frontend abstraído tras src/services/ · Apps Script +
 Google Sheets (13 hojas) + GitHub Pages + OAuth de Google · offline-first.
+
+INFRAESTRUCTURA DE AGENTES (06-03, tarde — e6b3c77): ya existe un sistema permanente en
+.claude/agents/ (7: frontend-auditor, backend-reviewer, security-reviewer, financial-analyst,
+documentation-writer, playwright-reviewer, implementation-engineer) y .claude/commands/ (4:
+/audit, /roadmap, /implement, /handoff). implementation-engineer es el ÚNICO que modifica
+código. Recomendado: estrenar con /audit → /roadmap antes de tocar nada. No toca runtime.
 
 HECHO Y DESPLEGADO (sesión 2026-06-03):
 - SPRINT 5 (inversiones avanzadas): comisión de compra/venta + retención en fuente
@@ -1011,4 +1021,5 @@ Empezar con: git log --oneline -5 · git status · node --test tests/selectors.t
 ---
 
 *Actualizado el 2026-06-03 por Claude Opus 4.8: Sprint 5 + Sprint 6 completos, cadena de 7 fixes
-de integridad de sync, verificación en vivo con Playwright. HEAD f3e8699 · v0.2.43 · 54/54 tests.*
+de integridad de sync, verificación en vivo con Playwright. Sub-sesión (tarde): infraestructura
+de agentes y comandos (.claude/agents + .claude/commands). HEAD e6b3c77 · v0.2.43 · 54/54 tests.*

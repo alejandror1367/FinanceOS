@@ -1,6 +1,6 @@
 # Prompt de continuación — FinanceOS
-**Generado:** 2026-06-03 (fin de sesión Sprint 5 + Sprint 6 + 7 fixes de sync)
-**HEAD:** `f3e8699` · **SW:** `v0.2.43` · **Tests:** 54/54
+**Generado:** 2026-06-03 (sub-sesión tarde: infraestructura de agentes; tras Sprint 5 + 6 + 7 fixes de sync)
+**HEAD:** `e6b3c77` · **SW:** `v0.2.43` · **Tests:** 54/54
 
 ---
 
@@ -10,11 +10,16 @@ Lee PROJECT_HANDOFF.md (CONTEXTO MÍNIMO primero, luego §18) y CLAUDE.md antes 
 PROYECTO: FinanceOS — PWA financiera personal y privada de Alejo.
 Repo: https://github.com/alejandror1367/FinanceOS (rama main).
 Prod: https://alejandror1367.github.io/FinanceOS/
-HEAD: f3e8699 · SW v0.2.43 · config.version 0.2.43 · Tests 54/54
+HEAD: e6b3c77 · SW v0.2.43 · config.version 0.2.43 · Tests 54/54
 
 INVARIANTES (ver CLAUDE.md): JS ES Modules sin build step · sin frameworks/bundlers ·
 cero deps npm en runtime · frontend abstraído tras src/services/ · Apps Script +
 Google Sheets (13 hojas) + GitHub Pages + OAuth de Google · offline-first.
+
+INFRAESTRUCTURA DE AGENTES (NUEVO, e6b3c77): .claude/agents/ (7) + .claude/commands/ (4:
+/audit, /roadmap, /implement, /handoff). Cada agente reconstruye su contexto desde el repo
+(portable entre equipos). implementation-engineer es el ÚNICO que modifica código.
+Recomendado: estrenar con /audit → /roadmap antes de implementar el siguiente sprint.
 
 HECHO Y DESPLEGADO (sesión 2026-06-03):
 - SPRINT 5 (inversiones avanzadas): comisión de compra/venta + retención en fuente
@@ -48,7 +53,25 @@ Empezar con: git log --oneline -5 · git status · node --test tests/selectors.t
 
 ---
 
-## Contexto rápido de la sesión
+## Sub-sesión (2026-06-03, tarde) — Infraestructura de agentes
+
+Se creó el sistema permanente de auditoría/planificación/implementación/documentación
+(commit `e6b3c77`, solo tooling de desarrollo — no toca el runtime servido ni el SW):
+
+- **`.claude/agents/` (7):** `frontend-auditor`, `backend-reviewer`, `security-reviewer`,
+  `financial-analyst`, `documentation-writer`, `playwright-reviewer`, `implementation-engineer`.
+  Cada uno define objetivo, alcance, responsabilidades, archivos prioritarios, qué NO hacer,
+  formato de salida, severidad P0–P3, priorización, anti-duplicación, interacción entre agentes
+  y una sección **"Bootstrap del contexto"** (qué leer y en qué orden) para ser **portable entre
+  equipos** sin depender de memoria de sesión. `implementation-engineer` es el ÚNICO que edita código.
+- **`.claude/commands/` (4):** `/audit` (lanza los 5 auditores en paralelo, consolida y deduplica),
+  `/roadmap` (prioriza por ROI en sprints), `/implement` (ejecuta el siguiente sprint con tests y
+  verificación en vivo), `/handoff` (continuidad entre equipos).
+- **Flujo:** `/audit → /roadmap → /implement → /handoff`. Recomendado estrenar con `/audit`.
+
+---
+
+## Contexto rápido de la sesión (Sprint 5 + 6 + fixes de sync)
 
 ### Lo que se hizo (en orden)
 

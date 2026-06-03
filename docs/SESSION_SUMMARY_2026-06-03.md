@@ -53,7 +53,28 @@ ef740f8 fix(investments): compras multicuenta no sincronizaban (name vacío)
 
 ## Próximas 5 tareas prioritarias
 1. **Confirmar en producción** (dueño): borrar varios snapshots sin loop, broker inline, BRK.B con precio.
-2. **Sprint 7 — Performance:** paginar/lazy `listTransactions_` (>5000 tx) + `content-visibility` en vistas pesadas.
-3. **Bug P3 TD-37:** validación de solapamiento de presupuestos (misma categoría+periodo).
-4. **Bug P3 cosmético:** label "Apariencia" truncado como "T..." en Ajustes.
+2. **Estrenar el sistema de agentes:** `/audit` → `/roadmap` para fijar el siguiente sprint por ROI.
+3. **Sprint 7 — Performance:** paginar/lazy `listTransactions_` (>5000 tx) + `content-visibility` en vistas pesadas.
+4. **Bug P3 TD-37:** validación de solapamiento de presupuestos (misma categoría+periodo).
 5. **Sprint 8 — Analítica avanzada:** selector de período + insights adicionales + comparación histórica.
+
+---
+
+## Sub-sesión (tarde) — Infraestructura de agentes y comandos
+
+**Resumen:** se construyó el sistema permanente de auditoría/planificación/implementación/
+documentación de FinanceOS, portable entre equipos. Solo tooling de desarrollo (`.claude/`):
+no toca el runtime servido, el SW se mantiene en `v0.2.43`. Cierre en `e6b3c77` · 54/54 tests.
+
+| Cambio | Impacto |
+|---|---|
+| `.claude/agents/` (7 agentes) | Auditores especializados (frontend, backend, security, financial, playwright) + documentation-writer + implementation-engineer (único que edita código) |
+| `.claude/commands/` (4 comandos) | `/audit`, `/roadmap`, `/implement`, `/handoff` orquestan el flujo completo |
+| Sección "Bootstrap del contexto" en cada agente | Portabilidad entre equipos: el contexto se reconstruye desde el repo, sin memoria de sesión |
+| Severidad unificada P0–P3 + IDs por prefijo (FE/BE/SEC/FIN/QA) | Hallazgos trazables y deduplicables entre `/audit → /roadmap → /implement` |
+
+**Archivos creados:** `.claude/agents/{frontend-auditor,backend-reviewer,security-reviewer,
+financial-analyst,documentation-writer,playwright-reviewer,implementation-engineer}.md` ·
+`.claude/commands/{audit,roadmap,implement,handoff}.md`.
+
+**Commit:** `e6b3c77 feat(agents): infraestructura de agentes y comandos de auditoría/implementación`.
