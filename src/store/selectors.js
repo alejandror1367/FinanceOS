@@ -335,6 +335,31 @@ export const selectors = {
     return best;
   },
 
+  // Tendencias de gasto por categoría: top topN categorías por total acumulado en los
+  // últimos n meses. Devuelve [{category, total, months:[{key,label,amount}]}] desc.
+  categoryTrends(s, n = 6, topN = 5) {
+    const months = lastMonths(n);
+    const monthKeys = new Set(months.map((m) => m.key));
+    const totals = new Map();
+    const byMonth = new Map();
+    for (const t of s.transactions) {
+      if (t.type !== 'expense') continue;
+      const key = String(t.date).slice(0, 7);
+      if (!monthKeys.has(key)) continue;
+      totals.set(t.categoryId, (totals.get(t.categoryId) || 0) + t.amount);
+      if (!byMonth.has(t.categoryId)) byMonth.set(t.categoryId, new Map());
+      byMonth.get(t.categoryId).set(key, (byMonth.get(t.categoryId).get(key) || 0) + t.amount);
+    }
+    return [...totals.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, topN)
+      .map(([id, total]) => ({
+        category: selectors.categoryById(s, id),
+        total,
+        months: months.map((m) => ({ ...m, amount: byMonth.get(id)?.get(m.key) || 0 })),
+      }));
+  },
+
   // Gasto por categoría del mes (para analítica ligera)
   expenseByCategory(s, ref) {
     const map = new Map();

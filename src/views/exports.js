@@ -90,13 +90,18 @@ function monthlyReport(s) {
 
 function netWorthStatement(s) {
   const cur = s.baseCurrency;
-  const accountsValue = (s.accounts || []).filter((a) => !a.isArchived).reduce((sum, a) => sum + (a.balance || 0), 0);
+  // Mismo filtro que totalAssets: excluye investment (evita doble conteo) y credit_card (son pasivos).
+  const accountsValue = (s.accounts || [])
+    .filter((a) => !a.isArchived && a.type !== 'investment' && a.type !== 'credit_card')
+    .reduce((sum, a) => sum + (a.balance || 0), 0);
   const invValue = selectors.investmentsValue(s);
   const otherAssets = (s.assets || []).reduce((sum, a) => sum + (a.value || 0), 0);
   const totalAssets = selectors.totalAssets(s);
   const totalLiab = selectors.totalLiabilities(s);
   const netWorth = totalAssets - totalLiab;
-  const liabRows = (s.liabilities || []).map((l) => `<tr><td>${l.name}</td><td class="num">${formatMoney(l.balance, l.currency || cur)}</td></tr>`).join('');
+  // debtList unifica liabilities + tarjetas de crédito (cuentas type=credit_card).
+  const liabRows = selectors.debtList(s)
+    .map((d) => `<tr><td>${d.name}</td><td>${d.type === 'credit_card' ? 'Tarjeta' : d.type || 'Pasivo'}</td><td class="num">${formatMoney(d.balance, d.currency || cur)}</td></tr>`).join('');
 
   return `${reportStyles}<div class="rep">
     <h1>Estado patrimonial</h1>
@@ -113,7 +118,7 @@ function netWorthStatement(s) {
       <tr><td>Otros activos</td><td class="num">${formatMoney(otherAssets, cur)}</td></tr>
     </tbody></table>
     <h2>Pasivos</h2>
-    <table><tbody>${liabRows || '<tr><td>Sin deudas</td><td class="num">0</td></tr>'}</tbody></table>
+    <table><thead><tr><th>Nombre</th><th>Tipo</th><th class="num">Saldo</th></tr></thead><tbody>${liabRows || '<tr><td colspan="3">Sin deudas registradas</td></tr>'}</tbody></table>
   </div>`;
 }
 

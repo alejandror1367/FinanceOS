@@ -1,14 +1,14 @@
-// views/analytics.js — Analítica e Insights.
-// Gráficos: flujo de caja, ahorro, patrimonio, gastos por categoría.
-// Insights automáticos derivados de los datos.
+// views/analytics.js — Analítica: tendencias históricas e insights.
+// Identidad: "más allá del mes actual". El Dashboard cubre el presente;
+// Analítica cubre la historia y las tendencias multi-mes.
 
-import { el } from '../utils/dom.js';
+import { el, mount } from '../utils/dom.js';
 import { icon } from '../utils/icons.js';
 import { store } from '../store/store.js';
 import { selectors, normPeriodKey } from '../store/selectors.js';
-import { formatMoney, formatDate, formatPercent, formatNumber } from '../utils/format.js';
+import { formatMoney, formatPercent, formatNumber } from '../utils/format.js';
 import { Card, EmptyState } from '../components/ui.js';
-import { LineChart, Donut, Legend, CHART_PALETTE } from '../components/charts.js';
+import { LineChart, Legend, CHART_PALETTE } from '../components/charts.js';
 
 const compact = (v) => formatNumber(v, { notation: 'compact', maximumFractionDigits: 1 });
 
@@ -35,121 +35,192 @@ function buildInsights(s, cur) {
   const savings = income - expense;
   const rate = income ? (savings / income) * 100 : 0;
 
-  // Proyección de ahorro al cierre del mes.
+  // Proyección al cierre del mes (único en esta vista — Dashboard no lo tiene).
   const day = now.getDate();
   const dim = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
   if (income || expense) {
     const projSavings = day > 0 ? (savings / day) * dim : savings;
-    out.push(insightRow(projSavings >= 0 ? 'arrowUp' : 'arrowDown', projSavings >= 0 ? 'positive' : 'negative',
-      `Si mantienes este ritmo, este mes ${projSavings >= 0 ? 'ahorrarás' : 'tendrás un déficit de'} <b>${formatMoney(Math.abs(projSavings), cur)}</b>.`));
+    out.push(insightRow(
+      projSavings >= 0 ? 'arrowUp' : 'arrowDown',
+      projSavings >= 0 ? 'positive' : 'negative',
+      `Si mantienes este ritmo, este mes ${projSavings >= 0 ? 'ahorrarás' : 'tendrás un déficit de'} <b>${formatMoney(Math.abs(projSavings), cur)}</b>.`,
+    ));
   }
 
-  // Tasa de ahorro.
+  // Tasa de ahorro actual vs. promedio histórico 3 meses.
   if (income) {
-    out.push(insightRow('wallet', rate >= 20 ? 'positive' : rate >= 0 ? 'info' : 'negative',
-      `Tu tasa de ahorro del mes es <b>${formatPercent(rate)}</b>.`));
+    const avg3 = selectors.monthlySavingsAvg(s, 3);
+    const avgIncome = selectors.cashflow(s, 4).slice(0, 3).reduce((a, m) => a + m.income, 0) / 3;
+    const avgRate = avgIncome ? (avg3 / avgIncome) * 100 : null;
+    const rateLabel = `Tasa de ahorro: <b>${formatPercent(rate)}</b> este mes`;
+    const comparison = avgRate !== null
+      ? ` · promedio 3m: <b>${formatPercent(avgRate)}</b>`
+      : '';
+    out.push(insightRow('wallet', rate >= 20 ? 'positive' : rate >= 0 ? 'info' : 'negative', rateLabel + comparison));
   }
 
-  // Presupuesto del mes.
-  const monthlyBudgets = (s.budgets || []).filter((b) => b.period === 'monthly' && normPeriodKey(b.periodKey, 7) === curMonthKey);
+  // Estado del presupuesto mensual.
+  const monthlyBudgets = (s.budgets || []).filter(
+    (b) => b.period === 'monthly' && normPeriodKey(b.periodKey, 7) === curMonthKey,
+  );
   if (monthlyBudgets.length) {
     const budgeted = monthlyBudgets.reduce((a, b) => a + (b.amount || 0), 0);
     const consumed = monthlyBudgets.reduce((a, b) => a + selectors.budgetConsumed(s, b), 0);
     const pct = budgeted ? (consumed / budgeted) * 100 : 0;
     const over = pct > 100;
-    out.push(insightRow('budgets', over ? 'negative' : pct >= 80 ? 'warning' : 'accent',
-      `Llevas <b>${pct.toFixed(0)}%</b> de tu presupuesto del mes (${formatMoney(consumed, cur)} de ${formatMoney(budgeted, cur)})${over ? ' — <b>excedido</b>' : ''}.`));
+    out.push(insightRow(
+      'budgets', over ? 'negative' : pct >= 80 ? 'warning' : 'accent',
+      `Llevas <b>${pct.toFixed(0)}%</b> del presupuesto del mes (${formatMoney(consumed, cur)} de ${formatMoney(budgeted, cur)})${over ? ' — <b>excedido</b>' : ''}.`,
+    ));
   }
 
-  // Mayor variación por categoría.
+  // Mayor variación de categoría vs. mes anterior (solo si el cambio es relevante en monto).
   const change = selectors.topCategoryChange(s);
-  if (change && change.category && Math.abs(change.pct) >= 5) {
+  const MIN_AMOUNT = 10000;
+  if (change && change.category && Math.abs(change.pct) >= 5 && change.curAmt >= MIN_AMOUNT) {
     const up = change.pct >= 0;
-    out.push(insightRow(up ? 'arrowUp' : 'arrowDown', up ? 'warning' : 'positive',
-      `Tus gastos en <b>${change.category.name}</b> ${up ? 'aumentaron' : 'bajaron'} <b>${Math.abs(change.pct).toFixed(0)}%</b> vs. el mes anterior.`));
+    out.push(insightRow(
+      up ? 'arrowUp' : 'arrowDown', up ? 'warning' : 'positive',
+      `Tus gastos en <b>${change.category.name}</b> ${up ? 'aumentaron' : 'bajaron'} <b>${Math.abs(change.pct).toFixed(0)}%</b> vs. el mes anterior (${formatMoney(change.curAmt, cur)}).`,
+    ));
   }
 
-  // Mayor gasto del mes.
+  // Mayor gasto del mes por categoría.
   const byCat = selectors.categorySpend(s, curMonthKey);
   if (byCat.length && byCat[0].category) {
-    out.push(insightRow('shopping', 'info',
-      `Tu mayor gasto del mes es <b>${byCat[0].category.name}</b> con <b>${formatMoney(byCat[0].amount, cur)}</b>.`));
+    out.push(insightRow(
+      'shopping', 'info',
+      `Tu mayor gasto del mes es <b>${byCat[0].category.name}</b> con <b>${formatMoney(byCat[0].amount, cur)}</b>.`,
+    ));
   }
 
   return out;
 }
 
-export function renderAnalytics() {
-  const s = store.get();
-  const cur = s.baseCurrency;
-  const now = new Date();
-  const curMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+function buildCashflowCard(s, cur) {
+  let activePeriod = 6;
+  const chartArea = el('div');
 
-
-  // Flujo de caja (6 meses)
-  const cf = selectors.cashflow(s, 6);
-  const labels = cf.map((m) => m.label);
-  const cashflowCard = Card({
-    title: 'Flujo de caja',
-    body: el('div', {}, [
-      LineChart({ labels, valueFormat: compact, series: [
+  function renderChart() {
+    const cf = selectors.cashflow(s, activePeriod);
+    const labels = cf.map((m) => m.label);
+    mount(chartArea, LineChart({
+      labels, valueFormat: compact, series: [
         { name: 'Ingresos', color: 'var(--positive)', points: cf.map((m) => m.income) },
-        { name: 'Gastos', color: 'var(--negative)', points: cf.map((m) => m.expense) },
-      ] }),
+        { name: 'Gastos',   color: 'var(--negative)', points: cf.map((m) => m.expense) },
+        { name: 'Ahorro',   color: 'var(--accent)',   points: cf.map((m) => m.savings) },
+      ],
+    }));
+  }
+  renderChart();
+
+  const periodBtns = [3, 6, 12].map((n) => {
+    const btn = el('button', {
+      class: `btn btn--ghost btn--sm${n === activePeriod ? ' btn--primary' : ''}`,
+      text: `${n}m`,
+      on: {
+        click: () => {
+          activePeriod = n;
+          periodBtns.forEach((b) => { b.className = 'btn btn--ghost btn--sm'; });
+          btn.className = 'btn btn--primary btn--sm';
+          renderChart();
+        },
+      },
+    });
+    return btn;
+  });
+  // Mark initial active
+  periodBtns[1].className = 'btn btn--primary btn--sm';
+
+  return Card({
+    title: 'Flujo de caja',
+    action: el('div', { class: 'row-flex', style: { gap: '4px' } }, periodBtns),
+    body: el('div', {}, [
+      chartArea,
       Legend([
         { label: 'Ingresos', color: 'var(--positive)' },
-        { label: 'Gastos', color: 'var(--negative)' },
+        { label: 'Gastos',   color: 'var(--negative)' },
+        { label: 'Ahorro',   color: 'var(--accent)' },
       ]),
     ]),
   });
+}
 
-  // Ahorro mensual
-  const savingsCard = Card({
-    title: 'Ahorro mensual',
-    body: LineChart({ labels, valueFormat: compact, series: [{ name: 'Ahorro', color: 'var(--accent)', points: cf.map((m) => m.savings) }] }),
+function buildTrendsCard(s, cur) {
+  const trends = selectors.categoryTrends(s, 6, 5);
+  if (!trends.length) {
+    return Card({
+      title: 'Tendencias por categoría',
+      body: EmptyState({ title: 'Sin datos suficientes', message: 'Registra gastos en al menos 2 meses para ver tendencias.', iconName: 'analytics' }),
+    });
+  }
+
+  const months = trends[0].months;
+  const maxPerRow = trends.map((t) => Math.max(1, ...t.months.map((m) => m.amount)));
+
+  const headerCells = [
+    el('th', { text: 'Categoría' }),
+    ...months.map((m) => el('th', { class: 'num', text: m.label })),
+    el('th', { class: 'num', text: 'Total' }),
+  ];
+
+  const rows = trends.map((t, ri) => {
+    const rowMax = maxPerRow[ri];
+    const cells = t.months.map((m) => {
+      if (!m.amount) return el('td', { class: 'num text-tertiary', text: '—' });
+      const ratio = m.amount / rowMax;
+      const bg = ratio >= 0.9 ? 'var(--negative-bg)' : ratio >= 0.5 ? 'var(--warning-bg)' : 'transparent';
+      return el('td', { class: 'num', style: { background: bg } }, [
+        el('span', { text: compact(m.amount) }),
+      ]);
+    });
+
+    return el('tr', {}, [
+      el('td', { class: 'row-flex', style: { gap: '6px', alignItems: 'center' } }, [
+        el('span', { html: icon(t.category?.icon || 'shopping'), style: { opacity: '0.6', fontSize: '14px' } }),
+        el('span', { text: t.category?.name || 'Sin categoría' }),
+      ]),
+      ...cells,
+      el('td', { class: 'num', style: { fontWeight: '600' } }, [
+        el('span', { text: compact(t.total) }),
+      ]),
+    ]);
   });
 
-  // Patrimonio (snapshots)
-  const snaps = [...(s.netWorthSnapshots || [])].sort((a, b) => (a.date < b.date ? -1 : 1)).slice(-8);
-  const netWorthCard = Card({
-    title: 'Patrimonio neto',
-    body: snaps.length >= 2
-      ? LineChart({ labels: snaps.map((sn) => formatDate(sn.date, 'short')), valueFormat: compact, series: [{ name: 'Patrimonio', color: 'var(--accent)', points: snaps.map((sn) => sn.netWorth) }] })
-      : EmptyState({ title: 'Histórico insuficiente', message: 'Guarda al menos 2 snapshots en Patrimonio para ver la tendencia.', iconName: 'networth' }),
+  const table = el('table', { class: 'analytics-trends', style: { width: '100%', borderCollapse: 'collapse', fontSize: 'var(--fs-caption)' } }, [
+    el('thead', {}, [el('tr', {}, headerCells)]),
+    el('tbody', {}, rows),
+  ]);
+
+  return Card({
+    title: 'Tendencias por categoría',
+    action: el('span', { class: 't-caption text-secondary', text: 'Últimos 6 meses' }),
+    body: table,
   });
+}
 
-  // Gastos por categoría (mes actual)
-  const spend = selectors.categorySpend(s, curMonthKey);
-  const top = spend.slice(0, 6);
-  const othersTotal = spend.slice(6).reduce((a, c) => a + c.amount, 0);
-  const segments = top.map((c, i) => ({ label: c.category ? c.category.name : 'Sin categoría', value: c.amount, color: CHART_PALETTE[i % CHART_PALETTE.length] }));
-  if (othersTotal > 0) segments.push({ label: 'Otros', value: othersTotal, color: 'var(--neutral)' });
-  const totalSpend = spend.reduce((a, c) => a + c.amount, 0);
+export function renderAnalytics() {
+  const s = store.get();
+  const cur = s.baseCurrency;
 
-  const expensesCard = Card({
-    title: 'Gastos por categoría',
-    body: spend.length
-      ? el('div', { class: 'donut-wrap' }, [
-          Donut(segments, { centerTop: formatMoney(totalSpend, cur, { compact: true }), centerSub: 'este mes', valueFormat: (v) => formatMoney(v, cur, { compact: true }) }),
-          Legend(segments.map((seg) => ({ label: seg.label, color: seg.color, value: formatMoney(seg.value, cur, { compact: true }) }))),
-        ])
-      : EmptyState({ title: 'Sin gastos este mes', iconName: 'shopping' }),
-  });
-
-  // Insights
   const insights = buildInsights(s, cur);
   const insightsCard = Card({
     title: 'Insights',
-    body: insights.length ? el('div', {}, insights) : EmptyState({ title: 'Sin datos suficientes', message: 'Registra movimientos para generar insights.', iconName: 'bolt' }),
+    body: insights.length
+      ? el('div', {}, insights)
+      : EmptyState({ title: 'Sin datos suficientes', message: 'Registra movimientos para generar insights.', iconName: 'bolt' }),
   });
+
+  const cashflowCard = buildCashflowCard(s, cur);
+  const trendsCard   = buildTrendsCard(s, cur);
 
   return el('div', {}, [
     el('div', { class: 'page-header' }, [
       el('h2', { class: 't-h1', text: 'Analítica' }),
-      el('p', { class: 'page-header__sub', text: 'Tendencias e insights de tus finanzas.' }),
+      el('p', { class: 'page-header__sub', text: 'Tendencias históricas e insights de tus finanzas.' }),
     ]),
     insightsCard,
-    el('div', { class: 'grid grid--2 section' }, [cashflowCard, savingsCard]),
-    el('div', { class: 'grid grid--2 section' }, [netWorthCard, expensesCard]),
+    el('div', { class: 'section' }, [cashflowCard]),
+    el('div', { class: 'section' }, [trendsCard]),
   ]);
 }
