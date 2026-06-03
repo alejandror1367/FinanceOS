@@ -34,7 +34,7 @@
   /* Texto */
   --text-primary: var(--slate-100);
   --text-secondary: var(--slate-400);
-  --text-tertiary: var(--slate-500);
+  --text-tertiary: var(--slate-400);   /* WCAG AA ≥4.5:1 contra --bg-app (#13171E) — era slate-500 (~3.5:1) */
   --text-inverse: var(--graphite-900);
 
   /* Primario (periwinkle) */
@@ -88,7 +88,7 @@
 
   --text-primary: #1A2130;
   --text-secondary: #5A6577;
-  --text-tertiary: #8A93A3;
+  --text-tertiary: #6B7686;  /* WCAG AA ≥4.5:1 contra --bg-surface (#FFFFFF) — era #8A93A3 (~3.2:1) */
   --text-inverse: var(--slate-50);
 
   /* En claro usamos tonos profundos (contraste AA en texto/relleno) */

@@ -119,7 +119,7 @@
 }
 .row__avatar svg { width: 18px; height: 18px; }
 .row__main { flex: 1; min-width: 0; }
-.row__title { font-weight: var(--fw-medium); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row__title { font-weight: var(--fw-medium); overflow-wrap: break-word; } /* FE-013: era nowrap+ellipsis, truncaba labels de ajustes en viewports medianos */
 .row__sub { font-size: var(--fs-caption); color: var(--text-secondary); }
 .row__amount { font-variant-numeric: tabular-nums; font-weight: var(--fw-semibold); white-space: nowrap; }
 
@@ -231,6 +231,7 @@
 .field__error:not(:empty) { margin-top: calc(var(--space-1) * -1); animation: fade-in var(--dur-fast) var(--ease-out); }
 textarea.input { height: auto; min-height: 76px; padding: var(--space-3); resize: vertical; }
 select.input { appearance: none; cursor: pointer;
+  padding-right: 2.5rem; /* espacio para la flecha custom; evita que texto largo solape el chevron */
   background-image: linear-gradient(45deg, transparent 50%, var(--text-tertiary) 50%), linear-gradient(135deg, var(--text-tertiary) 50%, transparent 50%);
   background-position: calc(100% - 18px) 18px, calc(100% - 13px) 18px; background-size: 5px 5px; background-repeat: no-repeat;
 }
@@ -346,9 +347,9 @@ body.modal-open { overflow: hidden; }
 .cc-util-fill { height: 100%; border-radius: 3px; transition: width .3s var(--ease-out); }
 .cc-panel__grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
 .cc-metric { display: flex; flex-direction: column; gap: 2px; }
-.cc-metric__label { font-size: 11px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: .04em; font-weight: var(--fw-medium); }
+.cc-metric__label { font-size: var(--fs-micro); color: var(--text-tertiary); text-transform: uppercase; letter-spacing: .04em; font-weight: var(--fw-medium); }
 .cc-metric__value { font-size: var(--fs-caption); font-weight: var(--fw-semibold); color: var(--text-primary); }
-.cc-metric__sub { font-size: 11px; color: var(--text-tertiary); }
+.cc-metric__sub { font-size: var(--fs-micro); color: var(--text-tertiary); }
 /* Utilization bar en cuentas */
 .util-bar { height: 4px; background: var(--border-subtle); border-radius: 2px; overflow: hidden; margin-top: 4px; max-width: 180px; }
 .util-bar__fill { height: 100%; background: var(--positive); border-radius: 2px; }
@@ -381,7 +382,7 @@ body.modal-open { overflow: hidden; }
 .import-sources { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .import-source-chip { display: flex; flex-direction: column; padding: var(--space-2) var(--space-3); background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); }
 .import-source-name { font-size: var(--fs-caption); font-weight: var(--fw-semibold); color: var(--text-primary); }
-.import-source-hint { font-size: 11px; color: var(--text-tertiary); }
+.import-source-hint { font-size: var(--fs-micro); color: var(--text-tertiary); }
 .import-help { font-size: var(--fs-caption); color: var(--text-secondary); line-height: 1.6; }
 .import-help p { margin: 0; }
 .import-analyzing { display: flex; flex-direction: column; align-items: center; gap: var(--space-3); padding: var(--space-12) var(--space-6); text-align: center; }
@@ -436,7 +437,7 @@ body.modal-open { overflow: hidden; }
 .inv-card__gain { font-size: var(--fs-caption); font-weight: var(--fw-medium); }
 .inv-card__metrics { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2) var(--space-4); padding: var(--space-3) 0; border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle); }
 .inv-metric { display: flex; flex-direction: column; gap: 1px; }
-.inv-metric__label { font-size: 10px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .05em; font-weight: var(--fw-semibold); }
+.inv-metric__label { font-size: var(--fs-micro); color: var(--text-secondary); text-transform: uppercase; letter-spacing: .05em; font-weight: var(--fw-semibold); }
 .inv-metric__value { font-size: var(--fs-caption); font-weight: var(--fw-semibold); color: var(--text-primary); }
 .inv-card__actions { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
 .gap-2 { gap: var(--space-2); }
@@ -452,7 +453,7 @@ body.modal-open { overflow: hidden; }
 .inv-summary-total td { border-top: 2px solid var(--border); border-bottom: none; font-weight: var(--fw-semibold); font-size: var(--fs-body); padding-top: var(--space-3); }
 .inv-purchases-wrap { margin-top: var(--space-2); border-top: 1px solid var(--border-subtle); overflow-x: auto; }
 .inv-purchases-tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-caption); min-width: 340px; }
-.inv-purchases-tbl th { padding: var(--space-1) var(--space-2); font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: var(--text-tertiary); font-weight: var(--fw-medium); white-space: nowrap; border-bottom: 1px solid var(--border-subtle); }
+.inv-purchases-tbl th { padding: var(--space-1) var(--space-2); font-size: var(--fs-micro); text-transform: uppercase; letter-spacing: .04em; color: var(--text-tertiary); font-weight: var(--fw-medium); white-space: nowrap; border-bottom: 1px solid var(--border-subtle); }
 .inv-purchases-tbl td { padding: var(--space-2); border-bottom: 1px solid var(--border-subtle); white-space: nowrap; vertical-align: middle; }
 .inv-purchases-tbl tbody tr:last-child td { border-bottom: none; }
 .inv-purchases-actions { display: flex; gap: 2px; justify-content: flex-end; }
@@ -494,7 +495,7 @@ body.modal-open { overflow: hidden; }
 /* Cuentas — chips de presets en modal "Nueva cuenta" */
 .preset-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); padding-bottom: var(--space-4); border-bottom: 1px solid var(--border-subtle); margin-bottom: var(--space-4); }
 .preset-chip { font-size: var(--fs-caption); font-weight: var(--fw-medium); padding: var(--space-1) var(--space-3); border-radius: var(--radius-full); border: 1px solid var(--border); background: var(--bg-surface); color: var(--text-secondary); cursor: pointer; transition: background var(--dur-fast), color var(--dur-fast), border-color var(--dur-fast); white-space: nowrap; }
-.preset-chip:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+.preset-chip:hover { background: var(--accent); color: var(--accent-contrast); border-color: var(--accent); }
 
 /* Vista Hoy — semáforo, insight y progreso del mes */
 .today-health-body { display: flex; flex-direction: column; gap: var(--space-3); }
