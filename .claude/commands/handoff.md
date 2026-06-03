@@ -36,15 +36,27 @@ Objetivo: `origin/main` con todo el trabajo + documentación al día + prompt de
 3. **Commitear lo pendiente** (si hay): mensajes descriptivos reales, código y docs en commits
    separados; stagea solo archivos intencionales (no `git add -A` a ciegas). Deja actuar al hook
    pre-commit. Cierra con `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`.
-4. **Sincronizar la documentación al estado real** (vía agente **documentation-writer**):
-   - `PROJECT_HANDOFF.md`: actualizar **CONTEXTO MÍNIMO PARA /HANDOFF** (≤100 líneas,
-     autosuficiente: estado, arquitectura, módulos, bugs abiertos, riesgos, decisiones, próximo
-     sprint, archivos críticos), §2 estado/tests, §10/11/12 deuda/bugs, §15 git (HEAD/SW/commits).
-   - `docs/NEXT_SESSION.md`: prompt de continuación con HEAD, SW, tests, qué se hizo, qué sigue,
-     forma de trabajo y comandos de arranque — **debe funcionar tal cual en otro PC**.
-   - `docs/TechnicalDebt.md`: marcar ✅ lo cerrado esta sesión.
-   - `docs/SESSION_SUMMARY_<YYYY-MM-DD>.md`: resumen de la sesión.
-   - Si tocaste `.gs` sin desplegar, déjalo anotado como **deploy pendiente** en el handoff.
+4. **[OBLIGATORIO] Invocar el agente `documentation-writer`** — puerta de calidad de docs.
+   **No avanzar al paso 5** hasta que el agente complete y emita el checklist de portabilidad
+   con todos los ítems ✅. Si algún ítem queda ❌, corregirlo antes de continuar.
+
+   Contexto a proporcionar al agente al invocarlo:
+   - HEAD actual, SW version, conteo de tests resultante de este handoff
+   - Lista de commits realizados en la sesión (hash + mensaje)
+   - Sprints completados, TDs cerrados, bugs corregidos esta sesión
+   - Deploys realizados vs. archivos `.gs` modificados sin desplegar
+   - Pendientes y riesgos identificados para la siguiente sesión
+
+   El agente debe actualizar obligatoriamente estos archivos:
+   - `PROJECT_HANDOFF.md`: **CONTEXTO MÍNIMO PARA /HANDOFF** (≤100 líneas, autosuficiente:
+     estado, arquitectura, módulos, bugs abiertos, riesgos, decisiones, sprint siguiente,
+     archivos críticos), §2 estado/tests, §10/11/12 deuda/bugs, §15 git (HEAD/SW/commits),
+     §18 próximos pasos, §19 prompt de nueva sesión.
+   - `docs/NEXT_SESSION.md`: prompt de continuación accionable y completo para otro PC.
+   - `docs/TechnicalDebt.md`: marcar ✅ lo cerrado con commit; nuevos TD-xx de esta sesión.
+   - `docs/SESSION_SUMMARY_<YYYY-MM-DD>.md`: resumen ejecutivo de la sesión.
+   - `docs/Roadmap-*.md`: marcar sprint completado ✅ y actualizar el siguiente sprint pendiente.
+   - Anotar cualquier `.gs` modificado sin desplegar como **deploy pendiente** en el handoff.
 5. **Checklist de portabilidad** (debe quedar ✅): el handoff reconstruye el contexto sin ayuda
    externa · versiones `config.js`↔`sw.js` y tests coinciden con git · auth=OAuth, 13 hojas,
    15 rutas, `.gs` listados · pasos `git clone && cd FinanceOS` → tests → `npx serve .`
