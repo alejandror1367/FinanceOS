@@ -4,6 +4,24 @@
  * FinanceOS · Fase 2.
  */
 
+// ---------- Caché per-request (BE-005 / TD-05, TD-24) ----------
+//
+// En Apps Script cada doGet/doPost es una ejecución fresca e independiente,
+// por lo que esta variable vive solo durante la ejecución del request actual.
+// Objetivo: evitar que una sola operación (ej. createTransaction → validación
+// de categoría + adjustBalance_ + logAudit_) lea la misma hoja de Sheets varias
+// veces, cada lectura siendo una llamada Sheets API de O(n).
+//
+// Regla de invalidación: repoCreate_, repoUpdate_ y repoSoftDelete_ llaman
+// repoCacheInvalidate_(entity) para que lecturas posteriores en el mismo request
+// vean los datos actualizados.
+var _repoCache_ = {};
+
+function repoCacheInvalidate_(entity) {
+  delete _repoCache_[entity + ':0'];
+  delete _repoCache_[entity + ':1'];
+}
+
 // ---------- Spreadsheet ----------
 
 function getSpreadsheetId_() {
@@ -87,11 +105,20 @@ function rowToObject_(schema, headers, row) {
 
 // TD-25: usa rango explícito en lugar de getDataRange() para saltar la fila de
 // cabecera y leer solo las columnas definidas en el schema (más rápido en tablas grandes).
+// BE-005: caché per-request para evitar múltiples lecturas de la misma hoja en un solo
+// doPost (ej. createTransaction llama repoReadAll_('Accounts') en validación, en
+// adjustBalance_ y en logAudit_ — antes eran 3 lecturas de Sheets; ahora es 1).
+// La caché se invalida automáticamente vía repoCacheInvalidate_ tras cada escritura.
 function repoReadAll_(entity, includeDeleted) {
+  var cacheKey = entity + ':' + (includeDeleted ? '1' : '0');
+  if (_repoCache_[cacheKey]) return _repoCache_[cacheKey].slice(); // copia defensiva
   var schema = SCHEMAS[entity];
   var sh = getSheet_(entity);
   var lastRow = sh.getLastRow();
-  if (lastRow < 2) return [];
+  if (lastRow < 2) {
+    _repoCache_[cacheKey] = [];
+    return [];
+  }
   var rows = sh.getRange(2, 1, lastRow - 1, schema.length).getValues();
   var out = [];
   for (var r = 0; r < rows.length; r++) {
@@ -102,7 +129,8 @@ function repoReadAll_(entity, includeDeleted) {
     if (!includeDeleted && obj.isDeleted === true) continue;
     out.push(obj);
   }
-  return out;
+  _repoCache_[cacheKey] = out;
+  return out.slice();
 }
 
 function repoFindRowIndex_(entity, id) {
@@ -138,11 +166,15 @@ function repoCreate_(entity, data) {
   if (hasKey_(schema, 'updatedAt')) record.updatedAt = ts;
   sh.appendRow(toRow_(schema, record));
   // Devuelve el record ya construido en memoria; evita releer la hoja completa (TD-05).
+  // BE-005: invalida la caché de esta entidad para que lecturas posteriores en el mismo
+  // request reflejen el nuevo registro.
+  repoCacheInvalidate_(entity);
   return record;
 }
 
 // TD-24: lee la fila directamente por índice tras localizarla; evita el segundo O(n)
 // de repoGet_ (que relería toda la hoja con getDataRange).
+// BE-005: invalida la caché de la entidad tras la escritura.
 function repoUpdate_(entity, id, patch) {
   var schema = SCHEMAS[entity];
   var sh = getSheet_(entity);
@@ -161,6 +193,7 @@ function repoUpdate_(entity, id, patch) {
   });
   if (hasKey_(schema, 'updatedAt')) current.updatedAt = nowIso_();
   sh.getRange(rowIndex, 1, 1, schema.length).setValues([toRow_(schema, current)]);
+  repoCacheInvalidate_(entity); // BE-005: lecturas posteriores en el mismo request ven el valor actualizado
   return current;
 }
 
@@ -193,6 +226,10 @@ function hasKey_(schema, key) {
 
 // TD-28: elimina físicamente las filas marcadas como isDeleted en todas las entidades.
 // Se llama vía acción admin 'purgeDeleted' (solo escrituras POST autorizadas).
+// BE-007: reemplaza el bucle deleteRow (N llamadas API separadas) por reconstrucción
+// de la hoja en un único setValues. Con 200 filas deleted en 1000 filas totales, la
+// versión anterior hacía 200 llamadas Sheets → timeout frecuente. La nueva hace 2
+// (clearContent + setValues), independientemente de cuántas filas se eliminen.
 function purgeDeleted_() {
   var entities = Object.keys(SCHEMAS);
   var summary = {};
@@ -202,20 +239,23 @@ function purgeDeleted_() {
     var sh = getSheet_(entity);
     var lastRow = sh.getLastRow();
     if (lastRow < 2) return;
-    // Recorre en orden inverso para no desplazar índices al borrar filas.
     var rows = sh.getRange(2, 1, lastRow - 1, schema.length).getValues();
-    var deleted = 0;
-    for (var r = rows.length - 1; r >= 0; r--) {
-      var obj = {};
-      for (var c = 0; c < schema.length; c++) {
-        obj[schema[c].key] = coerce_(rows[r][c], schema[c].type);
-      }
-      if (obj.isDeleted === true) {
-        sh.deleteRow(r + 2); // +2: fila 1 = cabecera, índice 0-based → 1-based
-        deleted++;
-      }
+    var idxDel = -1;
+    for (var k = 0; k < schema.length; k++) {
+      if (schema[k].key === 'isDeleted') { idxDel = k; break; }
     }
-    if (deleted > 0) summary[entity] = deleted;
+    var live = rows.filter(function (row) {
+      return idxDel < 0 || !coerce_(row[idxDel], 'boolean');
+    });
+    var deleted = rows.length - live.length;
+    if (deleted === 0) return;
+    // Borrar el rango de datos completo y reescribir solo las filas vivas en bloque.
+    sh.getRange(2, 1, lastRow - 1, schema.length).clearContent();
+    if (live.length > 0) {
+      sh.getRange(2, 1, live.length, schema.length).setValues(live);
+    }
+    repoCacheInvalidate_(entity);
+    summary[entity] = deleted;
   });
   return { purged: summary };
 }

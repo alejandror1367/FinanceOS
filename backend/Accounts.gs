@@ -67,6 +67,9 @@ function deleteAccount_(d) {
 // ── Modelo híbrido de saldos (TD-01) ─────────────────────────────────────────
 
 // Suma delta al saldo de una cuenta. Llamado por applyTxBalanceDelta_.
+// BE-005: repoGet_ usa repoReadAll_ que ya está cacheado; la primera lectura de
+// Accounts en el request es la única que va a Sheets. Tras la escritura, repoUpdate_
+// invalida la caché para que lecturas posteriores de Accounts vean el saldo actualizado.
 function adjustBalance_(accountId, delta) {
   if (!accountId || !delta || delta === 0) return;
   var account = repoGet_('Accounts', accountId);
