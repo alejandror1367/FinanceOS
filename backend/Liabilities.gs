@@ -13,7 +13,10 @@ function createLiability_(d) {
   if (d.dueDate !== undefined && d.dueDate !== '' && !isIsoDate_(d.dueDate)) {
     throw new Error('dueDate inválida (ISO 8601).');
   }
+  var dup = idempotentHit_('Liabilities', d.id);
+  if (dup) return dup;
   var rec = repoCreate_('Liabilities', {
+    id: d.id ? sanitizeString_(d.id, 40) : undefined,
     name: sanitizeString_(d.name, 80),
     type: sanitizeString_(d.type || '', 40),
     balance: toAmount_(d.balance, 'balance'),

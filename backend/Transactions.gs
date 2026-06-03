@@ -39,8 +39,14 @@ function validateTransaction_(d, isUpdate) {
 
 function createTransaction_(d) {
   requireFields_(d, ['type', 'date', 'amount', 'accountId']);
+  // Idempotencia ANTES de validar/aplicar saldo: si la tx ya existe (reintento de
+  // sync), devolverla sin re-ejecutar applyTxBalanceDelta_ — evita duplicar el
+  // movimiento y corromper el saldo de la cuenta.
+  var dup = idempotentHit_('Transactions', d.id);
+  if (dup) return dup;
   validateTransaction_(d, false);
   var rec = repoCreate_('Transactions', {
+    id: d.id ? sanitizeString_(d.id, 40) : undefined,
     type: d.type,
     date: d.date,
     amount: toAmount_(d.amount, 'amount'),

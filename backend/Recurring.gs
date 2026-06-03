@@ -17,7 +17,10 @@ function createRecurring_(d) {
   requireEnum_(d.type, ENUMS.txType, 'type');
   requireEnum_(d.frequency, ENUMS.frequency, 'frequency');
   if (!isIsoDate_(d.nextRunDate)) throw new Error('nextRunDate inválida (ISO 8601).');
+  var dup = idempotentHit_('RecurringTransactions', d.id);
+  if (dup) return dup;
   var rec = repoCreate_('RecurringTransactions', {
+    id: d.id ? sanitizeString_(d.id, 40) : undefined,
     type: d.type,
     amount: toAmount_(d.amount, 'amount'),
     currency: sanitizeString_(d.currency || APP.baseCurrency, 3),

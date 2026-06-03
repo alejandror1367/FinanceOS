@@ -168,6 +168,18 @@ function repoSoftDelete_(entity, id) {
   return repoUpdate_(entity, id, { isDeleted: true });
 }
 
+// Idempotencia de creación: si ya existe un registro con ese id (reintento de
+// sync, o una referencia creada en el mismo lote offline), devuelve el existente;
+// si no, null. Cada create* lo usa para early-return ANTES de sus efectos
+// secundarios (logAudit_, ajuste de saldos) y, junto con preservar el id del
+// cliente (ULID) en repoCreate_, evita filas duplicadas y referencias colgadas.
+// repoFindRowIndex_ solo lee la columna id → no encarece el create común.
+function idempotentHit_(entity, id) {
+  if (!id) return null;
+  if (repoFindRowIndex_(entity, id) <= 0) return null;
+  return repoGet_(entity, id);
+}
+
 function hasKey_(schema, key) {
   return schema.some(function (c) { return c.key === key; });
 }

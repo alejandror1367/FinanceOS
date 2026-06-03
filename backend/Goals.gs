@@ -16,7 +16,10 @@ function createGoal_(d) {
   if (d.targetDate !== undefined && d.targetDate !== '' && !isIsoDate_(d.targetDate)) {
     throw new Error('targetDate inválida (ISO 8601).');
   }
+  var dup = idempotentHit_('Goals', d.id);
+  if (dup) return dup;
   var rec = repoCreate_('Goals', {
+    id: d.id ? sanitizeString_(d.id, 40) : undefined,
     name: sanitizeString_(d.name, 80),
     type: sanitizeString_(d.type || 'other', 30),
     targetAmount: toAmount_(d.targetAmount, 'targetAmount'),

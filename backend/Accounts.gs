@@ -12,15 +12,11 @@ function listAccounts_(p) {
 function createAccount_(d) {
   requireFields_(d, ['name', 'type']);
   requireEnum_(d.type, ENUMS.accountType, 'type');
-  // Preserva el id (ULID) que envía el cliente: cuando se crea un broker inline
-  // y una inversión lo referencia en el mismo lote, la inversión ya guardó ese
-  // accountId; si el backend reasignara otro id, la referencia quedaría colgada.
-  // Idempotente: si el id ya existe (reintento de sync), devuelve el existente
-  // en vez de duplicar.
-  if (d.id) {
-    var existing = repoGet_('Accounts', d.id);
-    if (existing) return existing;
-  }
+  // Preserva el id (ULID) del cliente e idempotencia (ver idempotentHit_): evita
+  // que un broker creado inline quede con la referencia colgada y que un reintento
+  // de sync duplique la cuenta.
+  var dup = idempotentHit_('Accounts', d.id);
+  if (dup) return dup;
   var rec = repoCreate_('Accounts', {
     id: d.id ? sanitizeString_(d.id, 40) : undefined,
     name: sanitizeString_(d.name, 80),

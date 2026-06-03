@@ -13,7 +13,10 @@ function listJournal_(p) {
 function createJournal_(d) {
   requireFields_(d, ['title']);
   if (d.category !== undefined && d.category !== '') requireEnum_(d.category, ENUMS.journalCategory, 'category');
+  var dup = idempotentHit_('Journal', d.id);
+  if (dup) return dup;
   var rec = repoCreate_('Journal', {
+    id: d.id ? sanitizeString_(d.id, 40) : undefined,
     date: (d.date && isIsoDate_(d.date)) ? d.date : new Date().toISOString().slice(0, 10),
     category: d.category || 'reflection',
     title: sanitizeString_(d.title, 120),

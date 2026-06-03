@@ -9,7 +9,10 @@ function listAssets_(p) {
 
 function createAsset_(d) {
   requireFields_(d, ['name', 'value']);
+  var dup = idempotentHit_('Assets', d.id);
+  if (dup) return dup;
   var rec = repoCreate_('Assets', {
+    id: d.id ? sanitizeString_(d.id, 40) : undefined,
     name: sanitizeString_(d.name, 80),
     category: sanitizeString_(d.category || '', 40),
     value: toAmount_(d.value, 'value'),

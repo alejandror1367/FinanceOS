@@ -11,7 +11,10 @@ function listInvestments_(p) {
 function createInvestment_(d) {
   requireFields_(d, ['name', 'assetType', 'quantity']);
   requireEnum_(d.assetType, ENUMS.assetType, 'assetType');
+  var dup = idempotentHit_('Investments', d.id);
+  if (dup) return dup;
   var rec = repoCreate_('Investments', {
+    id:            d.id ? sanitizeString_(d.id, 40) : undefined,
     name:          sanitizeString_(d.name, 80),
     assetType:     d.assetType,
     symbol:        sanitizeString_(d.symbol || '', 20),

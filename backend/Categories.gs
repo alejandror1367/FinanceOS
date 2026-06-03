@@ -12,14 +12,11 @@ function listCategories_(p) {
 function createCategory_(d) {
   requireFields_(d, ['name', 'kind']);
   requireEnum_(d.kind, ENUMS.categoryKind, 'kind');
-  // Preserva el id (ULID) del cliente: si una transacción/presupuesto creado
-  // offline en el mismo lote referencia esta categoría, el backend no debe
-  // reasignar otro id (rompería la referencia → "Categoría inexistente").
-  // Idempotente: si ya existe, lo devuelve en vez de duplicar.
-  if (d.id) {
-    var existing = repoGet_('Categories', d.id);
-    if (existing) return existing;
-  }
+  // Preserva el id (ULID) del cliente e idempotencia (ver idempotentHit_): evita
+  // "Categoría inexistente" cuando una transacción/presupuesto offline la
+  // referencia antes de sincronizar, y evita duplicados en reintentos.
+  var dup = idempotentHit_('Categories', d.id);
+  if (dup) return dup;
   var rec = repoCreate_('Categories', {
     id: d.id ? sanitizeString_(d.id, 40) : undefined,
     name: sanitizeString_(d.name, 60),

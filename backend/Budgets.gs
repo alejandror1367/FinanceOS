@@ -15,7 +15,10 @@ function createBudget_(d) {
   requireEnum_(d.period, ENUMS.budgetPeriod, 'period');
   var cat = repoGet_('Categories', d.categoryId);
   if (!cat || cat.isDeleted) throw new Error('Categoría inexistente: ' + d.categoryId);
+  var dup = idempotentHit_('Budgets', d.id);
+  if (dup) return dup;
   var rec = repoCreate_('Budgets', {
+    id: d.id ? sanitizeString_(d.id, 40) : undefined,
     categoryId: d.categoryId,
     period: d.period,
     periodKey: sanitizeString_(d.periodKey, 7),
