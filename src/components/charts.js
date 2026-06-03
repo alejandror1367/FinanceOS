@@ -1,7 +1,7 @@
 // components/charts.js — gráficos SVG ligeros (sin dependencias).
 // LineChart (multi-serie), Donut y Legend. Usan tokens semánticos de color.
 
-import { el } from '../utils/dom.js';
+import { el, esc } from '../utils/dom.js';
 
 export const CHART_PALETTE = [
   'var(--accent)', 'var(--positive)', 'var(--gold)', 'var(--info)',
@@ -34,7 +34,7 @@ export function LineChart({ labels = [], series = [], height = 210, showValues =
 
   const paths = series.map((s, si) => {
     const pts = s.points.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
-    const dots = s.points.map((v, i) => `<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="4" fill="${s.color}" style="cursor:default"><title>${labels[i]}: ${fmt(v)}</title></circle>`).join('');
+    const dots = s.points.map((v, i) => `<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="4" fill="${s.color}" style="cursor:default"><title>${esc(labels[i])}: ${fmt(v)}</title></circle>`).join('');
     let valueLabels = '';
     if (showValues) {
       // Serie 0 etiqueta encima del punto; series siguientes, debajo (evita choque).
@@ -46,10 +46,10 @@ export function LineChart({ labels = [], series = [], height = 210, showValues =
   }).join('');
 
   const xlabels = labels.map((l, i) =>
-    `<text x="${x(i).toFixed(1)}" y="${H - 7}" text-anchor="${anchor(i)}" font-size="11" fill="var(--text-tertiary)">${l}</text>`).join('');
+    `<text x="${x(i).toFixed(1)}" y="${H - 7}" text-anchor="${anchor(i)}" font-size="11" fill="var(--text-tertiary)">${esc(l)}</text>`).join('');
 
   const a11yLabel = ariaLabel || (series[0] ? series[0].name : 'Gráfico de líneas');
-  const svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${a11yLabel}" style="height:auto;display:block"><title>${a11yLabel}</title>${grid}${zeroLine}${paths}${xlabels}</svg>`;
+  const svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(a11yLabel)}" style="height:auto;display:block"><title>${esc(a11yLabel)}</title>${grid}${zeroLine}${paths}${xlabels}</svg>`;
   return el('div', { class: 'chart', html: svg });
 }
 
@@ -67,14 +67,14 @@ export function Donut(segments = [], { size = 168, centerTop = '', centerSub = '
     const frac = (s.value || 0) / total;
     const len = frac * circ;
     const pct = (frac * 100).toFixed(1);
-    const seg = `<circle r="${r}" cx="${cx}" cy="${cy}" fill="none" stroke="${s.color}" stroke-width="20" stroke-dasharray="${len.toFixed(2)} ${(circ - len).toFixed(2)}" stroke-dashoffset="${(-offset).toFixed(2)}" transform="rotate(-90 ${cx} ${cy})" style="cursor:default"><title>${s.label}: ${fmt(s.value || 0)} · ${pct}%</title></circle>`;
+    const seg = `<circle r="${r}" cx="${cx}" cy="${cy}" fill="none" stroke="${s.color}" stroke-width="20" stroke-dasharray="${len.toFixed(2)} ${(circ - len).toFixed(2)}" stroke-dashoffset="${(-offset).toFixed(2)}" transform="rotate(-90 ${cx} ${cy})" style="cursor:default"><title>${esc(s.label)}: ${fmt(s.value || 0)} · ${pct}%</title></circle>`;
     offset += len;
     return seg;
   }).join('');
   const center = `<text x="${cx}" y="${cy - 2}" text-anchor="middle" font-size="16" font-weight="700" fill="var(--text-primary)">${centerTop}</text>` +
     (centerSub ? `<text x="${cx}" y="${cy + 16}" text-anchor="middle" font-size="11" fill="var(--text-secondary)">${centerSub}</text>` : '');
   const a11yLabel = ariaLabel || (segments.length ? 'Distribución: ' + segments.map((s) => s.label).join(', ') : 'Gráfico donut');
-  const svg = `<svg viewBox="0 0 168 168" width="${size}" height="${size}" role="img" aria-label="${a11yLabel}"><title>${a11yLabel}</title>${arcs}${center}</svg>`;
+  const svg = `<svg viewBox="0 0 168 168" width="${size}" height="${size}" role="img" aria-label="${esc(a11yLabel)}"><title>${esc(a11yLabel)}</title>${arcs}${center}</svg>`;
   return el('div', { class: 'donut', html: svg });
 }
 

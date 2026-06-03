@@ -77,9 +77,17 @@ export function openModal({ title, body, submitLabel = 'Guardar', onSubmit, dang
   document.addEventListener('keydown', onKeydown);
   activeOverlay = overlay;
 
-  // Foco al primer campo.
+  // Foco al primer campo editable; si no hay ninguno (ej. confirmDialog),
+  // foca el botón de acción principal (submit) para que el teclado sea operable
+  // sin tener que navegar desde fuera del diálogo (WCAG 2.4.3 / 3.2.2).
   const firstInput = modal.querySelector('input, select, textarea');
-  if (firstInput) setTimeout(() => firstInput.focus(), 30);
+  const submitBtn = modal.querySelector('button[type="submit"]');
+  const fallback = modal.querySelector('[tabindex="-1"]') || modal;
+  const target = firstInput || submitBtn || fallback;
+  if (!target.hasAttribute('tabindex') && target === fallback && target === modal) {
+    modal.setAttribute('tabindex', '-1');
+  }
+  setTimeout(() => target.focus(), 30);
 
   return { close: closeModal };
 }

@@ -87,9 +87,18 @@ export function BarChart(data = [], { ariaLabel, valueFormat } = {}) {
     ])));
 }
 
-export function ProgressBar(pct, variant = '', { title } = {}) {
+// ariaLabel: descripción del progreso (default "Progreso"). Completa WCAG 4.1.2.
+export function ProgressBar(pct, variant = '', { title, ariaLabel } = {}) {
   const clamped = Math.max(0, Math.min(100, pct));
-  return el('div', { class: 'progress', role: 'progressbar', 'aria-valuenow': Math.round(clamped), title: title || `${Math.round(clamped)}%` }, [
+  return el('div', {
+    class: 'progress',
+    role: 'progressbar',
+    'aria-valuemin': '0',
+    'aria-valuemax': '100',
+    'aria-valuenow': Math.round(clamped),
+    'aria-label': ariaLabel || 'Progreso',
+    title: title || `${Math.round(clamped)}%`,
+  }, [
     el('div', { class: `progress__bar${variant ? ' progress__bar--' + variant : ''}`, style: { width: `${clamped}%` } }),
   ]);
 }

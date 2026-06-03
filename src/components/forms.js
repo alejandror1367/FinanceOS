@@ -14,10 +14,12 @@ export function field(label, control, { error } = {}) {
   ]);
 }
 
-export function textInput({ name, value = '', placeholder = '', type = 'text', required = false } = {}) {
+// ariaLabel solo se pasa cuando el campo NO tiene un <label> visible asociado
+// (p. ej. un buscador inline). Si hay <label for=...>, omitir para no duplicar el anuncio.
+export function textInput({ name, value = '', placeholder = '', type = 'text', required = false, ariaLabel } = {}) {
   return el('input', {
     class: 'input', name, type, value, placeholder,
-    'aria-label': name, required: required ? true : null,
+    'aria-label': ariaLabel || null, required: required ? true : null,
   });
 }
 
@@ -33,8 +35,9 @@ export function textarea({ name, value = '', placeholder = '' } = {}) {
 }
 
 // options: [{ value, label }]
-export function select({ name, value = '', options = [] } = {}) {
-  const node = el('select', { class: 'input', name, 'aria-label': name },
+// ariaLabel solo se pasa cuando el <select> no tiene un <label> visible asociado.
+export function select({ name, value = '', options = [], ariaLabel } = {}) {
+  const node = el('select', { class: 'input', name, 'aria-label': ariaLabel || null },
     options.map((o) => el('option', { value: o.value, selected: String(o.value) === String(value) ? true : null, text: o.label })));
   return node;
 }

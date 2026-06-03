@@ -29,3 +29,13 @@ export function mount(container, ...nodes) {
 
 export const $ = (sel, root = document) => root.querySelector(sel);
 export const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+
+// Escapa caracteres especiales HTML para usarlos en atributos SVG/HTML (WCAG + XSS).
+// Aplica solo a strings; los valores numéricos no necesitan escaparse.
+export function esc(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
