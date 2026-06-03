@@ -159,12 +159,25 @@ function getReports_(p) {
  * Reutiliza las mismas funciones list*_ que las acciones individuales para
  * mantener idénticos los filtros (cuentas archivadas, soft-deletes, etc.).
  * Las claves coinciden con ENTITIES del frontend (src/services/entities.js).
+ *
+ * BE-006 (TD-25): ventana de 24 meses en transacciones para evitar payloads
+ * excesivos con años de historial. Historial completo sigue disponible vía
+ * getTransactions sin parámetro since. La paginación por cursor queda pendiente
+ * para un sprint posterior (L-effort, cambia el contrato del frontend).
  */
 function getBootstrap_(p) {
   p = p || {};
+  // Calcular el límite de 24 meses atrás como fecha ISO YYYY-MM-DD.
+  var since24m = new Date();
+  since24m.setMonth(since24m.getMonth() - 24);
+  var sinceParam = since24m.toISOString().slice(0, 10);
+  // Combinar con cualquier 'since' que venga del cliente (tomar el más restrictivo).
+  var txParams = {};
+  for (var k in p) { if (Object.prototype.hasOwnProperty.call(p, k)) txParams[k] = p[k]; }
+  if (!txParams.since || txParams.since < sinceParam) txParams.since = sinceParam;
   return {
     accounts:          listAccounts_(p),
-    transactions:      listTransactions_(p),
+    transactions:      listTransactions_(txParams),
     categories:        listCategories_(p),
     budgets:           listBudgets_(p),
     goals:             listGoals_(p),

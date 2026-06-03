@@ -101,6 +101,9 @@ var ROUTES = {
   // TD-28: purga física de filas soft-deleted (acción de administración).
   purgeDeleted: function () { return purgeDeleted_(); },
 
+  // BE-008: trunca el AuditLog eliminando entradas con más de 90 días (acción de administración).
+  truncateAuditLog: function () { return { removed: truncateAuditLog_() }; },
+
   // TD-26: escritura por lotes — N ops en 1 request, reduciendo invocaciones para colas offline.
   // Formato: { ops: [{ action, data, entityId? }, ...] }. Devuelve { results: [...] }.
   batchWrite: function (d) {

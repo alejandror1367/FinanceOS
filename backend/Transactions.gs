@@ -7,10 +7,18 @@
  * FinanceOS · Fase 2.
  */
 
+// BE-006 (TD-25): soporte de parámetro `since` (fecha ISO YYYY-MM-DD) para filtrar
+// transacciones anteriores a la ventana de tiempo requerida. Usado por getBootstrap_
+// para limitar el payload de cold-start a 24 meses. El parámetro es opt-in: si no
+// se pasa, devuelve todas las transacciones (compatibilidad con clientes sin actualizar).
 function listTransactions_(p) {
   var rows = repoReadAll_('Transactions');
   // Orden descendente por fecha.
   rows.sort(function (a, b) { return (a.date < b.date) ? 1 : (a.date > b.date ? -1 : 0); });
+  if (p && p.since) {
+    var since = String(p.since).slice(0, 10); // normalizar a YYYY-MM-DD
+    rows = rows.filter(function (r) { return String(r.date || '').slice(0, 10) >= since; });
+  }
   if (p && p.limit) return rows.slice(0, Number(p.limit) || rows.length);
   return rows;
 }
