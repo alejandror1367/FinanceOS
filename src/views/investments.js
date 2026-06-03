@@ -6,7 +6,7 @@ import { icon } from '../utils/icons.js';
 import { store } from '../store/store.js';
 import { dataService } from '../services/dataService.js';
 import { apiClient } from '../services/apiClient.js';
-import { formatMoney, formatDate } from '../utils/format.js';
+import { formatMoney, formatDate, roundMoney } from '../utils/format.js';
 import { KpiCard, Badge, Trend, ProgressBar, EmptyState, Button } from '../components/ui.js';
 import { openModal, confirmDialog } from '../components/modal.js';
 import { field, textInput, numberInput, select, segmented, setFieldError, focusFieldError } from '../components/forms.js';
@@ -76,18 +76,10 @@ function groupByTicker(investments) {
     // Cost basis incluye la comisión de compra de cada lote (Sprint 5).
     const totalCommission = g.purchases.reduce((s, p) => s + (Number(p.commission) || 0), 0);
     const totalCost = g.purchases.reduce((s, p) => s + (Number(p.quantity) || 0) * (Number(p.purchasePrice || p.avgCost) || 0), 0) + totalCommission;
-    // P&L realizado neto: comisiones de compra/venta + retención en fuente (FIN-002/TD-42).
-    // La retención solo descuenta sobre la ganancia bruta del lote (max(0, gananciaLote));
-    // no aplica si el lote tuvo pérdida. Usa la tasa del lote vendido cuando está definida;
-    // de lo contrario, la tasa del lote de compra más reciente con retención configurada.
+    // P&L realizado neto: delega al selector puro selectors.lotRealizedPnL (FIN-002/003/004).
+    // Incluye: comisión de compra prorateada, comisión de venta completa y retención.
     const fallbackWithholdingRate = sorted.find((p) => Number(p.withholdingRate) > 0)?.withholdingRate || 0;
-    const realizedPnL = g.sold.reduce((s, p) => {
-      const qty     = Number(p.soldQuantity || p.quantity) || 0;
-      const fees    = (Number(p.commission) || 0) + (Number(p.soldCommission) || 0);
-      const grossPnL = qty * (Number(p.soldPrice) || 0) - qty * (Number(p.purchasePrice || p.avgCost) || 0) - fees;
-      const rate    = Number(p.withholdingRate) || fallbackWithholdingRate;
-      return s + selectors.applyWithholding(grossPnL, rate);
-    }, 0);
+    const realizedPnL = g.sold.reduce((s, p) => s + selectors.lotRealizedPnL(p, fallbackWithholdingRate), 0);
     // Retención en fuente de la posición: la del lote más reciente que la tenga definida.
     const withholdingRate = fallbackWithholdingRate;
     return { ...g, sorted, totalQty, totalCost, totalCommission, withholdingRate,
@@ -97,17 +89,22 @@ function groupByTicker(investments) {
 }
 
 // ─── Modal de venta ───────────────────────────────────────────────────────────
+// FIN-003 (TD-43): permite ventas parciales. El usuario indica la cantidad a vender
+// (≤ cantidad total del lote). Si vende todo, el lote se cierra (soldDate); si vende
+// una fracción, se reduce quantity y se registra un lote de venta separado.
 function openSellModal(group, livePrice) {
   const { symbol, name, totalQty, totalCost, currency, purchases } = group;
   const currentPrice = livePrice?.price || group.storedPrice || 0;
+  const qtyFmt = totalQty.toFixed(6).replace(/\.?0+$/, '');
+  const qtyEl   = numberInput({ name: 'soldQuantity', value: qtyFmt, placeholder: `Máx. ${qtyFmt}` });
   const priceEl = numberInput({ name: 'soldPrice', value: currentPrice ? currentPrice.toFixed(currency !== 'COP' ? 2 : 0) : '', placeholder: 'Precio por unidad' });
   const dateEl  = textInput({ name: 'soldDate', value: today(), type: 'date' });
   const commEl  = numberInput({ name: 'soldCommission', value: '', placeholder: 'Opcional' });
 
   const body = el('div', {}, [
-    el('p', { class: 't-caption text-secondary', text: `${totalQty.toFixed(6).replace(/\.?0+$/, '')} unidades · costo total ${fmtI(totalCost, currency)}` }),
-    el('div', { class: 'field-row' }, [field('Precio de venta', priceEl), field('Fecha de venta', dateEl)]),
-    field(`Comisión de venta (${currency})`, commEl),
+    el('p', { class: 't-caption text-secondary', text: `${qtyFmt} unidades disponibles · costo total ${fmtI(totalCost, currency)}` }),
+    el('div', { class: 'field-row' }, [field('Cantidad a vender', qtyEl), field('Precio de venta', priceEl)]),
+    el('div', { class: 'field-row' }, [field('Fecha de venta', dateEl), field(`Comisión de venta (${currency})`, commEl)]),
   ]);
 
   openModal({
@@ -115,30 +112,71 @@ function openSellModal(group, livePrice) {
     body,
     submitLabel: 'Registrar venta',
     onSubmit: async () => {
-      const soldPrice = Number(priceEl.value) || 0;
-      const soldDate  = dateEl.value;
-      const totalComm = Number(commEl.value) || 0;
+      const qtySolicitada = Number(qtyEl.value) || 0;
+      const soldPrice     = Number(priceEl.value) || 0;
+      const soldDate      = dateEl.value;
+      const totalComm     = Number(commEl.value) || 0;
+
+      if (qtySolicitada <= 0 || qtySolicitada > totalQty + 1e-9) {
+        focusFieldError(qtyEl); return setFieldError(qtyEl, `Debe ser entre 0 y ${qtyFmt}`);
+      }
       if (soldPrice <= 0) { focusFieldError(priceEl); return setFieldError(priceEl, 'Ingresa el precio de venta'); }
       if (!soldDate)      { focusFieldError(dateEl);  return setFieldError(dateEl, 'Selecciona una fecha'); }
-      // Prorratea la comisión de venta entre lotes por participación de cantidad,
-      // así el P&L realizado neto sobrevive si luego se borra un lote individual.
-      const qtyTotal = purchases.reduce((s, p) => s + (Number(p.quantity) || 0), 0) || 1;
+
+      const isTotal = Math.abs(qtySolicitada - totalQty) < 1e-9;
+
       return guardedSave(async () => {
-        for (const p of purchases) {
-          const qty = Number(p.quantity) || 0;
-          const soldCommission = totalComm * (qty / qtyTotal);
-          await dataService.update('investments', p.id, { ...p, soldPrice, soldDate, soldQuantity: qty, soldCommission });
+        if (isTotal) {
+          // Venta total: cierra todos los lotes con soldDate.
+          // Prorratea la comisión de venta entre lotes por participación de cantidad.
+          const qtyLoteTotal = purchases.reduce((s, p) => s + (Number(p.quantity) || 0), 0) || 1;
+          for (const p of purchases) {
+            const qty = Number(p.quantity) || 0;
+            const soldCommission = totalComm * (qty / qtyLoteTotal);
+            // FIN-004: soldQuantity = qty del lote (venta total de ese lote).
+            await dataService.update('investments', p.id, { ...p, soldPrice, soldDate, soldQuantity: qty, soldCommission });
+          }
+        } else {
+          // Venta parcial: distribuir qtySolicitada entre los lotes FIFO (más recientes primero).
+          // Para cada lote, calculamos cuánto vendemos de él y actualizamos su quantity.
+          // Si un lote queda en 0, lo marcamos vendido (soldDate); los demás solo reducen quantity.
+          let qtyRestante = qtySolicitada;
+          // Ordenar FIFO: compras más antiguas primero para la distribución
+          const lotesOrdenados = [...purchases].sort((a, b) => (a.purchaseDate || '').localeCompare(b.purchaseDate || ''));
+          for (const p of lotesOrdenados) {
+            if (qtyRestante <= 0) break;
+            const qtyLote = Number(p.quantity) || 0;
+            const qtyVendida = Math.min(qtyRestante, qtyLote);
+            qtyRestante -= qtyVendida;
+            const soldCommission = totalComm * (qtyVendida / qtySolicitada);
+            const loteAgotado = Math.abs(qtyVendida - qtyLote) < 1e-9;
+            if (loteAgotado) {
+              // Lote completamente vendido: cerrarlo
+              await dataService.update('investments', p.id, { ...p, soldPrice, soldDate, soldQuantity: qtyVendida, soldCommission });
+            } else {
+              // Lote parcialmente vendido: crear lote vendido + reducir lote activo
+              // 1. Registrar la porción vendida como nuevo lote cerrado
+              await dataService.create('investments', {
+                ...p, id: undefined,
+                quantity: qtyVendida,
+                soldPrice, soldDate, soldQuantity: qtyVendida, soldCommission,
+              });
+              // 2. Reducir la cantidad del lote activo
+              await dataService.update('investments', p.id, { ...p, quantity: qtyLote - qtyVendida });
+            }
+          }
         }
       }, `Venta de ${symbol || name} registrada`, 'Error al registrar');
     },
   });
 }
 
+// FIN-008 (TD-44): delega al selector puro (selectors.cdtCurrentValue) para evitar
+// duplicar la lógica y mantener la función testeable sin DOM.
 function cdtCurrentValue(group) {
   const inv = group.purchases[0];
-  if (!inv?.interestRate || !inv?.purchaseDate) return group.totalCost;
-  const days = (Date.now() - new Date(inv.purchaseDate).getTime()) / 86400000;
-  return group.totalCost * Math.pow(1 + inv.interestRate / 100, days / 365);
+  if (!inv) return group.totalCost;
+  return selectors.cdtCurrentValue(inv);
 }
 
 function groupValue(group, livePrices) {
@@ -581,12 +619,14 @@ export function renderInvestments() {
       return { ...sec, groups, totalValue, totalCost, gain: totalValue - totalCost, ret: totalCost ? (totalValue - totalCost) / totalCost * 100 : 0 };
     }).filter((s) => s.groups.length);
 
-    const pTotal = secStats.reduce((s, x) => s + x.totalValue, 0);
-    const cTotal = secStats.reduce((s, x) => s + x.totalCost, 0);
-    const gTotal = pTotal - cTotal;
+    // FIN-009 (TD-21): redondear totales del portafolio para evitar errores de punto flotante.
+    // Solo los acumulados finales se redondean; los valores intermedios por lote no se tocan.
+    const pTotal = roundMoney(secStats.reduce((s, x) => s + x.totalValue, 0), baseCur);
+    const cTotal = roundMoney(secStats.reduce((s, x) => s + x.totalCost, 0), baseCur);
+    const gTotal = roundMoney(pTotal - cTotal, baseCur);
     const rTotal = cTotal ? gTotal / cTotal * 100 : 0;
     // P&L realizado acumulado de todas las posiciones cerradas (en moneda base)
-    const realizedTotal = closedGroups.reduce((sum, g) => sum + (toCOP(g.realizedPnL, g.currency, fxRates) ?? g.realizedPnL), 0);
+    const realizedTotal = roundMoney(closedGroups.reduce((sum, g) => sum + (toCOP(g.realizedPnL, g.currency, fxRates) ?? g.realizedPnL), 0), baseCur);
 
     const wrap = el('div', { class: 'stack' });
 
