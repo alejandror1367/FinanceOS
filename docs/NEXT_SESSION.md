@@ -1,121 +1,69 @@
 # Prompt de continuación — FinanceOS
-**Generado:** 2026-06-03 (sub-sesión noche: config MCP playwright + context7; tras agentes/comandos + Sprint 5 + 6 + 7 fixes de sync)
-**HEAD:** `c06a2ea` · **SW:** `v0.2.43` · **Tests:** 54/54
+**Generado:** 2026-06-03 (sesión completa: /handoff in → /audit → /roadmap → /implement Sprint 1 → /handoff out)
+**HEAD:** `b23a4f6` · **SW:** `v0.2.46` · **Tests:** 65/65
 
 ---
 
 ```text
-AVISO MCP: el repo ahora versiona .mcp.json con playwright y context7 (scope de proyecto).
-Tras clonar/pull deben APROBARSE (Claude pedirá confirmación) y REINICIARSE Claude Code:
-la lista de tools MCP se fija al arrancar; aunque `claude mcp list` los muestre conectados,
-sus tools no se cargan en una sesión ya en curso. GitHub MCP ya conecta.
-
 Lee PROJECT_HANDOFF.md (CONTEXTO MÍNIMO primero, luego §18) y CLAUDE.md antes de cualquier cambio.
+
+MCP: .mcp.json versionado con playwright y context7 (scope de proyecto).
+Tras git pull deben APROBARSE y REINICIARSE Claude Code: las tools MCP se fijan al arrancar.
 
 PROYECTO: FinanceOS — PWA financiera personal y privada de Alejo.
 Repo: https://github.com/alejandror1367/FinanceOS (rama main).
 Prod: https://alejandror1367.github.io/FinanceOS/
-HEAD: c06a2ea · SW v0.2.43 · config.version 0.2.43 · Tests 54/54
+HEAD: b23a4f6 · SW v0.2.46 · config.version 0.2.46 · Tests 65/65
 
 INVARIANTES (ver CLAUDE.md): JS ES Modules sin build step · sin frameworks/bundlers ·
 cero deps npm en runtime · frontend abstraído tras src/services/ · Apps Script +
 Google Sheets (13 hojas) + GitHub Pages + OAuth de Google · offline-first.
 
-INFRAESTRUCTURA DE AGENTES (e6b3c77): .claude/agents/ (7) + .claude/commands/ (4:
-/audit, /roadmap, /implement, /handoff). Cada agente reconstruye su contexto desde el repo
-(portable entre equipos). implementation-engineer es el ÚNICO que modifica código.
-Recomendado: estrenar con /audit → /roadmap antes de implementar el siguiente sprint.
+HECHO Y COMMITEADO (sesión 2026-06-03, tarde):
 
-HECHO Y DESPLEGADO (sesión 2026-06-03):
-- CONFIG MCP (sub-sesión noche, c06a2ea): .mcp.json versionado con playwright (@playwright/mcp)
-  y context7 (@upstash/context7-mcp), scope de proyecto. Sin secretos; tooling de dev, no runtime.
-- SPRINT 5 (inversiones avanzadas): comisión de compra/venta + retención en fuente
-  (withholdingRate) con Badge en positionCard + soporte multicuenta (un ticker, varias cuentas).
-- SPRINT 6 (UX): tooltips Donut/ProgressBar · validación inline en TODOS los formularios
-  (setFieldError/focusFieldError) · Command Palette (⌘K/Ctrl K · '/' · '?' · botón lupa).
-- 7 FIXES DE SYNC, todos redeployados por el dueño:
-  BRK.B (Yahoo punto→guion) · snapshots soft-delete (+ columna isDeleted) · loop batchWrite
-  acotado · compras multicuenta (name vacío) · preservar id cliente en cuentas/categorías ·
-  idempotencia + preservación de id en los 10 create* del backend (helper idempotentHit_).
-- Verificado en vivo (Playwright): 14 rutas sin errores JS; Sprint 5/6 confirmados.
-- Tests: 54/54 (11 suites).
+AUDITORÍA GLOBAL (/audit, 4/5 áreas):
+- 46 hallazgos: P0:5 / P1:12 / P2:19 / P3:10. IDs nuevos TD-41…TD-53.
+- Entregables: Audit-Global / Bugs-Criticos / QuickWins / UX-Recommendations del 2026-06-03.
 
-PENDIENTE (sin sprint asignado — elegir con el dueño):
-- Sprint 7 (Performance): paginación listTransactions_ (>5000 tx), content-visibility,
-  lazy load de vistas pesadas, cold-start backend.
-- Sprint 8 (Analítica avanzada) · Sprint 9 (pulido + WCAG + fix truncamiento "Apariencia" Ajustes, v1.0).
-- Bugs P3 abiertos: TD-36 (proyección presupuesto días 1–3) · TD-37 (solapamiento presupuestos).
+ROADMAP (/roadmap):
+- docs/Roadmap-Implementacion-2026-06-03.md: 9 sprints, ~14-17 días, basado en auditoría.
 
-PENDIENTE DE VERIFICAR POR EL DUEÑO (happy-path autenticado con datos):
-- Borrado masivo de snapshots (sin "sincronizando" en bucle) · broker inline bien vinculado ·
-  compras multicuenta · BRK.B trae precio.
+SPRINT 1 — Integridad de cifras maestras (/implement):
+- BE-001/TD-45 (45b47ec): guard isDeleted en idempotentHit_ → no resucita soft-deletes
+- BE-003/TD-02 (bc4f1fe): getQuotes devuelve fxRates{USD,EUR}; selectores excluyen 1:1
+- FIN-001/TD-41 (8751f9a): computeNetWorth_ filtra vendidos+isDeleted, suma comisión
+- FIN-002/TD-42 (4073ddf): applyWithholding() descuenta retención del P&L realizado
+- BE-002/TD-46 (b23a4f6): _recalcAccountBalance (idempotente) reemplaza ajuste delta
+- +11 tests nuevos (65/65, 13 suites)
 
-SIN DEPLOYS PENDIENTES — el dueño ya redeployó todos los .gs de backend tocados.
+⚠ DEPLOY MANUAL PENDIENTE (3 archivos .gs — dueño debe desplegar en Apps Script):
+  backend/Utils.gs    ← commit 45b47ec (guard isDeleted)
+  backend/Quotes.gs   ← commit bc4f1fe (fxRates en getQuotes)
+  backend/Reports.gs  ← commit 8751f9a (computeNetWorth_ paridad FE)
+
+PENDIENTES EN ORDEN:
+1. INMEDIATO: despliega los 3 .gs en Apps Script → recarga prod → verifica en vivo:
+   - getQuotes devuelve {quotes, fxRates} con tasas USDCOP/EURCOP
+   - Patrimonio dashboard coincide con vista Inversiones (sin lotes vendidos inflados)
+   - P&L neto de retención visible en inversiones
+   - Crear tx offline, editarla 2 veces offline, flush → saldo correcto sin doble conteo
+2. Sprint 2 (ventas parciales + valoración CDT) — NO requiere deploy: /implement 2
+3. Sprint 3 (accesibilidad/DS WCAG AA) — NO requiere deploy, ideal primer PR limpio: /implement 3
+4. QA en vivo Playwright (pendiente de la auditoría): /audit playwright
+5. TD-43 (ventas parciales): pedir cantidad a vender en el modal (Sprint 2)
+
+BUGS P1 ABIERTOS:
+- TD-43: ventas parciales rotas (soldQuantity = qty comprada) — Sprint 2
+- TD-44: CDT sobrevaluado (capitaliza sobre totalCost+comisión, sin tope en vencimiento) — Sprint 2
+
+RIESGOS VIVOS:
+- TD-02 🟡 parcial: FX frontend ok; backend Quotes.gs ⚠ pendiente deploy
+- listTransactions_ sin paginación >5000 tx — Sprint 4
+- TD-47: reconcileAndHydrate reduce update a su patch — Sprint 4
 
 FORMA DE TRABAJO: fases pequeñas y verificables · explicar qué/por qué ·
-correr `node --test tests/selectors.test.js` tras cada cambio de selector ·
-commits atómicos por feature · el hook auto-bumpa SW + config.version al commitear src/.
+correr node --test tests/selectors.test.js tras cada cambio de selector (65/65 base) ·
+commits atómicos por feature · hook auto-bumpa SW + config.version al commitear src/.
+Para mensajes de commit multilínea: archivo temporal _commitmsg.txt + git commit -F _commitmsg.txt
 Empezar con: git log --oneline -5 · git status · node --test tests/selectors.test.js.
 ```
-
----
-
-## Sub-sesión (2026-06-03, tarde) — Infraestructura de agentes
-
-Se creó el sistema permanente de auditoría/planificación/implementación/documentación
-(commit `e6b3c77`, solo tooling de desarrollo — no toca el runtime servido ni el SW):
-
-- **`.claude/agents/` (7):** `frontend-auditor`, `backend-reviewer`, `security-reviewer`,
-  `financial-analyst`, `documentation-writer`, `playwright-reviewer`, `implementation-engineer`.
-  Cada uno define objetivo, alcance, responsabilidades, archivos prioritarios, qué NO hacer,
-  formato de salida, severidad P0–P3, priorización, anti-duplicación, interacción entre agentes
-  y una sección **"Bootstrap del contexto"** (qué leer y en qué orden) para ser **portable entre
-  equipos** sin depender de memoria de sesión. `implementation-engineer` es el ÚNICO que edita código.
-- **`.claude/commands/` (4):** `/audit` (lanza los 5 auditores en paralelo, consolida y deduplica),
-  `/roadmap` (prioriza por ROI en sprints), `/implement` (ejecuta el siguiente sprint con tests y
-  verificación en vivo), `/handoff` (continuidad entre equipos).
-- **Flujo:** `/audit → /roadmap → /implement → /handoff`. Recomendado estrenar con `/audit`.
-
----
-
-## Contexto rápido de la sesión (Sprint 5 + 6 + fixes de sync)
-
-### Lo que se hizo (en orden)
-
-**Sprint 5 — Inversiones avanzadas**
-
-| Commit | Feature |
-|--------|---------|
-| (Sprint 5) | `commission`/`soldCommission`/`withholdingRate` en inversiones · Badge `Ret. X%` · cost basis y P&L netos de comisiones · `investmentsCost` suma comisión · +2 tests |
-
-**Cadena de 7 fixes de integridad de sync** (todos redeployados)
-
-| Commit | Fix |
-|--------|-----|
-| `9a6fc31` | Quotes: símbolos de clase `BRK.B` → reintento punto→guion en Yahoo |
-| `95bcd51` | Snapshots: columna `isDeleted` + soft delete (rápido) en vez de hard delete |
-| `2fdbc40` | syncEngine: ruta batchWrite acota reintentos (no bucle "sincronizando") |
-| `ef740f8` | Inversiones: "+ Compra" prellena nombre/moneda + fallback a símbolo (name vacío) |
-| `5e46331` | `createAccount_` preserva id del cliente (broker inline) + idempotente |
-| `8c12920` | `createCategory_` igual (categoría offline referenciada) |
-| `12e103d` | Idempotencia + preservación de id en los 10 `create*` (`idempotentHit_`) |
-
-**Sprint 6 — UX**
-
-| Commit | Feature |
-|--------|---------|
-| `00ac288` | Tooltips Donut por segmento + ProgressBar % · validación inline (infra + inversiones) |
-| `8e2861b` | Validación inline en transacciones, presupuestos, metas, patrimonio, cuentas, diario, recurrentes, deudas |
-| `f3e8699` | Command Palette ⌘K + atajos globales + botón lupa en topbar |
-
-### Decisiones técnicas relevantes
-- Todos los `create*` del backend preservan el id (ULID) del cliente y son idempotentes
-  (`idempotentHit_` en Utils.gs) → sin referencias colgadas ni duplicados en reintentos.
-- Snapshots: soft delete (necesita columna `isDeleted`). Hard delete era lento → causaba timeout/loop.
-- `initShortcuts()` se registra ANTES de `dataService.init()` (los atajos no esperan a la red).
-- Quotes: intenta el símbolo tal cual; si no hay datos y tiene punto, reintenta punto→guion.
-
-### Verificación en vivo (Playwright + Chromium)
-- 14/14 rutas sin errores JS. Sprint 5 (campos comisión/retención) y validación inline confirmados.
-- Command Palette: abre con ⌘K/'/'/botón, filtra, navega ("patri" + ↵ → #/networth), cierra.
-- Detectó y corrigió: los atajos quedaban inactivos esperando `dataService.init()` (movidos antes).

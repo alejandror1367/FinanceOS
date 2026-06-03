@@ -40,7 +40,7 @@ La deuda se concentra en **tres temas de fondo**: (1) **modelo contable** (el le
 | ID | Problema | Origen | Impacto | Esfuerzo | Recomendación |
 |----|----------|--------|---------|----------|---------------|
 | TD-01 | **Ledger desconectado de los saldos** (transacciones no mueven `account.balance`; transferencias no mueven dinero) | F-1 | Patrimonio/liquidez y movimientos/ahorro **nunca reconcilian**; cifras maestras incoherentes | L | Decidir modelo: (a) saldos derivados del ledger `balance = inicial + Σtx`, o (b) declarar saldos manuales y separar visualmente del "ahorro del mes". Es la decisión que condiciona el resto. |
-| TD-02 | **Multi-moneda sin conversión** (sumas mezclan divisas) | C-2 / F-3 | Patrimonio neto **incorrecto** en cuanto exista una 2ª divisa (latente) | S (bloqueo) / L (FX) | Corto plazo: **forzar divisa única** y bloquear alta de otra (S). Largo plazo: capa FX con tasas en `Settings`. |
+| TD-02 🟡 | **Multi-moneda sin conversión** (sumas mezclan divisas) | C-2 / F-3 | Patrimonio neto **incorrecto** en cuanto exista una 2ª divisa (latente) | S (bloqueo) / L (FX) | **PARCIALMENTE HECHO** (`bc4f1fe`): selectores excluyen posiciones sin tasa (no suman 1:1); `getQuotes` devuelve `fxRates{USD,EUR}`; `priceService` las consume. ⚠ **Pendiente deploy `Quotes.gs`**. Backend `Reports.gs` aplica FX best-effort. Queda: UI de aviso de "valor incompleto" y fuente única FE/BE (F-17). |
 | TD-03 | **Doble conteo de cuentas de inversión** en `totalAssets` (incluye `balance` de cuenta *investment* + posiciones) | F-2 | Patrimonio **inflado** sin error visible; incoherente con `totalLiquidity` | S | Excluir `type==='investment'` de `totalAssets` o documentar que su `balance` es solo cash. |
 | TD-04 | **Sin pruebas automatizadas** de la lógica financiera (`selectors.js`) | C-3 | Regresiones de cifras **silenciosas** (no rompen la app) | M | Suite `node --test` (sin build) con 20–30 casos sobre net worth, presupuestos, ahorro, rentabilidad. |
 | TD-05 | **`AuditLog` se relee entero en cada escritura** (`repoCreate_`→`repoGet_`) | GAS-C1 | Cada escritura se vuelve más lenta a medida que crece el histórico (coste cuasi-cuadrático) | S | `repoCreate_` devuelve el `record` ya construido en memoria, sin releer la hoja. |
@@ -122,7 +122,45 @@ La deuda se concentra en **tres temas de fondo**: (1) **modelo contable** (el le
 
 ---
 
+---
+
+## TD nuevos — Auditoría 2026-06-03 (TD-41…TD-53)
+
+> Incorporados tras la auditoría global del 2026-06-03. Ver `docs/Audit-Global-2026-06-03.md`.
+
+### P0 · Crítica (nuevos)
+
+| ID | Problema | Origen | Impacto | Esf | Estado |
+|----|----------|--------|---------|-----|--------|
+| TD-41 ✅ | **`computeNetWorth_` desincronizado de Sprint 5** — suma lotes vendidos, ignora comisión y FX | FIN-001 | Patrimonio backend ≠ FE; PDF/snapshots incorrectos | M | **HECHO** (`8751f9a`): filtra `!soldDate && !isDeleted`, suma `commission`, FX best-effort. ⚠ **Pendiente deploy `Reports.gs`** |
+| TD-42 ✅ | **`withholdingRate` decorativa** — capturada y mostrada pero nunca aplicada al P&L | FIN-002 | Usuario cree ver P&L neto; es bruto (+~4% sesgo) | M | **HECHO** (`4073ddf`): `applyWithholding()` en `selectors.js`; descuenta ganancia realizada al vender. Tests incluidos. |
+| TD-45 ✅ | **`idempotentHit_` resucita registros soft-deleted** — devuelve hit borrado como válido | BE-001 | Saldo nunca aplicado + registro fantasma | S | **HECHO** (`45b47ec`): guard `if (hit.isDeleted) return null`. ⚠ **Pendiente deploy `Utils.gs`** |
+| TD-46 ✅ | **Doble conteo de saldo en `update` de tx offline** — `_adjustAccountBalances` no idempotente | BE-002 | Saldo local divergente en multi-edición offline | M | **HECHO** (`b23a4f6`): `_recalcAccountBalance` recalcula desde IndexedDB (idempotente) en lugar de ajustar con deltas. |
+
+### P1 · Alta (nuevos)
+
+| ID | Problema | Origen | Impacto | Esf | Estado |
+|----|----------|--------|---------|-----|--------|
+| TD-43 | **Ventas parciales imposibles** — `soldQuantity`=qty comprada; comisión mal prorrateada | FIN-003/004 | Liquidación siempre total; P&L realizado incorrecto en ventas parciales | M | Abierto — Sprint 2 |
+| TD-44 | **`cdtCurrentValue` sobrevalora CDT** — capitaliza sobre `totalCost` (incl. comisión) sin tope en vencimiento | FIN-008 | CDT sobrevalorado; sigue creciendo tras vencer | S | Abierto — Sprint 2 |
+| TD-47 | **`reconcileAndHydrate` reduce `update` a su patch** — `db.put(store, op.data)` reemplaza el registro entero | BE-004 | Pérdida temporal de campos tras refresh con update pendiente | S | Abierto — Sprint 4 |
+| TD-48 | **Inyección de markup en SVG de charts** — labels de usuario interpolados crudos en `<title>`/`aria-label` | FE-001 | Donut/LineChart roto con `&<>"` en nombre de categoría | S | Abierto — Sprint 3 |
+| TD-49 | **`aria-label` técnico sobrescribe label visible** — regresión de TD-08 en `forms.js` | FE-003 | Lector anuncia "amount"/"categoryId"; WCAG 2.5.3/4.1.2 | S | Abierto — Sprint 3 |
+
+### P2 · Media (nuevos)
+
+| ID | Problema | Origen | Impacto | Esf | Estado |
+|----|----------|--------|---------|-----|--------|
+| TD-50 | **`id_token` en querystring GET** — viaja en URL; queda en logs/historial/proxy | SEC-001 | Fuga de token de sesión (TTL 1h) | M | Abierto — Sprint 5 |
+| TD-51 | **`verifyGoogleToken_` sin validar `iss` ni `exp` explícito** | SEC-002 | Falta defensa en profundidad estándar GIS | S | Abierto — Sprint 5 |
+| TD-52 | **`goalForecast` usa `monthlySavingsAvg` global** — cada meta reclama el 100% del ahorro | FIN-011 | Fechas de cumplimiento optimistas con N metas activas | M | Abierto — Sprint 6 |
+| TD-53 | **`monthlySavingsAvg` no excluye meses sin datos** — diluye el promedio en histórico corto | FIN-012 | Forecast subestimado para usuarios nuevos | S | Abierto — Sprint 6 |
+
+---
+
 ## Documentos relacionados
 
 - `docs/Audit.md` · `docs/Audit-Financiero.md` · `docs/Audit-Frontend.md` · `docs/Audit-Backend.md`
+- `docs/Audit-Global-2026-06-03.md` · `docs/Bugs-Criticos-2026-06-03.md` · `docs/QuickWins-2026-06-03.md`
+- `docs/Roadmap-Implementacion-2026-06-03.md` — roadmap activo (9 sprints)
 - `docs/SessionState.md` — estado operativo · `CLAUDE.md` — fuente de verdad.
