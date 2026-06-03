@@ -1,3 +1,33 @@
+# Resultado consolidado 2026-06-03
+
+> Resumen ejecutivo de la auditoría global del **2026-06-03** (HEAD `c778e25`, SW `v0.2.43`, 54/54 tests).
+> Lo que sigue **debajo de la línea** es el guion-plantilla original (no es un resultado).
+
+**Alcance:** 4/5 áreas (Frontend · Backend · Seguridad · Financiera). **QA en vivo Playwright: pendiente** (cancelada en sesión).
+
+**Hallazgos: 46** — 🔴 P0: 5 · 🟠 P1: 12 · 🟡 P2: 19 · 🟢 P3: 10. IDs nuevos de deuda: **TD-41…TD-53**.
+
+**Top 10 por ROI:**
+
+| # | ID | Sev | Esf | Hallazgo | TD |
+|---|----|-----|-----|----------|----|
+| 1 | BE-001 | P0 | S | `idempotentHit_` resucita registros soft-deleted (saldo no aplicado) | TD-45 |
+| 2 | FIN-005 + BE-003 | P0/P1 | M | FX silencioso 1:1; `fxRates` nunca poblado desde el backend | TD-02 |
+| 3 | FIN-001 | P0 | M | Backend `computeNetWorth_` desincronizado de Sprint 5 (diverge del FE) | TD-41 |
+| 4 | FIN-002 | P0 | M | Retención en fuente decorativa (nunca se aplica al P&L) | TD-42 |
+| 5 | FE-002 | P1 | S | `--text-tertiary` falla contraste WCAG (1 token → toda la app) | TD-40 |
+| 6 | FE-003 | P1 | S | `aria-label` técnico sobrescribe label visible (regresión TD-08) | TD-49 |
+| 7 | FE-001 | P1 | S | Inyección de markup en SVG de charts (escapar labels) | TD-48 |
+| 8 | FIN-003/004 | P1 | M/S | Ventas parciales rotas + comisión mal prorrateada | TD-43 |
+| 9 | BE-002 | P0 | M | Doble conteo de saldo en `update` de tx offline | TD-46 |
+| 10 | BE-005 | P1 | M | O(n) por escritura (3-4 `repoGet_` completos por create) | TD-05/24 |
+
+**Regresiones:** FE-003 (debilita TD-08) · FIN-007 (debilita TD-23) · FIN-001 (Sprint 5 rompió paridad FE↔BE, materializa F-17).
+
+**Entregables del día:** [`Audit-Global-2026-06-03.md`](./Audit-Global-2026-06-03.md) · [`Bugs-Criticos-2026-06-03.md`](./Bugs-Criticos-2026-06-03.md) · [`QuickWins-2026-06-03.md`](./QuickWins-2026-06-03.md) · [`UX-Recommendations-2026-06-03.md`](./UX-Recommendations-2026-06-03.md). Nuevos TD por integrar en `TechnicalDebt.md`: TD-41…TD-53. **Siguiente paso:** `/roadmap`.
+
+---
+
 Actúa como un equipo completo de auditoría de software, producto financiero y arquitectura compuesto por:
 
 * Principal Financial Systems Architect
