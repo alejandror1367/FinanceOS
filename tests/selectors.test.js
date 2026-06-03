@@ -693,3 +693,124 @@ describe('realizedPnLNet (TD-42)', () => {
     assert.equal(selectors.applyWithholding(pnlBruto, undefined), 1_000_000);
   });
 });
+
+// ── P&L por lote — ventas totales y parciales (FIN-003/004 / TD-43) ─────────────
+
+describe('lotRealizedPnL (FIN-003/004)', () => {
+  // Caso 1: venta total — soldQuantity === quantity → lote cerrado, P&L correcto
+  test('venta total: soldQuantity = qty → P&L usa comisión entera', () => {
+    // 10 acciones compradas a $100 con comisión $50. Vendidas a $120 con comisión $20.
+    // costBasis = 10*100 + 50*(10/10) = 1050. Ventas = 10*120 - 50 - 1050 = 1200 - 50 - 1050 = 100.
+    const lote = {
+      quantity: 10, soldQuantity: 10,
+      purchasePrice: 100, commission: 50,
+      soldPrice: 120, soldCommission: 20,
+      withholdingRate: 0,
+    };
+    // grossPnL = 10*120 - (10*100 + 50) - 20 = 1200 - 1050 - 20 = 130
+    assert.equal(selectors.lotRealizedPnL(lote), 130);
+  });
+
+  // Caso 2: venta parcial — soldQuantity < qty → comisión de compra prorateada
+  test('venta parcial: soldQuantity < qty → comisión de compra prorateada', () => {
+    // 10 acciones compradas a $100 con comisión $100 (= $10 por acción).
+    // Se venden 4. costBasis = 4*100 + 100*(4/10) = 400 + 40 = 440.
+    // Ventas: 4 * $130 - $10 soldComm = 520 - 10 = 510. P&L = 510 - 440 = 70.
+    const lote = {
+      quantity: 10, soldQuantity: 4,
+      purchasePrice: 100, commission: 100,
+      soldPrice: 130, soldCommission: 10,
+      withholdingRate: 0,
+    };
+    assert.equal(selectors.lotRealizedPnL(lote), 70);
+  });
+
+  // Caso 2b: venta total de ese mismo lote → comisión íntegra
+  test('venta total (mismos datos): comisión de compra entera', () => {
+    // 10 acciones, todas vendidas: comisión de compra sin prorratear.
+    // costBasis = 10*100 + 100*(10/10) = 1100. Ventas: 10*130 - 10 = 1290. P&L = 190.
+    const lote = {
+      quantity: 10, soldQuantity: 10,
+      purchasePrice: 100, commission: 100,
+      soldPrice: 130, soldCommission: 10,
+      withholdingRate: 0,
+    };
+    assert.equal(selectors.lotRealizedPnL(lote), 190);
+  });
+
+  // Caso con retención aplicada sobre ganancia
+  test('venta total con retención 4% sobre la ganancia', () => {
+    // grossPnL = 10*120 - (10*100 + 50) - 20 = 130. Retención: 130 * 0.96 = 124.8
+    const lote = {
+      quantity: 10, soldQuantity: 10,
+      purchasePrice: 100, commission: 50,
+      soldPrice: 120, soldCommission: 20,
+      withholdingRate: 4,
+    };
+    assert.equal(selectors.lotRealizedPnL(lote), 130 * 0.96);
+  });
+
+  // Pérdida: no aplica retención
+  test('venta con pérdida: retención no se descuenta', () => {
+    const lote = {
+      quantity: 10, soldQuantity: 10,
+      purchasePrice: 100, commission: 0,
+      soldPrice: 80, soldCommission: 0,
+      withholdingRate: 4,
+    };
+    // grossPnL = 10*80 - 10*100 = -200. Sin retención (pérdida).
+    assert.equal(selectors.lotRealizedPnL(lote), -200);
+  });
+});
+
+// ── Valoración CDT con tope de vencimiento (FIN-008 / TD-44) ─────────────────
+
+describe('cdtCurrentValue (FIN-008)', () => {
+  // Caso 3: sin maturityDate → capitaliza sin tope
+  test('sin maturityDate: capitaliza sin tope de vencimiento', () => {
+    // CDT: capital=1.000.000, tasa=10% E.A., comprado hace 365 días exactos.
+    const purchaseDate = '2025-01-01';
+    const todayMs = new Date('2026-01-01').getTime();
+    const inv = { quantity: 1_000_000, interestRate: 10, purchaseDate };
+    const value = selectors.cdtCurrentValue(inv, todayMs);
+    // 1.000.000 × (1 + 0.10)^(365/365) = 1.100.000
+    assert.ok(Math.abs(value - 1_100_000) < 1, `esperaba ~1.100.000, recibí ${value}`);
+  });
+
+  // Caso 4: con maturityDate pasada → valor topa en vencimiento
+  test('con maturityDate pasada: valor topa en la fecha de vencimiento', () => {
+    // CDT: capital=1.000.000, tasa=10%, comprado hace 730 días. Venció hace 365 días.
+    // Usamos fechas que no incluyen año bisiesto (2022→2023, 2023→2024 son 365 y 365).
+    const purchaseDate = '2022-03-01';
+    const maturityDate = '2023-03-01'; // 365 días exactos (fuera de feb bisiesto)
+    const todayMs = new Date('2024-03-01').getTime(); // 730 días después de compra
+    const inv = { quantity: 1_000_000, interestRate: 10, purchaseDate, maturityDate };
+    const value = selectors.cdtCurrentValue(inv, todayMs);
+    // El selector topa diasDesdeCompra (730) al diasHastaVencimiento (365).
+    // Valor = 1.000.000 × (1.10)^(365/365) = 1.100.000 — no sigue creciendo.
+    const diasVencimiento = (new Date(maturityDate).getTime() - new Date(purchaseDate).getTime()) / 86400000;
+    const expected = 1_000_000 * Math.pow(1.10, diasVencimiento / 365);
+    assert.ok(Math.abs(value - expected) < 1, `esperaba ~${expected.toFixed(0)} (tope), recibí ${value}`);
+  });
+
+  // Caso 5: con maturityDate futura → capitaliza solo hasta hoy
+  test('con maturityDate futura: capitaliza solo hasta hoy', () => {
+    // CDT: capital=1.000.000, tasa=10%, comprado hace 182 días. Vence en 365 días desde compra.
+    const purchaseDate = '2025-07-04';
+    const maturityDate = '2026-07-04'; // 365 días de plazo
+    // "hoy" es 182 días después de la compra
+    const todayMs = new Date('2026-01-01').getTime();
+    const inv = { quantity: 1_000_000, interestRate: 10, purchaseDate, maturityDate };
+    const value = selectors.cdtCurrentValue(inv, todayMs);
+    // diasDesdeCompra ≈ 181. diasHastaVencimiento = 365. min(181, 365) = 181.
+    const diasDesdeCompra = (todayMs - new Date(purchaseDate).getTime()) / 86400000;
+    const expected = 1_000_000 * Math.pow(1.10, diasDesdeCompra / 365);
+    assert.ok(Math.abs(value - expected) < 1, `esperaba ~${expected.toFixed(0)}, recibí ${value}`);
+  });
+
+  // Caso base: sin tasa o sin fecha → devuelve el capital
+  test('sin interestRate: devuelve capital sin capitalizar', () => {
+    const inv = { quantity: 500_000, purchaseDate: '2025-01-01' }; // sin interestRate
+    assert.equal(selectors.cdtCurrentValue(inv), 500_000);
+  });
+});

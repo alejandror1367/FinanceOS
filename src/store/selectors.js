@@ -495,6 +495,51 @@ export const selectors = {
     return pnlBruto - pnlBruto * (rate / 100);
   },
 
+  // ── FIN-003/004 (TD-43): P&L de un lote de venta (función pura, testeable sin DOM) ──
+  // Recibe el objeto de posición vendida (p) con:
+  //   soldQuantity  — cantidad realmente vendida
+  //   quantity      — cantidad original del lote (para prorratear comisión de compra)
+  //   soldPrice     — precio de venta por unidad
+  //   purchasePrice / avgCost — precio de compra por unidad
+  //   commission    — comisión de compra del lote completo (se prorrateo)
+  //   soldCommission — comisión de la operación de venta
+  //   withholdingRate — retención en fuente (%)
+  // Devuelve el P&L neto (ya con retención aplicada).
+  lotRealizedPnL(p, fallbackWithholdingRate = 0) {
+    const qtyVendida  = Number(p.soldQuantity || p.quantity) || 0;
+    const qtyLotTotal = Number(p.quantity) || qtyVendida || 1;
+    const buyPrice    = Number(p.purchasePrice || p.avgCost) || 0;
+    const buyComm     = Number(p.commission) || 0;
+    // FIN-004: comisión de compra prorateada a la fracción vendida
+    const buyCommProrateada = buyComm * (qtyVendida / qtyLotTotal);
+    const costBasis   = qtyVendida * buyPrice + buyCommProrateada;
+    const soldComm    = Number(p.soldCommission) || 0;
+    const grossPnL    = qtyVendida * (Number(p.soldPrice) || 0) - costBasis - soldComm;
+    const rate        = Number(p.withholdingRate) || fallbackWithholdingRate;
+    return selectors.applyWithholding(grossPnL, rate);
+  },
+
+  // ── FIN-008 (TD-44): valor actual de un CDT/renta fija (función pura, testeable sin DOM) ──
+  // Recibe el objeto de posición de tipo CDT:
+  //   quantity      — capital puro invertido
+  //   interestRate  — tasa E.A. en %
+  //   purchaseDate  — fecha de compra (ISO YYYY-MM-DD)
+  //   maturityDate  — fecha de vencimiento (ISO, opcional). Si se omite, no hay tope.
+  //   todayMs       — timestamp de "hoy" en ms (permite tests deterministas; por defecto Date.now())
+  // Devuelve el valor actual capitalizado.
+  cdtCurrentValue(inv, todayMs) {
+    if (!inv?.interestRate || !inv?.purchaseDate) return Number(inv?.quantity) || 0;
+    const now = todayMs !== undefined ? todayMs : Date.now();
+    const capital = Number(inv.quantity) || 0;
+    const diasDesdeCompra = (now - new Date(inv.purchaseDate).getTime()) / 86400000;
+    let days = diasDesdeCompra;
+    if (inv.maturityDate) {
+      const diasHastaVencimiento = (new Date(inv.maturityDate).getTime() - new Date(inv.purchaseDate).getTime()) / 86400000;
+      days = Math.min(diasDesdeCompra, Math.max(0, diasHastaVencimiento));
+    }
+    return capital * Math.pow(1 + inv.interestRate / 100, days / 365);
+  },
+
   // Detecta si hay entidades con divisas distintas a baseCurrency (TD-02).
   // Úsalo para mostrar un aviso en la UI antes de implementar conversión FX.
   hasMixedCurrencies(s) {
