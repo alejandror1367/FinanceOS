@@ -33,6 +33,7 @@ Centraliza: patrimonio neto, presupuestos, flujo de caja, inversiones, metas, de
 | Bugs sesión 2026-06-03 | ✅ 7 fixes de sync/datos corregidos y desplegados (ver §"Cambios 2026-06-03") |
 | Sprint 6 deudas/metas | ✅ avgRate multi-moneda · amortize con % · goalForecast repartido · savingsAvg activo |
 | Sprint 7 charts/a11y  | ✅ LineChart: labels decimados+rotados (n>6) · tablas sr-only en charts · bottom-nav priorizado |
+| Sprint 8 avanzado     | ✅ XIRR+CAGR (selectors) · roundMoney en _shiftBalance · fix docs Groq · comentario getDb_ |
 | Verificación en vivo | ✅ Playwright: 14 rutas sin errores JS · Sprint 5/6 confirmados |
 | Pendiente | Sin sprint asignado. Bugs P3 (TD-36/TD-37) + ver §18 |
 
@@ -385,7 +386,7 @@ Los hooks `UserPromptSubmit`/`PreToolUse`/`PostToolUse` de `accessibility-agents
 ### Auditoría funcional completa con Playwright MCP
 - Recorridas las 15 rutas de la app (14 documentadas + `#/import` nuevo)
 - Informe completo en `docs/Audit-Funcional-2026-06-02.md`
-- Se descubrió módulo nuevo `#/import` — importación de extractos bancarios con IA (Gemini)
+- Se descubrió módulo nuevo `#/import` — importación de extractos bancarios con IA (Groq, no Gemini)
 - Plugins habilitados (`.claude/settings.json`): `playwright`, `context7`, `code-simplifier`
 - MCPs (`claude mcp list` 2026-06-02): `github` ✓, `playwright` ✓, `context7` ✓ — los tres
   conectan. El GitHub MCP ahora funciona vía HTTP (`api.githubcopilot.com/mcp/`) con
@@ -668,7 +669,7 @@ commit: e6b3c77 · rama: main · SW: v0.2.43 · config.version: 0.2.43 · tests:
 
 > Leer esto antes que cualquier otra sección. Máximo 100 líneas. Fuente de verdad para retomar de inmediato.
 
-**HEAD:** `c4e680d` · **SW/config.version:** `v0.2.56` · **Tests:** 88/88 · **Rama:** main · **Sync:** local (no pusheado)
+**HEAD:** `c94a5b5` · **SW/config.version:** `v0.2.57` · **Tests:** 97/97 · **Rama:** main · **Sync:** local (no pusheado)
 
 > **MCP:** `.mcp.json` versionado con **playwright** + **context7** (scope de proyecto).
 > Tras `git pull`: **aprobar** ambos y **reiniciar Claude Code** (las tools MCP se fijan al arrancar).
@@ -722,13 +723,12 @@ Flujo: `Views → Services → Store → Views` (never direct to net/IndexedDB f
 - **SEC-001/TD-50:** `apiClient.js` usa siempre POST — `idToken` en body, nunca en URL (Sprint 5)
 - **SEC-002/TD-51:** `verifyGoogleToken_` valida `iss` + `exp` explícito antes de email/aud (Sprint 5)
 
-### Próximo sprint recomendado: Sprint 8 — Avanzado y limpieza P3
+### Próximo sprint recomendado: Sprint 9 — QA en vivo + pulido v1.0
 ```
 Roadmap activo: docs/Roadmap-Implementacion-2026-06-03.md
-Sprint 7: ✅ COMPLETO — no requiere deploy.
-Sprint 8: XIRR/CAGR (FIN-013) · roundMoney en adjustBalance_ (BE-013) · comentario getDb_ ·
-  corregir docs (#/import usa Groq, no Gemini).
-Sprint 8 toca un .gs (Accounts.gs) — requiere un deploy ligero.
+Sprint 8: ✅ COMPLETO. Pendiente deploy: Accounts.gs (adjustBalance_ roundMoney).
+Sprint 9: QA Playwright (15 rutas) · proyección presupuesto suavizada (TD-36) ·
+  validación solapamiento presupuestos (TD-37) · docs a estado v1.0.
 ```
 
 ### Archivos críticos

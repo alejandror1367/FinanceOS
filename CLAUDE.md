@@ -125,7 +125,7 @@ clave **no** se expone en el repo público (usar proxy en Apps Script / Worker).
 
 ### Servicios de IA / asistencia
 Permitidos para parsing de extractos (`#/import`), generación de insights y asistencia:
-- **Gemini** (usado hoy en `#/import`), **OpenAI**, **Claude**.
+- **Groq** (usado hoy en `#/import` — `llama-3.1-8b-instant`, gratis sin tarjeta), **OpenAI**, **Claude**.
 
 Condiciones: **opt-in** y consciente del costo · enviar el **mínimo** de datos necesario
 (datos financieros sensibles) · claves **fuera** del repo público (proxy server-side) ·
