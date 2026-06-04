@@ -47,4 +47,4 @@ export const navSections = [
 // Rutas destacadas para la barra inferior móvil (FE-012): priorizadas por frecuencia de uso.
 // Dashboard · Hoy · Transacciones · Presupuestos · Analítica.
 // Patrimonio y Ajustes siguen accesibles desde la barra lateral.
-export const bottomNavOrder = ['dashboard', 'today', 'transactions', 'budgets', 'analytics'];
+export const bottomNavOrder = ['dashboard', 'today', 'transactions', 'investments', 'settings'];
