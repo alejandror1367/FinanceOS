@@ -1,6 +1,6 @@
 # Prompt de continuación — FinanceOS
-**Generado:** 2026-06-03 (sesión tarde: Sprint 2 + Sprint 3 + FIN-014 + Sprint 4)
-**HEAD:** `6b45621` · **SW:** `v0.2.52` · **Tests:** 75/75
+**Generado:** 2026-06-03 (sesión noche: Analítica + fix PDF patrimonial)
+**HEAD:** `06d2c4c` · **SW:** `v0.2.53` · **Tests:** 75/75
 
 ---
 
@@ -13,60 +13,46 @@ Tras git pull deben APROBARSE y REINICIARSE Claude Code: las tools MCP se fijan 
 PROYECTO: FinanceOS — PWA financiera personal y privada de Alejo.
 Repo: https://github.com/alejandror1367/FinanceOS (rama main).
 Prod: https://alejandror1367.github.io/FinanceOS/
-HEAD: 6b45621 · SW v0.2.52 · config.version 0.2.52 · Tests 75/75
+HEAD: 06d2c4c · SW v0.2.53 · config.version 0.2.53 · Tests 75/75
 
 INVARIANTES (ver CLAUDE.md): JS ES Modules sin build step · sin frameworks/bundlers ·
 cero deps npm en runtime · frontend abstraído tras src/services/ · Apps Script +
 Google Sheets (13 hojas) + GitHub Pages + OAuth de Google · offline-first.
 
-HECHO Y DESPLEGADO (sesión 2026-06-03, tarde):
+HECHO Y DESPLEGADO (sesiones 2026-06-03):
 
-SPRINT 2 — Inversiones: ventas parciales y valoración (f1f1bd0, a8dec52):
-- Modal de venta pide qty; soporta parcial (lote remanente) y total
-- lotRealizedPnL: comisión prorateada por fracción vendida (FIN-004/TD-43)
-- cdtCurrentValue: capitaliza sobre capital, topa en maturityDate (FIN-008/TD-44)
-- roundMoney en totales del portafolio (FIN-009)
-- +9 tests → 74 total
+SPRINTS 1–4 (tarde):
+- Sprint 1: 5 bugs P0 (TD-41…46), +10 tests
+- Sprint 2: ventas parciales/totales, CDT capitalizado, penny-rounding
+- Sprint 3: WCAG AA — contraste, tokens, ARIA, focus
+- FIN-014: doble conteo CC en totalLiabilities eliminado
+- Sprint 4: backend perf + robustez sync (caché, purgeDeleted, bootstrap 24m, AuditLog)
 
-SPRINT 3 — WCAG AA + Design System (7c38299, b78eff6):
-- --text-tertiary ≥4.5:1 ambos temas; 10/11px → var(--fs-micro); tokens DS limpios
-- esc() en charts SVG; aria-label redundante removido; ProgressBar ARIA; focus en dialogs
-- 10/10 tareas completadas; sin deploy
-
-FIN-014 — Doble conteo CC en Patrimonio (cd839e9):
-- totalLiabilities filtra type=credit_card (no duplica con cuentas CC)
-- CC mostradas como filas reales en sección Pasivos
-- credit_card removido de "Nueva deuda"; +1 test → 75 total
-
-SPRINT 4 — Backend perf + robustez sync (7a4c43e, 056a5ba, 6b45621) — DESPLEGADO:
-- isTransient: "No autorizado" → dead-letter (TD-10/BE-011)
-- flushBatch: empareja por entityId no por índice (TD-26/BE-010)
-- reconcileAndHydrate: merge {...existing, ...op.data} en updates (TD-47/BE-004)
-- repoReadAll_ caché per-request + repoCacheInvalidate_ tras writes (TD-05/BE-005)
-- purgeDeleted_ en bloque: clearContent+setValues, de N→2 ops Sheets (TD-28/BE-007)
-- truncateAuditLog_(): purga >90 días, acción admin (BE-008)
-- getBootstrap_ ventanea transactions a 24m; listTransactions_ acepta since (TD-25/BE-006)
-
-PENDIENTE DE VERIFICACIÓN EN VIVO (por el dueño):
-1. Flujo venta parcial/total en UI Inversiones (nueva UI con campo qty)
-2. getBootstrap con ventana 24m no rompe historial más antiguo
-3. truncateAuditLog accesible desde Ajustes (si se expuso en UI)
+SESIÓN NOCHE (06d2c4c):
+- Analítica reestructurada: flujo de caja 3 series + selector 3/6/12m · tabla tendencias top5 categorías × 6m · insights históricos · eliminados 3 bloques que duplicaban Dashboard
+- PDF patrimonial corregido: "Sin deudas" → muestra CC + liabilities; accountsValue excluye investment y CC
+- Nuevo selector: categoryTrends(s, n, topN)
 
 PENDIENTES EN ORDEN:
-1. Sprint 5 (seguridad) — requiere deploy:
+1. Sprint 5 (seguridad) — requiere deploy backend:
    SEC-002/TD-51: validar iss+exp en verifyGoogleToken_ (Auth.gs)
    SEC-004: .gitignore += .env*, *.key, .clasp.json, settings.local.json
    SEC-001/TD-50: mover id_token a POST body (apiClient.js + Code.gs)
    SEC-005: truncar fileContent antes de enviar a Groq (Import.gs)
    SEC-006/TD-09: logAudit_ en accesos denegados (Auth.gs)
-2. Sprint 6 (deudas/metas, solo frontend) — NO requiere deploy: /implement 6
-3. Sprint 7 (charts responsive + a11y avanzada) — NO requiere deploy: /implement 7
-4. QA en vivo Playwright (pendiente de la auditoría): /audit playwright
-5. Sprint 8 (avanzado + P3) · Sprint 9 (QA + v1.0)
+2. Sprint 6 (deudas/metas, solo frontend) — NO requiere deploy
+3. Sprint 7 (charts responsive + a11y avanzada) — NO requiere deploy
+4. QA en vivo Playwright (pendiente post-Sprints)
+5. Sprints 8 y 9 (avanzado + v1.0)
 
-RIESGOS VIVOS:
-- getBootstrap_ limita a 24m — historial más antiguo no disponible en bootstrap (intencional)
-- TD-50/51 (seguridad): id_token en URL + validación iss/exp — Sprint 5
+VERIFICACIONES PENDIENTES EN VIVO (happy path autenticado con datos reales):
+- Flujo venta parcial/total en UI Inversiones
+- getBootstrap con ventana 24m no rompe historial más antiguo
+- Analítica: tabla tendencias y selector de período funcionan en producción
+
+RIESGOS ABIERTOS:
+- TD-50/51: id_token viaja en URL + sin validar iss/exp — Sprint 5
+- Bootstrap limita a 24m de transacciones (intencional, verificar impacto)
 
 FORMA DE TRABAJO: fases pequeñas y verificables · explicar qué/por qué ·
 correr node --test tests/selectors.test.js tras cada cambio de selector (75/75 base) ·

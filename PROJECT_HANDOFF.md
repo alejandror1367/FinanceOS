@@ -237,7 +237,7 @@ googleClientId: '444939967819-uv535tm5fg5glrj2fqc4l3llrqmhvqbb.apps.googleuserco
 | Inversiones | `views/investments.js` | ✅ | CRUD posiciones, valor/costo/rentabilidad, distribución |
 | Metas | `views/goals.js` | ✅ | CRUD + avance, tiempo estimado, aporte rápido |
 | Deudas | `views/debts.js` | ✅ | Snowball/Avalanche (orden, no amortización completa) |
-| Analítica | `views/analytics.js` | ✅ | Flujo de caja, ahorro, patrimonio, categorías (donut), insights |
+| Analítica | `views/analytics.js` | ✅ | Flujo de caja (3 series + selector 3/6/12m) · tendencias por categoría (tabla top5×6m) · insights históricos |
 | Diario | `views/journal.js` | ✅ | CRUD reflexiones/decisiones/aprendizajes/objetivos |
 | Exportaciones | `views/exports.js` | ✅ | CSV por colección, JSON completo, PDF mensual/patrimonial |
 | Ajustes | `views/settings.js` | ✅ | Tema, sync, actualizar, recalcular saldos, cerrar sesión, vaciar caché |
@@ -482,22 +482,21 @@ HEAD pasó de `75eacca` a **`b870d6c`**. SW `v0.2.10 → v0.2.13`. Tests `33 →
 ```
 Rama:    main
 Remote:  https://github.com/alejandror1367/FinanceOS.git
-HEAD:    6b45621  perf(backend): Sprint 4 Grupo B-2 — AuditLog archivado y ventana 24m en bootstrap
-SW:      v0.2.52  (sincronizado con config.version)
+HEAD:    06d2c4c  feat(analytics): reestructurar Analítica + fix PDF patrimonial
+SW:      v0.2.53  (sincronizado con config.version)
 Status:  limpio · sincronizado con origin/main (push 0 0)
 ```
 
 ### Commits recientes
 ```
+06d2c4c feat(analytics): reestructurar Analítica + fix PDF patrimonial
+1d4ac25 docs: handoff 2026-06-03 (tarde) — Sprints 2+3+4 + FIN-014
 6b45621 perf(backend): Sprint 4 Grupo B-2 — AuditLog archivado y ventana 24m en bootstrap
 056a5ba perf(backend): Sprint 4 Grupo B-1 — caché per-request y purgeDeleted en bloque
 7a4c43e fix(sync): Sprint 4 Grupo A — robustez del motor de sincronización frontend
 cd839e9 fix(networth): FIN-014 evitar doble conteo CC en totalLiabilities y mejorar UI de Pasivos
 b78eff6 fix(a11y): Sprint 3 — accesibilidad JS (3.2, 3.3, 3.5, 3.6)
 7c38299 fix(a11y/ds): Sprint 3 — contraste, tokens y DS (3.1, 3.7, 3.8, 3.9, 3.10)
-a8dec52 feat(selectors): FIN-004/008/009 selectores puros de lotes CDT y penny-rounding
-f1f1bd0 feat(investments): FIN-003 modal de venta con campo qty y ventas parciales
-40916ad docs: handoff 2026-06-03 (tarde/noche) — auditoría global + roadmap + Sprint 1
 ```
 
 ---
@@ -564,9 +563,9 @@ Todos los backends han sido desplegados. El estado del backend en producción es
 
 ### Verificación rápida del estado
 ```bash
-git log --oneline -5          # HEAD debe ser 6b45621
+git log --oneline -5          # HEAD debe ser 06d2c4c
 node --test tests/selectors.test.js  # 75/75
-grep "version" src/core/config.js   # debe coincidir con sw.js VERSION (v0.2.52)
+grep "version" src/core/config.js   # debe coincidir con sw.js VERSION (v0.2.53)
 ```
 
 ---
@@ -667,16 +666,17 @@ commit: e6b3c77 · rama: main · SW: v0.2.43 · config.version: 0.2.43 · tests:
 
 > Leer esto antes que cualquier otra sección. Máximo 100 líneas. Fuente de verdad para retomar de inmediato.
 
-**HEAD:** `6b45621` · **SW/config.version:** `v0.2.52` · **Tests:** 75/75 · **Rama:** main · **Sync:** limpio (pusheado)
+**HEAD:** `06d2c4c` · **SW/config.version:** `v0.2.53` · **Tests:** 75/75 · **Rama:** main · **Sync:** limpio (pusheado)
 
 > **MCP:** `.mcp.json` versionado con **playwright** + **context7** (scope de proyecto).
 > Tras `git pull`: **aprobar** ambos y **reiniciar Claude Code** (las tools MCP se fijan al arrancar).
 
 ### Estado actual real
 - **App en producción:** https://alejandror1367.github.io/FinanceOS/ (PWA instalada, OAuth activo)
-- **Backend Apps Script:** ✅ **Todo desplegado** — Sprints 1 y 4 redeployados por el dueño en esta sesión
-- **Tests:** **75/75** en `tests/selectors.test.js` — 15 suites (↑10 vs sesión anterior)
+- **Backend Apps Script:** ✅ **Todo desplegado** — Sprints 1 y 4 redeployados por el dueño en sesión anterior
+- **Tests:** **75/75** en `tests/selectors.test.js` — 15 suites
 - **Sesión 2026-06-03 (tarde):** Sprint 2 (ventas parciales + CDT) + Sprint 3 (WCAG AA) + fix FIN-014 (doble conteo CC) + Sprint 4 (backend perf + sync)
+- **Sesión 2026-06-03 (noche):** Analítica reestructurada (identidad propia, sin duplicados Dashboard) + fix PDF patrimonial (CC en pasivos, accountsValue correcto)
 
 ### Sin deploys pendientes
 Todos los `.gs` están actualizados en producción.
@@ -692,7 +692,9 @@ Flujo: `Views → Services → Store → Views` (never direct to net/IndexedDB f
 - Dashboard · Hoy · Transacciones · Cuentas · Presupuestos · Recurrentes
 - Patrimonio (**CC mostradas como filas reales en Pasivos**, sin doble conteo, snapshots)
 - Inversiones (ventas **parciales y totales** con qty, P&L prorateado, CDT con tope de vencimiento, penny-rounding)
-- Metas · Deudas (Snowball/Avalanche, amortización) · Analítica · Diario · Exportaciones · Ajustes
+- Metas · Deudas (Snowball/Avalanche, amortización) · Diario · Ajustes
+- **Analítica** (reestructurada): flujo de caja 3 series + selector 3/6/12m · tabla tendencias top5 categorías × 6 meses · insights históricos (sin duplicados del Dashboard)
+- **Exportaciones**: PDF patrimonial corregido (CC en pasivos, accountsValue excluye investment+CC)
 - **Command Palette (⌘K)** · **Validación inline** en todos los formularios
 - Import extractos bancarios — usa **Groq** (`llama-3.1-8b-instant`), no Gemini
 
@@ -727,14 +729,51 @@ Alternativa: Sprint 6 (deudas/metas, solo frontend) si no se quiere deploy inmed
 ### Archivos críticos
 ```
 CLAUDE.md                      — Invariantes absolutos (leer SIEMPRE primero)
-src/store/selectors.js         — Lógica financiera + lotRealizedPnL + cdtCurrentValue + FX
+src/store/selectors.js         — Lógica financiera + lotRealizedPnL + cdtCurrentValue + FX + categoryTrends
 src/services/dataService.js    — reconcileAndHydrate (merge update), _recalcAccountBalance
 src/services/syncEngine.js     — isTransient (sin "No autorizado"), flushBatch (por entityId)
+src/views/analytics.js         — reestructurada: flujo de caja 3 series + selector + tabla tendencias
+src/views/exports.js           — PDF patrimonial: debtList para pasivos, accountsValue sin CC/investment
 src/views/investments.js       — modal venta parcial/total, delegación a selectores
 src/views/networth.js          — pasivos sin credit_card en LIABILITY_TYPES, CC como filas
 backend/Utils.gs               — repoReadAll_ caché, purgeDeleted_ en bloque, repoCacheInvalidate_
 backend/Reports.gs             — getBootstrap_ con ventana 24m
 tests/selectors.test.js        — 75/75 tests financieros (15 suites)
+```
+
+---
+
+## Cambios realizados en sesión 2026-06-03 (noche — Analítica + Exportaciones)
+
+### Auditorías realizadas
+- Auditoría de la sección Analítica: diagnóstico de duplicación con Dashboard (4 de 5 bloques duplicados) y propuesta de rediseño con identidad propia.
+- Revisión del PDF patrimonial: identificados 2 bugs en `netWorthStatement` (accountsValue incluía CC/investment; liabRows ignoraba cuentas CC).
+
+### Mejoras UX/UI — Analítica reestructurada (`06d2c4c`)
+**Eliminado** (duplicaba Dashboard):
+- Card "Patrimonio neto" (snapshots ya en Dashboard)
+- Card "Ahorro mensual" separada
+- Donut "Gastos por categoría del mes" (ya en Dashboard)
+
+**Nuevo layout — identidad "más allá del mes actual":**
+1. **Insights mejorados**: tasa de ahorro muestra promedio histórico 3m para contexto; variación de categoría filtra por monto mínimo (≥ $10.000) para evitar ruido estadístico
+2. **Flujo de caja unificado**: 3 series (Ingresos / Gastos / Ahorro) en una sola card con selector de período **3m / 6m / 12m** en el header
+3. **Tabla de tendencias por categoría** (nuevo): top 5 categorías de gasto × últimos 6 meses, con coloreado por calor dentro de cada fila (pico = rojo, medio = amarillo)
+
+**Nuevo selector** `categoryTrends(s, n, topN)` en `selectors.js`: devuelve top N categorías por gasto acumulado en n meses, con desglose mensual por categoría.
+
+### Bugs corregidos — PDF estado patrimonial (`06d2c4c`)
+| Bug | Causa | Fix |
+|-----|-------|-----|
+| "Sin deudas" en PDF aunque hay deuda en tarjetas | `liabRows` solo leía `s.liabilities`, ignoraba cuentas `credit_card` | Usa `selectors.debtList(s)` (unifica ambas fuentes) |
+| Fila "Cuentas" no cuadra con KPI Activos | `accountsValue` incluía cuentas `investment` y `credit_card` | Mismo filtro que `totalAssets`: excluye `investment` y `credit_card` |
+
+### Archivos modificados
+`src/store/selectors.js` (nuevo `categoryTrends`) · `src/views/analytics.js` (reescritura completa) · `src/views/exports.js` (fix `netWorthStatement`)
+
+### Commits relevantes
+```
+06d2c4c feat(analytics): reestructurar Analítica + fix PDF patrimonial
 ```
 
 ---
@@ -1006,54 +1045,62 @@ Copia este prompt al iniciar la nueva sesión:
 ---
 
 ```text
-MCP: .mcp.json versionado con playwright y context7 (scope de proyecto).
-Tras git pull deben APROBARSE y REINICIARSE Claude Code (tools se fijan al arrancar).
-
 Lee PROJECT_HANDOFF.md (CONTEXTO MÍNIMO primero, luego §18) y CLAUDE.md antes de cualquier cambio.
+
+MCP: .mcp.json versionado con playwright y context7 (scope de proyecto).
+Tras git pull deben APROBARSE y REINICIARSE Claude Code: las tools MCP se fijan al arrancar.
 
 PROYECTO: FinanceOS — PWA financiera personal y privada de Alejo.
 Repo: https://github.com/alejandror1367/FinanceOS (rama main).
 Prod: https://alejandror1367.github.io/FinanceOS/
-HEAD: b23a4f6 · SW v0.2.46 · config.version 0.2.46 · Tests 65/65
+HEAD: 06d2c4c · SW v0.2.53 · config.version 0.2.53 · Tests 75/75
 
 INVARIANTES (ver CLAUDE.md): JS ES Modules sin build step · sin frameworks/bundlers ·
 cero deps npm en runtime · frontend abstraído tras src/services/ · Apps Script +
 Google Sheets (13 hojas) + GitHub Pages + OAuth de Google · offline-first.
 
-HECHO Y COMMITEADO (sesión 2026-06-03 tarde/noche):
-- AUDITORÍA GLOBAL (/audit): 46 hallazgos (P0:5/P1:12/P2:19/P3:10), TD-41…TD-53 registrados.
-  Ver docs/Audit-Global-2026-06-03.md y docs/Bugs-Criticos-2026-06-03.md.
-- ROADMAP (/roadmap): docs/Roadmap-Implementacion-2026-06-03.md — 9 sprints hasta v1.0.
-- SPRINT 1 — Integridad de cifras maestras (/implement):
-  · BE-001/TD-45 (45b47ec): guard isDeleted en idempotentHit_
-  · BE-003/TD-02 (bc4f1fe): getQuotes devuelve fxRates{USD,EUR}; selectores excluyen 1:1
-  · FIN-001/TD-41 (8751f9a): computeNetWorth_ filtra vendidos, suma comisión
-  · FIN-002/TD-42 (4073ddf): applyWithholding() descuenta retención del P&L realizado
-  · BE-002/TD-46 (b23a4f6): _recalcAccountBalance idempotente en update de tx
-  · +11 tests nuevos (65/65, 13 suites)
+HECHO Y DESPLEGADO (sesiones 2026-06-03):
 
-⚠ DEPLOY MANUAL PENDIENTE (3 .gs — desplegar en Apps Script):
-  backend/Utils.gs    ← commit 45b47ec
-  backend/Quotes.gs   ← commit bc4f1fe
-  backend/Reports.gs  ← commit 8751f9a
+SPRINTS 1–4 (tarde):
+- Sprint 1: 5 bugs P0 (TD-41…46), +10 tests
+- Sprint 2: ventas parciales/totales, CDT capitalizado, penny-rounding
+- Sprint 3: WCAG AA — contraste, tokens, ARIA, focus
+- FIN-014: doble conteo CC en totalLiabilities eliminado
+- Sprint 4: backend perf + robustez sync (caché, purgeDeleted, bootstrap 24m, AuditLog)
+
+SESIÓN NOCHE (06d2c4c):
+- Analítica reestructurada: flujo de caja 3 series + selector 3/6/12m · tabla tendencias top5 categorías × 6m · insights históricos · eliminados 3 bloques que duplicaban Dashboard
+- PDF patrimonial corregido: "Sin deudas" → muestra CC + liabilities; accountsValue excluye investment y CC
+- Nuevo selector: categoryTrends(s, n, topN)
 
 PENDIENTES EN ORDEN:
-1. Desplegar los 3 .gs → verificar en prod fxRates, patrimonio sin lotes inflados, P&L con retención
-2. Sprint 2 (ventas parciales + CDT): /implement 2 — NO requiere deploy
-3. Sprint 3 (accesibilidad WCAG AA): /implement 3 — todo S, un PR sin deploy
-4. QA en vivo Playwright (pendiente auditoría): /audit playwright
-5. Sprint 4 (backend perf): /implement 4 — requiere deploy
+1. Sprint 5 (seguridad) — requiere deploy backend:
+   SEC-002/TD-51: validar iss+exp en verifyGoogleToken_ (Auth.gs)
+   SEC-004: .gitignore += .env*, *.key, .clasp.json, settings.local.json
+   SEC-001/TD-50: mover id_token a POST body (apiClient.js + Code.gs)
+   SEC-005: truncar fileContent antes de enviar a Groq (Import.gs)
+   SEC-006/TD-09: logAudit_ en accesos denegados (Auth.gs)
+2. Sprint 6 (deudas/metas, solo frontend) — NO requiere deploy
+3. Sprint 7 (charts responsive + a11y avanzada) — NO requiere deploy
+4. QA en vivo Playwright (pendiente post-Sprints)
+5. Sprints 8 y 9 (avanzado + v1.0)
 
-BUGS P1 ABIERTOS:
-- TD-43: ventas parciales rotas (soldQuantity = qty comprada) — Sprint 2
-- TD-44: CDT sobrevaluado (capitaliza sobre totalCost+comisión sin tope) — Sprint 2
+VERIFICACIONES PENDIENTES EN VIVO (happy path autenticado con datos reales):
+- Flujo venta parcial/total en UI Inversiones
+- getBootstrap con ventana 24m no rompe historial más antiguo
+- Analítica: tabla tendencias y selector de período funcionan en producción
 
-FORMA DE TRABAJO: fases pequeñas · node --test tests/selectors.test.js tras cada cambio
-de selector (base 65/65) · commits atómicos · mensajes multilínea via _commitmsg.txt +
-git commit -F · hook auto-bumpa SW + config.version al commitear src/.
+RIESGOS ABIERTOS:
+- TD-50/51: id_token viaja en URL + sin validar iss/exp — Sprint 5
+- Bootstrap limita a 24m de transacciones (intencional, verificar impacto)
+
+FORMA DE TRABAJO: fases pequeñas y verificables · explicar qué/por qué ·
+correr node --test tests/selectors.test.js tras cada cambio de selector (75/75 base) ·
+commits atómicos por feature · hook auto-bumpa SW + config.version al commitear src/.
+Para mensajes de commit multilínea: archivo temporal _commitmsg.txt + git commit -F _commitmsg.txt
 Empezar con: git log --oneline -5 · git status · node --test tests/selectors.test.js.
 ```
 
 ---
 
-*Actualizado el 2026-06-03 por Claude Sonnet 4.6: auditoría global (46 hallazgos) + roadmap 9 sprints + Sprint 1 completado (5 P0). HEAD b23a4f6 · v0.2.46 · 65/65 tests. 3 .gs pendientes de deploy.*
+*Actualizado el 2026-06-03 (noche) por Claude Sonnet 4.6: Analítica reestructurada + fix PDF patrimonial. HEAD 06d2c4c · v0.2.53 · 75/75 tests. Sin deploys pendientes.*
