@@ -476,6 +476,12 @@ body.modal-open { overflow: hidden; }
 .inv-section-icon svg { width: 18px; height: 18px; color: var(--text-secondary); }
 .inv-section-icon-sm svg { width: 14px; height: 14px; color: var(--text-tertiary); vertical-align: middle; margin-right: 4px; }
 .inv-section-ret { font-size: var(--fs-body); font-weight: var(--fw-semibold); }
+.inv-section-head--toggle { width: 100%; background: none; border: none; padding: 0; font: inherit; cursor: pointer; text-align: left; color: inherit; }
+.inv-section-head--toggle:hover { opacity: .82; }
+.inv-section-head__right { display: flex; align-items: center; gap: var(--space-2); }
+.inv-section-chevron { display: flex; align-items: center; color: var(--text-tertiary); transition: transform .18s ease; flex-shrink: 0; }
+.inv-section-chevron.is-collapsed { transform: rotate(-90deg); }
+.inv-section-chevron svg { width: 18px; height: 18px; }
 .inv-calc-info { padding: var(--space-1) 0; font-size: var(--fs-caption); }
 /* QA-004/008: tablas anchas necesitan scroll horizontal en mobile */
 .inv-summary-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }

@@ -41,6 +41,15 @@ const SECTIONS = [
 ];
 const CURRENCIES = ['USD', 'COP', 'EUR', 'GBP', 'BRL'].map((c) => ({ value: c, label: c }));
 
+// Estado de colapso de secciones — nivel de módulo para sobrevivir re-renders reactivos.
+// Default: 'closed' colapsado (sección secundaria); las activas abiertas.
+const _collapsed = new Set(
+  (() => { try { return JSON.parse(localStorage.getItem('financeOS:inv:collapsed') || '["closed"]'); } catch (_) { return ['closed']; } })()
+);
+function _saveCollapsed() {
+  try { localStorage.setItem('financeOS:inv:collapsed', JSON.stringify([..._collapsed])); } catch (_) {}
+}
+
 const typeLabel  = (v) => (ASSET_TYPES.find((t) => t.value === v) || {}).label || v;
 const pctFmt     = (n) => `${n >= 0 ? '+' : ''}${Number(n).toFixed(2)}%`;
 const today      = () => new Date().toISOString().slice(0, 10);
@@ -663,25 +672,39 @@ export function renderInvestments() {
       wrap.appendChild(distCard);
     }
 
-    // Secciones con cards
+    // Secciones con cards (desplegables)
     secStats.forEach((sec) => {
+      const isCollapsed = _collapsed.has(sec.id);
       const secEl = el('div', { class: 'section' });
-      const head = el('div', { class: 'inv-section-head' });
+
+      const head = el('button', {
+        class: 'inv-section-head inv-section-head--toggle',
+        'aria-expanded': String(!isCollapsed),
+        on: { click: () => {
+          _collapsed.has(sec.id) ? _collapsed.delete(sec.id) : _collapsed.add(sec.id);
+          _saveCollapsed();
+          paint(false);
+        }},
+      });
       head.appendChild(el('div', { class: 'inv-section-title' }, [
         el('span', { class: 't-h2', text: sec.label }),
         el('span', { class: `inv-section-ret ${sec.ret >= 0 ? 'text-positive' : 'text-negative'}`, text: pctFmt(sec.ret) }),
       ]));
-      head.appendChild(el('div', { class: 't-caption text-secondary tabular' }, [
-        `${formatMoney(sec.totalValue, baseCur)}  ·  ${sec.gain >= 0 ? '+' : ''}${formatMoney(sec.gain, baseCur)}`,
+      head.appendChild(el('div', { class: 'inv-section-head__right' }, [
+        el('span', { class: 't-caption text-secondary tabular' },
+          [`${formatMoney(sec.totalValue, baseCur)}  ·  ${sec.gain >= 0 ? '+' : ''}${formatMoney(sec.gain, baseCur)}`]),
+        el('span', { class: `inv-section-chevron${isCollapsed ? ' is-collapsed' : ''}`, html: icon('chevronDown') }),
       ]));
       secEl.appendChild(head);
 
-      const grid = el('div', { class: 'inv-cards-grid' });
-      sec.groups.forEach((g) => {
-        const lp = livePrices[(g.symbol || '').toUpperCase()];
-        grid.appendChild(positionCard(g, lp || null, fxRates, baseCur));
-      });
-      secEl.appendChild(grid);
+      if (!isCollapsed) {
+        const grid = el('div', { class: 'inv-cards-grid' });
+        sec.groups.forEach((g) => {
+          const lp = livePrices[(g.symbol || '').toUpperCase()];
+          grid.appendChild(positionCard(g, lp || null, fxRates, baseCur));
+        });
+        secEl.appendChild(grid);
+      }
       wrap.appendChild(secEl);
     });
 
@@ -732,34 +755,55 @@ export function renderInvestments() {
 
     // ── Operaciones cerradas (posiciones totalmente vendidas) ─────────────────
     if (closedGroups.length > 0) {
+      const isClosedCollapsed = _collapsed.has('closed');
       const closedEl = el('div', { class: 'section' });
-      closedEl.appendChild(el('h3', { class: 't-h2 mb-4', text: 'Operaciones cerradas' }));
-      const closedList = el('div', { class: 'card card--pad-sm' });
-      closedList.appendChild(el('div', { class: 'row-list' }, closedGroups.map((g) => {
-        const soldDate = g.sold.map((p) => p.soldDate).sort().at(-1) || '';
-        const soldPnLCOP = toCOP(g.realizedPnL, g.currency, fxRates) ?? g.realizedPnL;
-        const pnlPct = g.sold.reduce((s, p) => s + (Number(p.quantity)||0) * (Number(p.purchasePrice||p.avgCost)||0), 0);
-        const pnlPctVal = pnlPct ? g.realizedPnL / pnlPct * 100 : 0;
-        const isPos = g.realizedPnL >= 0;
-        return el('div', { class: 'row' }, [
-          el('div', { class: 'row__avatar', html: icon('investments') }),
-          el('div', { class: 'row__main' }, [
-            el('div', { class: 'row__title' }, [g.symbol || g.name, ' ', Badge(typeLabel(g.assetType), 'info')]),
-            el('div', { class: 'row__sub', text: `Vendido ${soldDate ? soldDate.slice(0, 10) : ''} · ${g.sold.length} compra${g.sold.length > 1 ? 's' : ''}` }),
-          ]),
-          el('div', { class: `row__amount tabular ${isPos ? 'text-positive' : 'text-negative'}` }, [
-            `${isPos ? '+' : ''}${formatMoney(soldPnLCOP, baseCur)}  ${pctFmt(pnlPctVal)}`,
-          ]),
-          el('div', { class: 'row__actions' }, [
-            el('button', { class: 'icon-btn icon-btn--danger', 'aria-label': 'Eliminar registros', title: 'Eliminar registros de venta',
-              on: { click: () => confirmDialog({ title: 'Eliminar operación cerrada',
-                message: `¿Eliminar todos los registros de ${g.symbol || g.name}?`,
-                onConfirm: () => guardedOp(async () => { for (const p of g.sold) await dataService.remove('investments', p.id); }, 'Registros eliminados'),
-              }) }, html: icon('trash') }),
-          ]),
-        ]);
-      })));
-      closedEl.appendChild(closedList);
+
+      const closedHead = el('button', {
+        class: 'inv-section-head inv-section-head--toggle',
+        'aria-expanded': String(!isClosedCollapsed),
+        on: { click: () => {
+          _collapsed.has('closed') ? _collapsed.delete('closed') : _collapsed.add('closed');
+          _saveCollapsed();
+          paint(false);
+        }},
+      });
+      closedHead.appendChild(el('div', { class: 'inv-section-title' }, [
+        el('span', { class: 't-h2', text: 'Operaciones cerradas' }),
+        Badge(String(closedGroups.length), 'info'),
+      ]));
+      closedHead.appendChild(
+        el('span', { class: `inv-section-chevron${isClosedCollapsed ? ' is-collapsed' : ''}`, html: icon('chevronDown') })
+      );
+      closedEl.appendChild(closedHead);
+
+      if (!isClosedCollapsed) {
+        const closedList = el('div', { class: 'card card--pad-sm' });
+        closedList.appendChild(el('div', { class: 'row-list' }, closedGroups.map((g) => {
+          const soldDate = g.sold.map((p) => p.soldDate).sort().at(-1) || '';
+          const soldPnLCOP = toCOP(g.realizedPnL, g.currency, fxRates) ?? g.realizedPnL;
+          const pnlPct = g.sold.reduce((s, p) => s + (Number(p.quantity)||0) * (Number(p.purchasePrice||p.avgCost)||0), 0);
+          const pnlPctVal = pnlPct ? g.realizedPnL / pnlPct * 100 : 0;
+          const isPos = g.realizedPnL >= 0;
+          return el('div', { class: 'row' }, [
+            el('div', { class: 'row__avatar', html: icon('investments') }),
+            el('div', { class: 'row__main' }, [
+              el('div', { class: 'row__title' }, [g.symbol || g.name, ' ', Badge(typeLabel(g.assetType), 'info')]),
+              el('div', { class: 'row__sub', text: `Vendido ${soldDate ? soldDate.slice(0, 10) : ''} · ${g.sold.length} compra${g.sold.length > 1 ? 's' : ''}` }),
+            ]),
+            el('div', { class: `row__amount tabular ${isPos ? 'text-positive' : 'text-negative'}` }, [
+              `${isPos ? '+' : ''}${formatMoney(soldPnLCOP, baseCur)}  ${pctFmt(pnlPctVal)}`,
+            ]),
+            el('div', { class: 'row__actions' }, [
+              el('button', { class: 'icon-btn icon-btn--danger', 'aria-label': 'Eliminar registros', title: 'Eliminar registros de venta',
+                on: { click: () => confirmDialog({ title: 'Eliminar operación cerrada',
+                  message: `¿Eliminar todos los registros de ${g.symbol || g.name}?`,
+                  onConfirm: () => guardedOp(async () => { for (const p of g.sold) await dataService.remove('investments', p.id); }, 'Registros eliminados'),
+                }) }, html: icon('trash') }),
+            ]),
+          ]);
+        })));
+        closedEl.appendChild(closedList);
+      }
       wrap.appendChild(closedEl);
     }
 
