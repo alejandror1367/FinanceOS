@@ -139,10 +139,13 @@ export const selectors = {
   },
 
   // Promedio de ahorro de los últimos n meses completos (excluye el mes en curso).
+  // FIN-012 (TD-53): solo promedia meses con actividad (income>0 || expense>0) para
+  // no diluir el promedio en históricos cortos donde la mayoría de meses son vacíos.
   monthlySavingsAvg(s, n = 3) {
     const cf = selectors.cashflow(s, n + 1).slice(0, n); // n meses completos, sin el actual
-    if (!cf.length) return 0;
-    return cf.reduce((sum, m) => sum + m.savings, 0) / cf.length;
+    const active = cf.filter((m) => m.income > 0 || m.expense > 0);
+    if (!active.length) return 0;
+    return active.reduce((sum, m) => sum + m.savings, 0) / active.length;
   },
 
   savingsRate(s, ref) {
@@ -232,12 +235,21 @@ export const selectors = {
 
   // KPIs de deudas: deuda total, cuota mínima mensual (suma de los pagos mínimos manuales)
   // y tasa promedio ponderada por saldo — incluyendo tarjetas y créditos/hipotecas.
+  // FIN-006 (TD-02): convierte saldos a moneda base antes de ponderar; evita sesgo en
+  // portfolios multi-moneda (sin conversión, una deuda USD pesaría 1:1 con una COP).
   debtStats(s) {
     const list = selectors.debtList(s);
-    const total = list.reduce((sum, d) => sum + d.balance, 0);
-    const minPayment = list.reduce((sum, d) => sum + d.minPayment, 0);
-    const weighted = list.reduce((sum, d) => sum + d.interestRate * d.balance, 0);
-    const avgRate = total ? weighted / total : 0;
+    const fx   = priceService.fxRates;
+    const base = s.baseCurrency || 'COP';
+    const toBase = (amount, cur) => {
+      if (!cur || cur === base) return amount;
+      const rate = fx[cur];
+      return rate ? amount * rate : amount; // fallback 1:1 si no hay tasa
+    };
+    const total      = list.reduce((sum, d) => sum + toBase(d.balance, d.currency), 0);
+    const minPayment = list.reduce((sum, d) => sum + toBase(d.minPayment, d.currency), 0);
+    const weighted   = list.reduce((sum, d) => sum + d.interestRate * toBase(d.balance, d.currency), 0);
+    const avgRate    = total ? weighted / total : 0;
     return { total, minPayment, avgRate, count: list.length, list };
   },
 
@@ -566,6 +578,61 @@ export const selectors = {
       days = Math.min(diasDesdeCompra, Math.max(0, diasHastaVencimiento));
     }
     return capital * Math.pow(1 + inv.interestRate / 100, days / 365);
+  },
+
+  // ── FIN-007 (TD-23 ext): amortización mes a mes de una deuda (función pura, testeable) ──
+  // balance: saldo inicial. eaRate: tasa E.A. en %. payment: cuota fija por mes.
+  // Opciones: paymentPct (%) si la cuota es un % del saldo residual (ej. tarjetas: 2%);
+  //           paymentFloor: piso mínimo cuando se usa paymentPct.
+  // Devuelve { months, totalInterest }; months=Infinity si la cuota no cubre intereses.
+  amortize(balance, eaRate, payment, { paymentPct = 0, paymentFloor = 0 } = {}) {
+    if (!balance || balance <= 0) return { months: 0, totalInterest: 0 };
+    const usePct = paymentPct > 0;
+    if (!usePct && (!payment || payment <= 0)) return { months: null, totalInterest: null };
+    const r = eaRate > 0 ? Math.pow(1 + eaRate / 100, 1 / 12) - 1 : 0;
+    let bal = balance; let totalInterest = 0; let months = 0;
+    while (bal > 0.01 && months < 600) {
+      const interest   = bal * r;
+      const monthlyPay = usePct ? Math.max(bal * paymentPct / 100, paymentFloor) : payment;
+      const capital    = monthlyPay - interest;
+      if (capital <= 0) return { months: Infinity, totalInterest: Infinity };
+      totalInterest += interest;
+      bal = Math.max(0, bal - capital);
+      months++;
+    }
+    return { months, totalInterest: Math.round(totalInterest) };
+  },
+
+  // ── FIN-007: simulación encadenada Snowball/Avalanche ──
+  // debtList debe estar ya ordenado por estrategia: [{ balance, interestRate, minPayment }].
+  // Cuando una deuda queda en cero, su cuota mínima se redirige a la siguiente en lista.
+  // Devuelve { months, totalInterest } del portafolio completo.
+  chainedPayoff(debtList) {
+    const valid = debtList.filter((d) => d.balance > 0 && d.minPayment > 0);
+    if (!valid.length) return { months: 0, totalInterest: 0 };
+    const debts = valid.map((d) => ({
+      bal:  d.balance,
+      rate: d.interestRate > 0 ? Math.pow(1 + d.interestRate / 100, 1 / 12) - 1 : 0,
+      pay:  d.minPayment,
+      done: false,
+    }));
+    let months = 0; let totalInterest = 0; let freedBudget = 0;
+    while (debts.some((d) => !d.done) && months < 600) {
+      months++;
+      const prioIdx = debts.findIndex((d) => !d.done);
+      for (let i = 0; i < debts.length; i++) {
+        const d = debts[i];
+        if (d.done) continue;
+        const interest = d.bal * d.rate;
+        totalInterest += interest;
+        const payment = i === prioIdx ? d.pay + freedBudget : d.pay;
+        const capital  = payment - interest;
+        if (capital <= 0) return { months: Infinity, totalInterest: Infinity };
+        d.bal = Math.max(0, d.bal - capital);
+        if (d.bal <= 0.01 && !d.done) { d.done = true; freedBudget += d.pay; }
+      }
+    }
+    return { months, totalInterest: Math.round(totalInterest) };
   },
 
   // Detecta si hay entidades con divisas distintas a baseCurrency (TD-02).

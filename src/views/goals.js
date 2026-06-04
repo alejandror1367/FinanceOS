@@ -202,7 +202,10 @@ export function renderGoals() {
     const goals = [...(s.goals || [])].sort((a, b) => goalStats(b).pct - goalStats(a).pct);
     const totalTarget = goals.reduce((sum, g) => sum + (g.targetAmount || 0), 0);
     const totalCurrent = goals.reduce((sum, g) => sum + (g.currentAmount || 0), 0);
-    const monthlySavings = selectors.monthlySavingsAvg(s, 3);
+    // FIN-011 (TD-52): repartir el ahorro mensual entre las metas activas con saldo pendiente.
+    // Sin este reparto, cada meta asume el 100% del ahorro → fechas optimistas con N metas.
+    const activePending = goals.filter((g) => g.status === 'active' && (g.targetAmount || 0) > (g.currentAmount || 0));
+    const savingsPerGoal = selectors.monthlySavingsAvg(s, 3) / Math.max(1, activePending.length);
 
     mount(root,
       el('div', {}, [
@@ -216,7 +219,7 @@ export function renderGoals() {
           ]),
         ]),
         goals.length
-          ? el('div', { class: goals.length === 1 ? 'stack' : 'grid grid--2' }, goals.map((g) => goalCard(g, cur, monthlySavings)))
+          ? el('div', { class: goals.length === 1 ? 'stack' : 'grid grid--2' }, goals.map((g) => goalCard(g, cur, savingsPerGoal)))
           : el('div', { class: 'card' }, [EmptyState({ title: 'Sin metas', message: 'Crea tu primera meta financiera.', iconName: 'goals',
               action: Button('Nueva meta', { variant: 'primary', iconName: 'plus', onClick: () => openGoalModal({ mode: 'create' }) }) })]),
       ])

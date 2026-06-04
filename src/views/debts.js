@@ -22,21 +22,9 @@ const STATE = { strategy: 'avalanche' };
 const typeLabel = (v) => (LIABILITY_TYPE_LIST.find((t) => t.value === v) || {}).label || v;
 
 // ── Amortización ─────────────────────────────────────────────────────────────
-// Itera mes a mes para calcular con precisión meses y total de intereses.
+// Delegado a selectors.amortize (función pura testeable con cobertura en suite).
 function amortize(balance, eaRate, payment) {
-  if (!balance || balance <= 0) return { months: 0, totalInterest: 0 };
-  if (!payment || payment <= 0) return { months: null, totalInterest: null };
-  const r = eaRate > 0 ? Math.pow(1 + eaRate / 100, 1 / 12) - 1 : 0;
-  let bal = balance; let totalInterest = 0; let months = 0;
-  while (bal > 0.01 && months < 600) {
-    const interest = bal * r;
-    const capital = payment - interest;
-    if (capital <= 0) return { months: Infinity, totalInterest: Infinity };
-    totalInterest += interest;
-    bal = Math.max(0, bal - capital);
-    months++;
-  }
-  return { months, totalInterest: Math.round(totalInterest) };
+  return selectors.amortize(balance, eaRate, payment);
 }
 
 function payoffDateLabel(months) {
@@ -56,6 +44,10 @@ function projectionCard(debtList, cur) {
     });
 
   if (!rows.length) return null;
+
+  // FIN-007: simulación encadenada — cuando una deuda queda en cero, su cuota
+  // se redirige a la siguiente en la lista (ya ordenada por Snowball/Avalanche).
+  const chained = selectors.chainedPayoff(rows);
 
   const totalInterestSum = rows.reduce((s, r) => s + (r.totalInterest || 0), 0);
   const maxMonths = Math.max(...rows.map((r) => r.months || 0));
@@ -94,25 +86,52 @@ function projectionCard(debtList, cur) {
   tbl.appendChild(tbody);
   card.appendChild(tbl);
 
-  const footer = el('div', { class: 'row-flex between', style: 'margin-top:var(--space-3);flex-wrap:wrap;gap:var(--space-2)' });
+  const footer = el('div', { class: 'stack', style: 'margin-top:var(--space-3);gap:var(--space-2)' });
+
+  // Fila 1: solo mínimos
+  const row1 = el('div', { class: 'row-flex between', style: 'flex-wrap:wrap;gap:var(--space-2)' });
   if (!hasInfinity && freeDate) {
-    footer.appendChild(el('span', { class: 't-caption' }, [
-      el('span', { class: 'text-secondary', text: 'Libre de deudas: ' }),
+    row1.appendChild(el('span', { class: 't-caption' }, [
+      el('span', { class: 'text-secondary', text: 'Solo mínimos — libre en: ' }),
       el('b', { class: 'text-positive', text: freeDate }),
     ]));
   }
   if (totalInterestSum > 0) {
-    footer.appendChild(el('span', { class: 't-caption' }, [
+    row1.appendChild(el('span', { class: 't-caption' }, [
       el('span', { class: 'text-secondary', text: 'Intereses totales: ' }),
       el('b', { class: 'text-negative', text: `+${formatMoney(totalInterestSum, cur)}` }),
     ]));
   }
   if (hasInfinity) {
-    footer.appendChild(el('span', { class: 't-caption' }, [
+    row1.appendChild(el('span', { class: 't-caption' }, [
       Badge('Atención', 'negative'),
       ' La cuota mínima no cubre los intereses en alguna deuda.',
     ]));
   }
+  footer.appendChild(row1);
+
+  // Fila 2: simulación encadenada (Snowball/Avalanche)
+  if (!hasInfinity && chained.months > 0 && chained.months !== Infinity && rows.length > 1) {
+    const chainedDate  = payoffDateLabel(chained.months);
+    const monthsSaved  = maxMonths - chained.months;
+    const interestSaved = totalInterestSum - chained.totalInterest;
+    const row2 = el('div', { class: 'row-flex between', style: 'flex-wrap:wrap;gap:var(--space-2);padding-top:var(--space-1);border-top:1px solid var(--border-subtle)' });
+    if (chainedDate) {
+      row2.appendChild(el('span', { class: 't-caption' }, [
+        el('span', { class: 'text-secondary', text: 'Plan encadenado — libre en: ' }),
+        el('b', { class: 'text-positive', text: chainedDate }),
+        monthsSaved > 0 ? el('span', { class: 'text-positive', text: ` (${monthsSaved} mes${monthsSaved !== 1 ? 'es' : ''} antes)` }) : null,
+      ].filter(Boolean)));
+    }
+    if (interestSaved > 0) {
+      row2.appendChild(el('span', { class: 't-caption' }, [
+        el('span', { class: 'text-secondary', text: 'Ahorras en intereses: ' }),
+        el('b', { class: 'text-positive', text: formatMoney(Math.round(interestSaved), cur) }),
+      ]));
+    }
+    footer.appendChild(row2);
+  }
+
   card.appendChild(footer);
   return card;
 }

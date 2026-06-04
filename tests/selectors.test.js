@@ -823,3 +823,137 @@ describe('cdtCurrentValue (FIN-008)', () => {
     assert.equal(selectors.cdtCurrentValue(inv), 500_000);
   });
 });
+
+// ── monthlySavingsAvg solo meses con actividad (FIN-012 / TD-53) ──────────────
+
+describe('monthlySavingsAvg (FIN-012)', () => {
+  function txMonth(id, type, amount, ym) {
+    return tx(id, type, amount, `${ym}-15`);
+  }
+
+  test('solo 1 mes activo de 3 → promedia ese mes, no los 3', () => {
+    // Ahorro de hace 3 meses: 500k. Hace 2 y 1 meses: nada.
+    // monthlySavingsAvg(s, 3) debe devolver 500k (no 500k/3 ≈ 167k).
+    const now = new Date();
+    const targetMonth = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+    const ym = `${targetMonth.getFullYear()}-${String(targetMonth.getMonth() + 1).padStart(2, '0')}`;
+    const s = mkState({
+      transactions: [
+        txMonth('i1', 'income',  1_000_000, ym),
+        txMonth('e1', 'expense',   500_000, ym),
+      ],
+    });
+    const avg = selectors.monthlySavingsAvg(s, 3);
+    assert.equal(avg, 500_000, `esperaba 500000, recibí ${avg}`);
+  });
+
+  test('sin transacciones → devuelve 0', () => {
+    assert.equal(selectors.monthlySavingsAvg(mkState(), 3), 0);
+  });
+
+  test('2 meses activos de 3 → promedia solo esos 2', () => {
+    const now = new Date();
+    function ym(offset) {
+      const d = new Date(now.getFullYear(), now.getMonth() - offset, 1);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    }
+    // mes-2: ahorro 200k; mes-3: ahorro 400k; mes-1: sin datos
+    const s = mkState({
+      transactions: [
+        txMonth('i2', 'income', 500_000, ym(2)),
+        txMonth('e2', 'expense', 300_000, ym(2)), // ahorro 200k
+        txMonth('i3', 'income', 600_000, ym(3)),
+        txMonth('e3', 'expense', 200_000, ym(3)), // ahorro 400k
+      ],
+    });
+    const avg = selectors.monthlySavingsAvg(s, 3);
+    assert.equal(avg, 300_000, `esperaba 300000 ((200k+400k)/2), recibí ${avg}`);
+  });
+});
+
+// ── amortize cuota fija y cuota % del saldo (FIN-007) ────────────────────────
+
+describe('amortize (FIN-007)', () => {
+  test('saldo 0 → 0 meses', () => {
+    assert.deepEqual(selectors.amortize(0, 20, 100_000), { months: 0, totalInterest: 0 });
+  });
+
+  test('sin cuota → months null', () => {
+    assert.deepEqual(selectors.amortize(1_000_000, 20, 0), { months: null, totalInterest: null });
+  });
+
+  test('cuota fija: 1M al 0% pagando 100k → 10 meses sin interés', () => {
+    const r = selectors.amortize(1_000_000, 0, 100_000);
+    assert.equal(r.months, 10);
+    assert.equal(r.totalInterest, 0);
+  });
+
+  test('cuota insuficiente para cubrir intereses → Infinity', () => {
+    // 1M al 24% EA → tasa mensual ≈ 1.81%; interés mes 1 ≈ 18.1k. Pago 10k < interés.
+    const r = selectors.amortize(1_000_000, 24, 10_000);
+    assert.equal(r.months, Infinity);
+  });
+
+  test('cuota % del saldo (paymentPct=20, sin piso): paga en plazo razonable', () => {
+    // 20% del saldo residual cada mes al 0% → 1M * 0.8^n < 0.01 → ~83 meses
+    const r = selectors.amortize(1_000_000, 0, 0, { paymentPct: 20, paymentFloor: 0 });
+    assert.ok(r.months > 0 && r.months < 600, `months=${r.months} debe estar entre 1 y 600`);
+    assert.equal(r.totalInterest, 0); // sin tasa no hay interés
+  });
+
+  test('cuota % con piso: respeta el piso cuando el saldo es pequeño', () => {
+    // Deuda de 50k al 0%, pago 2% saldo o mínimo 10k. Con el piso, se paga más rápido.
+    const r = selectors.amortize(50_000, 0, 0, { paymentPct: 2, paymentFloor: 10_000 });
+    assert.ok(r.months <= 5, `con piso 10k sobre 50k debería liquidarse en ≤5 meses, got ${r.months}`);
+  });
+});
+
+// ── chainedPayoff Snowball/Avalanche (FIN-007) ───────────────────────────────
+
+describe('chainedPayoff (FIN-007)', () => {
+  test('lista vacía → 0 meses', () => {
+    assert.deepEqual(selectors.chainedPayoff([]), { months: 0, totalInterest: 0 });
+  });
+
+  test('una sola deuda: idéntico a amortize fija', () => {
+    const debt = { balance: 1_200_000, interestRate: 0, minPayment: 100_000 };
+    const chained = selectors.chainedPayoff([debt]);
+    const direct  = selectors.amortize(debt.balance, debt.interestRate, debt.minPayment);
+    assert.equal(chained.months, direct.months);
+  });
+
+  test('dos deudas encadenadas: acaba antes que el máximo de las individuales', () => {
+    // Deuda A: 500k, 0%, pago 100k → 5 meses
+    // Deuda B: 1M,   0%, pago 100k → 10 meses
+    // Encadenado: A se paga en 5m, luego B recibe 200k/mes → acaba en 5+5=10m total
+    // (igual porque sin interés el encadenado coincide con el independiente en este caso)
+    // Caso de interés: con tasas, el encadenado siempre es ≤ max(individuales).
+    const debts = [
+      { balance: 500_000, interestRate: 0, minPayment: 100_000 },
+      { balance: 1_000_000, interestRate: 0, minPayment: 100_000 },
+    ];
+    const chained = selectors.chainedPayoff(debts);
+    const directMax = Math.max(
+      selectors.amortize(debts[0].balance, debts[0].interestRate, debts[0].minPayment).months,
+      selectors.amortize(debts[1].balance, debts[1].interestRate, debts[1].minPayment).months,
+    );
+    assert.ok(chained.months <= directMax,
+      `chainedPayoff (${chained.months}m) debe ser ≤ max individual (${directMax}m)`);
+  });
+
+  test('con tasas: chained paga menos intereses que solo-mínimos', () => {
+    // Avalanche: deuda cara primero → menos interés total
+    const debts = [
+      { balance: 2_000_000, interestRate: 30, minPayment: 150_000 }, // cara → pagar primero
+      { balance: 1_000_000, interestRate: 10, minPayment:  80_000 }, // barata
+    ];
+    const chained   = selectors.chainedPayoff(debts);
+    const indivA    = selectors.amortize(debts[0].balance, debts[0].interestRate, debts[0].minPayment);
+    const indivB    = selectors.amortize(debts[1].balance, debts[1].interestRate, debts[1].minPayment);
+    const indivTotal = indivA.totalInterest + indivB.totalInterest;
+    assert.ok(chained.totalInterest <= indivTotal,
+      `chainedPayoff (${chained.totalInterest}) debe pagar ≤ interés individual (${indivTotal})`);
+    assert.ok(chained.months <= Math.max(indivA.months, indivB.months),
+      'chained termina antes o igual que el más largo individual');
+  });
+});
