@@ -13,7 +13,7 @@ Tras git pull deben APROBARSE y REINICIARSE Claude Code: las tools MCP se fijan 
 PROYECTO: FinanceOS — PWA financiera personal y privada de Alejo.
 Repo: https://github.com/alejandror1367/FinanceOS (rama main).
 Prod: https://alejandror1367.github.io/FinanceOS/
-HEAD: c94a5b5 · SW v0.2.57 · config.version 0.2.57 · Tests 97/97
+HEAD: 316911f · SW v0.2.59 · config.version 0.2.59 · Tests 97/97
 
 INVARIANTES (ver CLAUDE.md): JS ES Modules sin build step · sin frameworks/bundlers ·
 cero deps npm en runtime · frontend abstraído tras src/services/ · Apps Script +
@@ -36,18 +36,24 @@ SESIÓN NOCHE (06d2c4c):
 SPRINT 5 — COMPLETO Y DESPLEGADO (7242f95):
 SPRINT 6 — COMPLETO (0fcb1ab, sin deploy):
 SPRINT 7 — COMPLETO (c4e680d, sin deploy):
-SPRINT 8 — COMPLETO (c94a5b5). Pendiente deploy Accounts.gs (adjustBalance_ roundMoney):
+SPRINT 8 — COMPLETO Y DESPLEGADO (c94a5b5).
+SPRINT 9 — COMPLETO (316911f). QA Playwright: 15/15 PASS.
 - SEC-002/TD-51 ✅: Auth.gs valida iss ∈ {accounts.google.com, https://…} y exp > now
 - SEC-006/TD-09 ✅: logAudit_('AUTH_DENIED', 'Auth', null, email) en accesos denegados
 - SEC-001/TD-50 ✅: apiClient.js usa siempre POST — idToken en body, nunca en URL
 - SEC-004 ✅: .gitignore += .env*, *.key, .clasp.json, settings.local.json
 - SEC-005 ✅: Import.gs trunca fileContent a 40k chars antes de enviar a Groq
 
+ROADMAP COMPLETO — 9/9 sprints finalizados.
+
+HALLAZGOS QA ABIERTOS (no bloquean, no son regresiones):
+- QA-001 (P3): Dashboard KPI "Inversiones" muestra $0 cuando el portafolio son FIC (fondos sin precio vivo en Yahoo Finance). investmentsValue los excluye por falta de tasa FX/precio.
+- QA-002 (P3): MU y VUG muestran "— sin precio —" en primera carga (caché Yahoo expirado); se resuelve pulsando "Actualizar precios". Comportamiento esperado.
+- QA-003 (P2): Warning de Google Identity Services — FedCM será obligatorio en Chrome futuro. Requiere migración del flujo OAuth cuando Google lo fuerce.
+
 PENDIENTES EN ORDEN:
-1. Sprint 9 (QA en vivo Playwright + pulido v1.0):
-   Re-lanzar playwright-reviewer: 15 rutas, responsive, dark/light, console errors.
-   Proyección presupuesto suavizada (TD-36) · validación solapamiento (TD-37) ·
-   docs a estado v1.0.
+1. QA-001: si es prioritario, conectar priceService para que fondos FIC sin precio vivo se muestren con su última cotización conocida en lugar de $0.
+2. QA-003: migrar a FedCM cuando Google lo requiera (no urgente hoy).
 
 VERIFICACIONES PENDIENTES EN VIVO (happy path autenticado con datos reales):
 - Flujo venta parcial/total en UI Inversiones

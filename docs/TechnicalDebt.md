@@ -95,8 +95,8 @@ La deuda se concentra en **tres temas de fondo**: (1) **modelo contable** (el le
 | TD-33 | Reactividad de grano grueso (re-render total de la vista) | MF-1 / DS-MF6 | Suscripción por sección / `content-visibility` si escala. |
 | TD-34 | `store.set` muta el patch y hace shallow-merge | MF-2 | Merge inmutable o documentar invariante. |
 | TD-35 | Aporte a meta no genera transacción ni toca cuenta vinculada | F-12 | Integrar con el ledger cuando se resuelva TD-01. |
-| TD-36 | Proyección de presupuesto lineal sobre-proyecta días 1–3 | F-13 | Suavizado; sin proyección los primeros días. |
-| TD-37 | Sin validación de solapamiento de presupuestos | F-14 | Validar categoría+periodo únicos. |
+| TD-36 ✅ | Proyección de presupuesto lineal sobre-proyecta días 1–3 | F-13 | **HECHO** (`316911f`): `budgetStats` no proyecta cuando `day ≤ 3`; `projected = consumed` (sin alarma artificial los primeros días del mes). |
+| TD-37 ✅ | Sin validación de solapamiento de presupuestos | F-14 | **HECHO** (`316911f`): `openBudgetModal` verifica antes de guardar que no exista otro presupuesto con la misma (categoryId, period, periodKey). Error inline en el campo categoryId. |
 | TD-38 ✅ | Rentabilidad sin anualización (TWR/IRR) | F-15 | **HECHO** (`c94a5b5`): `selectors.xirr()` (Newton-Raphson), `selectors.cagr()`, `investmentXIRR()`, `investmentCAGR()`, `portfolioXIRR()`. 9 tests. |
 | TD-39 | Recurrentes sin ejecución automática | F-16 / SessionState | Trigger que genere la tx al vencer y avance `nextRunDate`. |
 | TD-40 | Theming con hex crudos; sin tokens de densidad; charts no responsive en altura; `font-size` SVG fijo; doble implementación FE/BE de la misma matemática | DS-MF1–7 / MF-3 / F-17 / GAS-MF1–6 | Higiene incremental del DS y del backend (caché, lotes, lecturas dirigidas). |

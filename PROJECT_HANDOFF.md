@@ -34,6 +34,7 @@ Centraliza: patrimonio neto, presupuestos, flujo de caja, inversiones, metas, de
 | Sprint 6 deudas/metas | ✅ avgRate multi-moneda · amortize con % · goalForecast repartido · savingsAvg activo |
 | Sprint 7 charts/a11y  | ✅ LineChart: labels decimados+rotados (n>6) · tablas sr-only en charts · bottom-nav priorizado |
 | Sprint 8 avanzado     | ✅ XIRR+CAGR (selectors) · roundMoney en _shiftBalance · fix docs Groq · comentario getDb_ |
+| Sprint 9 QA + v1.0   | ✅ QA Playwright 15/15 PASS · proyección presupuesto suavizada · validación solapamiento |
 | Verificación en vivo | ✅ Playwright: 14 rutas sin errores JS · Sprint 5/6 confirmados |
 | Pendiente | Sin sprint asignado. Bugs P3 (TD-36/TD-37) + ver §18 |
 
@@ -669,8 +670,7 @@ commit: e6b3c77 · rama: main · SW: v0.2.43 · config.version: 0.2.43 · tests:
 
 > Leer esto antes que cualquier otra sección. Máximo 100 líneas. Fuente de verdad para retomar de inmediato.
 
-**HEAD:** `c94a5b5` · **SW/config.version:** `v0.2.57` · **Tests:** 97/97 · **Rama:** main · **Sync:** local (no pusheado)  
-**Deploy Sprint 8:** ✅ Accounts.gs desplegado por el dueño (adjustBalance_ con roundMoney).
+**HEAD:** `316911f` · **SW/config.version:** `v0.2.59` · **Tests:** 97/97 · **Rama:** main · **Sync:** local (no pusheado)
 
 > **MCP:** `.mcp.json` versionado con **playwright** + **context7** (scope de proyecto).
 > Tras `git pull`: **aprobar** ambos y **reiniciar Claude Code** (las tools MCP se fijan al arrancar).
@@ -724,12 +724,13 @@ Flujo: `Views → Services → Store → Views` (never direct to net/IndexedDB f
 - **SEC-001/TD-50:** `apiClient.js` usa siempre POST — `idToken` en body, nunca en URL (Sprint 5)
 - **SEC-002/TD-51:** `verifyGoogleToken_` valida `iss` + `exp` explícito antes de email/aud (Sprint 5)
 
-### Próximo sprint recomendado: Sprint 9 — QA en vivo + pulido v1.0
+### Estado: Roadmap completo — todos los Sprints 1–9 finalizados ✅
 ```
-Roadmap activo: docs/Roadmap-Implementacion-2026-06-03.md
-Sprint 8: ✅ COMPLETO. Pendiente deploy: Accounts.gs (adjustBalance_ roundMoney).
-Sprint 9: QA Playwright (15 rutas) · proyección presupuesto suavizada (TD-36) ·
-  validación solapamiento presupuestos (TD-37) · docs a estado v1.0.
+Roadmap docs/Roadmap-Implementacion-2026-06-03.md: 9/9 sprints completados.
+QA Playwright 2026-06-03: 15/15 rutas PASS · 0 errores JS propios.
+Hallazgos QA abiertos (P3): QA-001 (Dashboard KPI inversiones $0 en FIC sin precio vivo),
+  QA-002 (precios MU/VUG stale en primera carga — expected), QA-003 (FedCM warning GSI).
+Próxima acción recomendada: atender QA-001 (Dashboard KPI FIC) si es prioritario.
 ```
 
 ### Archivos críticos
