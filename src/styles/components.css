@@ -122,8 +122,25 @@
 .row__title { font-weight: var(--fw-medium); overflow-wrap: break-word; }
 /* QA-002/003: en listas de filas (tx, cuentas) el título usa elipsis para no romper por caracteres */
 .row-list .row__title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.row__sub { font-size: var(--fs-caption); color: var(--text-secondary); }
+.row__sub { font-size: var(--fs-caption); color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .row__amount { font-variant-numeric: tabular-nums; font-weight: var(--fw-semibold); white-space: nowrap; }
+
+/* Mobile: acciones en línea propia para liberar espacio al título y al monto.
+   En 375px los 3 botones táctiles (3×44px=132px) dejaban solo ~90px al main,
+   truncando nombres a "Ba…" o "S…". Con wrap, main recupera ~200px. */
+@media (max-width: 600px) {
+  .row { flex-wrap: wrap; align-items: flex-start; }
+  .row__avatar { align-self: flex-start; padding-top: 2px; }
+  .row__amount { align-self: flex-start; padding-top: 1px; }
+  .row__actions {
+    flex: 0 0 100%;
+    justify-content: flex-end;
+    padding-left: calc(38px + var(--space-3));
+    margin-top: var(--space-1);
+  }
+  /* En móvil el título puede envolver (badges inline se desplazan a la línea siguiente) */
+  .row-list .row__title { white-space: normal; overflow: visible; text-overflow: unset; }
+}
 
 /* ---------- Progress ---------- */
 .progress { height: 8px; border-radius: var(--radius-full); background: var(--bg-surface-2); overflow: hidden; }
@@ -452,10 +469,11 @@ body.modal-open { overflow: hidden; }
 .inv-section-ret { font-size: var(--fs-body); font-weight: var(--fw-semibold); }
 .inv-calc-info { padding: var(--space-1) 0; font-size: var(--fs-caption); }
 /* QA-004/008: tablas anchas necesitan scroll horizontal en mobile */
-.inv-summary-wrap { overflow-x: auto; }
-.inv-summary-table { width: 100%; border-collapse: collapse; font-size: var(--fs-caption); }
-.inv-summary-table th { text-align: left; padding: var(--space-2) var(--space-2); color: var(--text-tertiary); font-weight: var(--fw-medium); border-bottom: 1px solid var(--border); }
+.inv-summary-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.inv-summary-table { width: 100%; min-width: 480px; border-collapse: collapse; font-size: var(--fs-caption); }
+.inv-summary-table th { text-align: left; padding: var(--space-2) var(--space-2); color: var(--text-tertiary); font-weight: var(--fw-medium); border-bottom: 1px solid var(--border); white-space: nowrap; }
 .inv-summary-table td { padding: var(--space-2) var(--space-2); border-bottom: 1px solid var(--border-subtle); vertical-align: middle; }
+.inv-summary-table td:first-child { white-space: nowrap; }
 .inv-summary-total td { border-top: 2px solid var(--border); border-bottom: none; font-weight: var(--fw-semibold); font-size: var(--fs-body); padding-top: var(--space-3); }
 .inv-purchases-wrap { margin-top: var(--space-2); border-top: 1px solid var(--border-subtle); overflow-x: auto; }
 .inv-purchases-tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-caption); min-width: 340px; }
