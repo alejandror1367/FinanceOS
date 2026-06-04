@@ -195,7 +195,7 @@ function buildTrendsCard(s, cur) {
   return Card({
     title: 'Tendencias por categoría',
     action: el('span', { class: 't-caption text-secondary', text: 'Últimos 6 meses' }),
-    body: table,
+    body: el('div', { class: 'table-scroll' }, [table]),
   });
 }
 

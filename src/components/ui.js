@@ -43,9 +43,9 @@ export function Trend(pct, { invert = false } = {}) {
   ]);
 }
 
-export function Button(label, { variant = 'ghost', iconName, onClick, iconOnly = false, ariaLabel } = {}) {
+export function Button(label, { variant = 'ghost', size, iconName, onClick, iconOnly = false, ariaLabel } = {}) {
   return el('button', {
-    class: `btn btn--${variant}${iconOnly ? ' btn--icon' : ''}`,
+    class: `btn btn--${variant}${size ? ' btn--' + size : ''}${iconOnly ? ' btn--icon' : ''}`,
     type: 'button',
     'aria-label': ariaLabel || (iconOnly ? label : null),
     on: onClick ? { click: onClick } : {},
