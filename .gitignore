@@ -2,3 +2,9 @@
 audit-*.png
 *.png
 !assets/*.svg
+
+# Secretos y configuración local (nunca al repo público)
+.env*
+*.key
+.clasp.json
+settings.local.json

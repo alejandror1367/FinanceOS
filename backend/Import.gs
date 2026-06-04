@@ -40,6 +40,9 @@ var SYSTEM_PROMPT_ =
   'income=crédito/depósito/ingreso, expense=débito/retiro/compra, transfer=entre cuentas. ' +
   'Incluye TODAS las transacciones sin omitir ninguna.';
 
+// SEC-005: límite de caracteres enviados a Groq (~10k tokens; evita fuga de datos excesiva)
+var IMPORT_MAX_CHARS_ = 40000;
+
 function buildUserMessage_(data) {
   var hint = data.bankHint ? ('Este extracto es de ' + data.bankHint + '.\n\n') : '';
   if (data.mimeType === 'application/pdf') {
@@ -48,7 +51,12 @@ function buildUserMessage_(data) {
       'Descarga el extracto en formato CSV desde la app de tu banco e inténtalo de nuevo.'
     );
   }
-  return hint + 'Extracto a procesar:\n\n' + data.fileContent;
+  var content = String(data.fileContent || '');
+  if (content.length > IMPORT_MAX_CHARS_) {
+    content = content.slice(0, IMPORT_MAX_CHARS_);
+    Logger.log('[Import] fileContent truncado a ' + IMPORT_MAX_CHARS_ + ' chars (original: ' + data.fileContent.length + ')');
+  }
+  return hint + 'Extracto a procesar:\n\n' + content;
 }
 
 function parseStatement_(data) {

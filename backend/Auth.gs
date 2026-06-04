@@ -38,6 +38,22 @@ function verifyGoogleToken_(idToken) {
 
     var data = JSON.parse(res.getContentText());
 
+    // 0. Issuer — defensa en profundidad (SEC-002/TD-51)
+    var VALID_ISSUERS = ['accounts.google.com', 'https://accounts.google.com'];
+    if (VALID_ISSUERS.indexOf(data.iss) === -1) {
+      Logger.log('[Auth] Issuer inválido: ' + data.iss);
+      cache.put(cacheKey, '0', 60);
+      return false;
+    }
+
+    // 0b. Expiración — defensa en profundidad (SEC-002/TD-51)
+    var nowSec = Math.floor(Date.now() / 1000);
+    if (!data.exp || parseInt(data.exp, 10) <= nowSec) {
+      Logger.log('[Auth] Token expirado: exp=' + data.exp);
+      cache.put(cacheKey, '0', 60);
+      return false;
+    }
+
     // 1. Email verificado por Google
     if (!data.email_verified || data.email_verified === 'false') {
       cache.put(cacheKey, '0', 60);
@@ -48,6 +64,8 @@ function verifyGoogleToken_(idToken) {
     if (APP.allowedEmails.indexOf(data.email) === -1) {
       cache.put(cacheKey, '0', 300); // 5 min para cuentas no autorizadas
       Logger.log('[Auth] Intento de acceso no autorizado: ' + data.email);
+      // SEC-006/TD-09: bitácora de accesos denegados
+      try { logAudit_('AUTH_DENIED', 'Auth', null, data.email); } catch (_) {}
       return false;
     }
 
