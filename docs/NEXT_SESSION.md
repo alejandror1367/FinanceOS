@@ -1,6 +1,6 @@
 # Prompt de continuación — FinanceOS
-**Generado:** 2026-06-03 (sesión post-Sprint 5: seguridad OAuth)
-**HEAD:** `7242f95` · **SW:** `v0.2.54` · **Tests:** 75/75
+**Generado:** 2026-06-04 (sesión análisis IA + planificación Alpaca)
+**HEAD:** `912c7ba` · **SW:** `v0.2.63` · **Tests:** 97/97 (20 suites)
 
 ---
 
@@ -13,60 +13,71 @@ Tras git pull deben APROBARSE y REINICIARSE Claude Code: las tools MCP se fijan 
 PROYECTO: FinanceOS — PWA financiera personal y privada de Alejo.
 Repo: https://github.com/alejandror1367/FinanceOS (rama main).
 Prod: https://alejandror1367.github.io/FinanceOS/
-HEAD: 316911f · SW v0.2.59 · config.version 0.2.59 · Tests 97/97
+HEAD: 912c7ba · SW v0.2.63 · config.version 0.2.63 · Tests 97/97 (20 suites)
 
 INVARIANTES (ver CLAUDE.md): JS ES Modules sin build step · sin frameworks/bundlers ·
 cero deps npm en runtime · frontend abstraído tras src/services/ · Apps Script +
 Google Sheets (13 hojas) + GitHub Pages + OAuth de Google · offline-first.
 
-HECHO Y DESPLEGADO (sesiones 2026-06-03):
+HECHO Y DESPLEGADO (todos los sprints 1–9 + mobile fixes):
+- Roadmap 9/9 sprints completos · QA Playwright 15/15 PASS
+- Fix mobile layout (912c7ba) · QA-001 fix Dashboard KPI FIC (012d019)
+- Sprints 1–9: ver PROJECT_HANDOFF.md §"Cambios 2026-06-03" para detalle completo.
 
-SPRINTS 1–4 (tarde):
-- Sprint 1: 5 bugs P0 (TD-41…46), +10 tests
-- Sprint 2: ventas parciales/totales, CDT capitalizado, penny-rounding
-- Sprint 3: WCAG AA — contraste, tokens, ARIA, focus
-- FIN-014: doble conteo CC en totalLiabilities eliminado
-- Sprint 4: backend perf + robustez sync (caché, purgeDeleted, bootstrap 24m, AuditLog)
-
-SESIÓN NOCHE (06d2c4c):
-- Analítica reestructurada: flujo de caja 3 series + selector 3/6/12m · tabla tendencias top5 categorías × 6m · insights históricos · eliminados 3 bloques que duplicaban Dashboard
-- PDF patrimonial corregido: "Sin deudas" → muestra CC + liabilities; accountsValue excluye investment y CC
-- Nuevo selector: categoryTrends(s, n, topN)
-
-SPRINT 5 — COMPLETO Y DESPLEGADO (7242f95):
-SPRINT 6 — COMPLETO (0fcb1ab, sin deploy):
-SPRINT 7 — COMPLETO (c4e680d, sin deploy):
-SPRINT 8 — COMPLETO Y DESPLEGADO (c94a5b5).
-SPRINT 9 — COMPLETO (316911f). QA Playwright: 15/15 PASS.
-- SEC-002/TD-51 ✅: Auth.gs valida iss ∈ {accounts.google.com, https://…} y exp > now
-- SEC-006/TD-09 ✅: logAudit_('AUTH_DENIED', 'Auth', null, email) en accesos denegados
-- SEC-001/TD-50 ✅: apiClient.js usa siempre POST — idToken en body, nunca en URL
-- SEC-004 ✅: .gitignore += .env*, *.key, .clasp.json, settings.local.json
-- SEC-005 ✅: Import.gs trunca fileContent a 40k chars antes de enviar a Groq
-
-ROADMAP COMPLETO — 9/9 sprints finalizados.
-
-HALLAZGOS QA ABIERTOS (no bloquean, no son regresiones):
-- QA-001 (P3): Dashboard KPI "Inversiones" muestra $0 cuando el portafolio son FIC (fondos sin precio vivo en Yahoo Finance). investmentsValue los excluye por falta de tasa FX/precio.
-- QA-002 (P3): MU y VUG muestran "— sin precio —" en primera carga (caché Yahoo expirado); se resuelve pulsando "Actualizar precios". Comportamiento esperado.
-- QA-003 (P2): Warning de Google Identity Services — FedCM será obligatorio en Chrome futuro. Requiere migración del flujo OAuth cuando Google lo fuerce.
+SESIÓN 2026-06-04 (solo análisis, sin código):
+- Análisis completo de integraciones IA (Claude Artifacts, Groq, Alpaca)
+- Matriz comparativa 8 opciones + roadmap 4 fases
+- Diagnóstico de 2 bugs en backgroundRefreshPrices() en app.js
+- Propuesta de integración Alpaca API como fuente primaria para acciones US
+- Todo documentado en docs/Live-Artifacts-Prompt.md
 
 PENDIENTES EN ORDEN:
-1. QA-001: si es prioritario, conectar priceService para que fondos FIC sin precio vivo se muestren con su última cotización conocida en lugar de $0.
-2. QA-003: migrar a FedCM cuando Google lo requiera (no urgente hoy).
+
+1. FIX AUTO-REFRESH PRECIOS (src/core/app.js — sin deploy):
+   Bug A (app.js:112): eliminar guardia !priceService.isStale en backgroundRefreshPrices()
+     → precios siempre refrescan al arrancar la app, no solo si han pasado >15 min
+   Bug B (app.js:121-124): fix parser para formato { quotes, fxRates } del backend
+     → const resp = await apiClient.get(...); rawQuotes = resp?.quotes ?? resp;
+     → investments.js ya maneja correctamente (referencia: lines 563-580)
+
+2. INTEGRACIÓN ALPACA API (backend/Quotes.gs — requiere deploy):
+   - Alpaca free tier: acciones US/ETFs/crypto (sin tarjeta)
+   - fetchAlpaca_() usa GET data.alpaca.markets/v2/stocks/snapshots?symbols=...
+   - Headers: APCA-API-KEY-ID + APCA-API-SECRET-KEY (en Script Properties, no en repo)
+   - isUsSymbol_(): sin punto ni =X → Alpaca; con .CL o =X → Yahoo (igual que hoy)
+   - Crypto: data.alpaca.markets/v1beta3/crypto/snapshots?symbols=BTC/USD
+   - Formato salida no cambia: { quotes, fxRates }
+   - El usuario debe crear cuenta en alpaca.markets (gratis) y configurar las claves
+
+3. SIMULADOR FIRE (nueva ruta #/fire — sin deploy):
+   - Pura aritmética, sin IA
+   - Usa selectores existentes: ingresos, gastos, investmentsValue, goalForecast
+   - Nueva vista views/fire.js + ruta en routes.js
+   - Responde: tasa de ahorro actual, años hasta independencia financiera, sensibilidad
+
+4. REPORTES AUTOMÁTICOS GROQ (nuevo backend/Insights.gs — requiere deploy):
+   - Apps Script time trigger día 1 de cada mes
+   - Lee aggregados de Sheets → llama Groq (llama-3.1-8b-instant, ya en Import.gs)
+   - Escribe resumen en nueva hoja Insights
+   - Frontend: card "Resumen del mes" en Dashboard/Analítica
+
+BUGS ABIERTOS (no bloquean):
+- QA-003 (P2): FedCM warning en GIS — migrar cuando Google lo fuerce
+- QA-002 (P3): precios stale en primera carga — expected behavior
 
 VERIFICACIONES PENDIENTES EN VIVO (happy path autenticado con datos reales):
 - Flujo venta parcial/total en UI Inversiones
 - getBootstrap con ventana 24m no rompe historial más antiguo
 - Analítica: tabla tendencias y selector de período funcionan en producción
-- Sprint 5: tras deploy, verificar que login sigue funcionando con POST (no hay regresión)
 
 RIESGOS ABIERTOS:
-- Bootstrap limita a 24m de transacciones (intencional, verificar impacto)
+- backgroundRefreshPrices() escribe precios corruptos en priceService (Bug B arriba)
+  → el Dashboard puede mostrar valores de inversiones incorrectos en arranque
+- Bootstrap limita a 24m de transacciones (intencional, confirmar impacto)
 
 FORMA DE TRABAJO: fases pequeñas y verificables · explicar qué/por qué ·
-correr node --test tests/selectors.test.js tras cada cambio de selector (75/75 base) ·
+correr node --test tests/selectors.test.js tras cada cambio de selector (97/97 base) ·
 commits atómicos por feature · hook auto-bumpa SW + config.version al commitear src/.
-Para mensajes de commit multilínea: git commit -F _commitmsg.txt (archivo temporal)
+Para mensajes de commit multilínea: git commit -F _commitmsg.txt (archivo temporal).
 Empezar con: git log --oneline -5 · git status · node --test tests/selectors.test.js.
 ```
