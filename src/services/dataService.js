@@ -18,6 +18,7 @@ import { syncQueue } from './syncQueue.js';
 import { syncEngine } from './syncEngine.js';
 import { ENTITIES } from './entities.js';
 import { newId } from '../utils/id.js';
+import { roundMoney } from '../utils/format.js';
 
 const SEED_FLAG = 'seed:v1';
 
@@ -340,7 +341,8 @@ export const dataService = {
     if (!accountId || !delta) return;
     const account = await db.get('accounts', accountId);
     if (!account) return;
-    const updated = { ...account, balance: Math.round((account.balance || 0) + delta), updatedAt: new Date().toISOString() };
+    // BE-013 (TD-22): redondear según divisa — evita centavos fantasma en COP.
+    const updated = { ...account, balance: roundMoney((account.balance || 0) + delta, account.currency || 'COP'), updatedAt: new Date().toISOString() };
     await db.put('accounts', updated);
     await this._refreshStore('accounts');
   },

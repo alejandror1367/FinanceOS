@@ -957,3 +957,71 @@ describe('chainedPayoff (FIN-007)', () => {
       'chained termina antes o igual que el más largo individual');
   });
 });
+
+// ── CAGR y XIRR (FIN-013 / TD-38) ────────────────────────────────────────────
+
+describe('cagr (FIN-013)', () => {
+  test('10% de ganancia en exactamente 1 año → CAGR ≈ 10%', () => {
+    const purchaseDate = '2025-01-01';
+    const todayMs      = new Date('2026-01-01').getTime();
+    const r = selectors.cagr(1_000_000, 1_100_000, purchaseDate, todayMs);
+    assert.ok(Math.abs(r - 0.1) < 0.001, `esperaba ~0.1, recibí ${r}`);
+  });
+
+  test('costBasis 0 → null (evita división por cero)', () => {
+    assert.equal(selectors.cagr(0, 1_000_000, '2025-01-01'), null);
+  });
+
+  test('sin fecha de compra → null', () => {
+    assert.equal(selectors.cagr(1_000_000, 1_100_000, null), null);
+  });
+
+  test('pérdida del 50% en 2 años → CAGR negativo', () => {
+    const todayMs = new Date('2027-01-01').getTime();
+    const r = selectors.cagr(1_000_000, 500_000, '2025-01-01', todayMs);
+    // 0.5^(1/2) - 1 ≈ -0.2929
+    assert.ok(r < 0, 'CAGR debe ser negativo para pérdida');
+    assert.ok(Math.abs(r - (Math.pow(0.5, 0.5) - 1)) < 0.001,
+      `esperaba ≈${(Math.pow(0.5, 0.5) - 1).toFixed(4)}, recibí ${r?.toFixed(4)}`);
+  });
+});
+
+describe('xirr (FIN-013)', () => {
+  test('flujo simple 1 año, 10% rentabilidad → XIRR ≈ 10%', () => {
+    const flows = [
+      { amount: -1_000_000, date: '2025-01-01' },
+      { amount:  1_100_000, date: '2026-01-01' },
+    ];
+    const r = selectors.xirr(flows);
+    assert.ok(r !== null, 'debe converger');
+    assert.ok(Math.abs(r - 0.1) < 0.001, `esperaba ~0.1, recibí ${r}`);
+  });
+
+  test('flujo de 2 años, ganancia 44% total → XIRR ≈ 20% anual', () => {
+    // 1.2^2 = 1.44 → 44% en 2 años
+    const flows = [
+      { amount: -1_000_000, date: '2024-01-01' },
+      { amount:  1_440_000, date: '2026-01-01' },
+    ];
+    const r = selectors.xirr(flows);
+    assert.ok(r !== null, 'debe converger');
+    assert.ok(Math.abs(r - 0.2) < 0.001, `esperaba ~0.2, recibí ${r}`);
+  });
+
+  test('menos de 2 flujos → null', () => {
+    assert.equal(selectors.xirr([{ amount: -1_000_000, date: '2025-01-01' }]), null);
+  });
+
+  test('lista vacía → null', () => {
+    assert.equal(selectors.xirr([]), null);
+  });
+
+  test('flujo con pérdida → XIRR negativo', () => {
+    const flows = [
+      { amount: -1_000_000, date: '2025-01-01' },
+      { amount:    800_000, date: '2026-01-01' },
+    ];
+    const r = selectors.xirr(flows);
+    assert.ok(r !== null && r < 0, `XIRR debe ser negativo, recibí ${r}`);
+  });
+});

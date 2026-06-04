@@ -635,6 +635,101 @@ export const selectors = {
     return { months, totalInterest: Math.round(totalInterest) };
   },
 
+  // ── FIN-013 (TD-38): rentabilidad anualizada — XIRR y CAGR ───────────────────
+
+  // XIRR — Tasa Interna de Retorno extendida para flujos en fechas irregulares.
+  // cashFlows: [{ amount: number, date: string YYYY-MM-DD }]
+  //   amount < 0 = salida (inversión), amount > 0 = entrada (venta o valor actual).
+  // Usa Newton-Raphson con hasta 100 iteraciones. Devuelve tasa E.A. o null.
+  xirr(cashFlows, guess = 0.1) {
+    if (!cashFlows || cashFlows.length < 2) return null;
+    const t0    = Math.min(...cashFlows.map((cf) => new Date(cf.date).getTime()));
+    const days  = cashFlows.map((cf) => (new Date(cf.date).getTime() - t0) / 86400000);
+    const amts  = cashFlows.map((cf) => cf.amount);
+    const npv   = (r) => amts.reduce((s, a, i) => s + a / Math.pow(1 + r, days[i] / 365), 0);
+    const dnpv  = (r) => amts.reduce((s, a, i) => s - (days[i] / 365) * a / Math.pow(1 + r, days[i] / 365 + 1), 0);
+    let r = guess;
+    for (let i = 0; i < 100; i++) {
+      const f = npv(r); const df = dnpv(r);
+      if (!isFinite(f) || !isFinite(df) || Math.abs(df) < 1e-12) break;
+      const next = r - f / df;
+      if (Math.abs(next - r) < 1e-8) return next;
+      r = next;
+      if (r < -0.9999) r = -0.5; // evitar divergencia
+    }
+    return null;
+  },
+
+  // CAGR — tasa de crecimiento anual compuesto.
+  // costBasis: coste total de compra. currentValue: valor actual (o de venta).
+  // Devuelve la tasa E.A. o null si los datos son insuficientes.
+  cagr(costBasis, currentValue, purchaseDateIso, todayMs) {
+    if (!costBasis || costBasis <= 0 || !currentValue || !purchaseDateIso) return null;
+    const now  = todayMs !== undefined ? todayMs : Date.now();
+    const days = (now - new Date(purchaseDateIso).getTime()) / 86400000;
+    if (days <= 0) return null;
+    return Math.pow(currentValue / costBasis, 365 / days) - 1;
+  },
+
+  // XIRR de una posición individual (compra → valor actual o venta).
+  investmentXIRR(inv, currentPrice, todayMs) {
+    const now     = todayMs !== undefined ? todayMs : Date.now();
+    const today   = new Date(now).toISOString().slice(0, 10);
+    const buyPx   = Number(inv.purchasePrice || inv.avgCost) || 0;
+    const qty     = Number(inv.quantity) || 0;
+    const cost    = qty * buyPx + (Number(inv.commission) || 0);
+    if (!cost || !inv.purchaseDate) return null;
+    const curVal  = inv.soldDate
+      ? qty * (Number(inv.soldPrice) || 0) - (Number(inv.soldCommission) || 0)
+      : qty * (Number(currentPrice) || 0);
+    return selectors.xirr([
+      { amount: -cost,   date: inv.purchaseDate },
+      { amount: curVal,  date: inv.soldDate || today },
+    ]);
+  },
+
+  // CAGR de una posición individual.
+  investmentCAGR(inv, currentPrice, todayMs) {
+    const buyPx  = Number(inv.purchasePrice || inv.avgCost) || 0;
+    const qty    = Number(inv.quantity) || 0;
+    const cost   = qty * buyPx + (Number(inv.commission) || 0);
+    const now    = todayMs !== undefined ? todayMs : Date.now();
+    const curVal = inv.soldDate
+      ? qty * (Number(inv.soldPrice) || 0)
+      : qty * (Number(currentPrice) || 0);
+    return selectors.cagr(cost, curVal, inv.purchaseDate, now);
+  },
+
+  // XIRR del portafolio completo (agrega todos los flujos de compra y valor actual).
+  // Solo incluye posiciones no borradas con datos suficientes.
+  portfolioXIRR(s, todayMs) {
+    const fx   = priceService.fxRates;
+    const base = s.baseCurrency || 'COP';
+    const now  = todayMs !== undefined ? todayMs : Date.now();
+    const today = new Date(now).toISOString().slice(0, 10);
+    const toBase = (v, cur) => {
+      if (!cur || cur === base) return v;
+      const rate = fx[cur]; return rate ? v * rate : v;
+    };
+    const flows = [];
+    for (const inv of (s.investments || [])) {
+      if (inv.isDeleted || !inv.purchaseDate) continue;
+      const buyPx = Number(inv.purchasePrice || inv.avgCost) || 0;
+      const qty   = Number(inv.quantity) || 0;
+      const cost  = qty * buyPx + (Number(inv.commission) || 0);
+      if (!cost) continue;
+      const cur = inv.currency || base;
+      const lp  = priceService.priceFor(inv.symbol);
+      const px  = lp?.price || inv.currentPrice || 0;
+      const curVal = inv.soldDate
+        ? qty * (Number(inv.soldPrice) || 0) - (Number(inv.soldCommission) || 0)
+        : qty * px;
+      flows.push({ amount: -toBase(cost, cur),   date: inv.purchaseDate });
+      flows.push({ amount:  toBase(curVal, cur),  date: inv.soldDate || today });
+    }
+    return flows.length >= 2 ? selectors.xirr(flows) : null;
+  },
+
   // Detecta si hay entidades con divisas distintas a baseCurrency (TD-02).
   // Úsalo para mostrar un aviso en la UI antes de implementar conversión FX.
   hasMixedCurrencies(s) {

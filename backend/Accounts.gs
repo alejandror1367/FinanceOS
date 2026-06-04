@@ -74,7 +74,13 @@ function adjustBalance_(accountId, delta) {
   if (!accountId || !delta || delta === 0) return;
   var account = repoGet_('Accounts', accountId);
   if (!account || account.isDeleted) return;
-  repoUpdate_('Accounts', accountId, { balance: Math.round((account.balance || 0) + delta) });
+  // BE-013 (TD-22): redondeo según divisa — COP/CLP/JPY sin decimales; resto con 2.
+  var cur = String(account.currency || APP.baseCurrency || 'COP').toUpperCase();
+  var noCents = ['COP', 'CLP', 'JPY', 'KRW', 'VND', 'IDR'];
+  var decimals = noCents.indexOf(cur) !== -1 ? 0 : 2;
+  var factor   = Math.pow(10, decimals);
+  var newBalance = Math.round(((account.balance || 0) + delta) * factor) / factor;
+  repoUpdate_('Accounts', accountId, { balance: newBalance });
 }
 
 // Aplica (+1) o revierte (-1) el efecto contable de una transacción en los saldos.

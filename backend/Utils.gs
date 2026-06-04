@@ -32,6 +32,9 @@ function getSpreadsheetId_() {
   return id;
 }
 
+// TD-16: memoiza el handle de Sheets en _db para reutilizarlo dentro del mismo request.
+// En Apps Script cada doGet/doPost es una ejecución fresca — _db no persiste entre
+// requests. El memo evita abrir el Spreadsheet más de una vez por ejecución.
 var _db;
 function getDb_() {
   return _db || (_db = SpreadsheetApp.openById(getSpreadsheetId_()));
