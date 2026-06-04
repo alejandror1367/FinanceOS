@@ -13,7 +13,7 @@ Tras git pull deben APROBARSE y REINICIARSE Claude Code: las tools MCP se fijan 
 PROYECTO: FinanceOS — PWA financiera personal y privada de Alejo.
 Repo: https://github.com/alejandror1367/FinanceOS (rama main).
 Prod: https://alejandror1367.github.io/FinanceOS/
-HEAD: 7242f95 · SW v0.2.54 · config.version 0.2.54 · Tests 75/75
+HEAD: 0fcb1ab · SW v0.2.55 · config.version 0.2.55 · Tests 88/88
 
 INVARIANTES (ver CLAUDE.md): JS ES Modules sin build step · sin frameworks/bundlers ·
 cero deps npm en runtime · frontend abstraído tras src/services/ · Apps Script +
@@ -34,6 +34,7 @@ SESIÓN NOCHE (06d2c4c):
 - Nuevo selector: categoryTrends(s, n, topN)
 
 SPRINT 5 — COMPLETO Y DESPLEGADO (7242f95):
+SPRINT 6 — COMPLETO (0fcb1ab, sin deploy):
 - SEC-002/TD-51 ✅: Auth.gs valida iss ∈ {accounts.google.com, https://…} y exp > now
 - SEC-006/TD-09 ✅: logAudit_('AUTH_DENIED', 'Auth', null, email) en accesos denegados
 - SEC-001/TD-50 ✅: apiClient.js usa siempre POST — idToken en body, nunca en URL
@@ -41,12 +42,9 @@ SPRINT 5 — COMPLETO Y DESPLEGADO (7242f95):
 - SEC-005 ✅: Import.gs trunca fileContent a 40k chars antes de enviar a Groq
 
 PENDIENTES EN ORDEN:
-1. Sprint 6 (deudas/metas, solo frontend) — NO requiere deploy:
-   avgRate multi-moneda · amortize() con minPayment% · goalForecast repartido ·
-   savingsAvg solo meses con actividad · sameMonth normalizado a YYYY-MM
-3. Sprint 7 (charts responsive + a11y avanzada) — NO requiere deploy
-4. QA en vivo Playwright (pendiente post-Sprints)
-5. Sprints 8 y 9 (avanzado + v1.0)
+1. Sprint 7 (charts responsive + a11y avanzada) — NO requiere deploy
+2. QA en vivo Playwright (pendiente post-Sprints)
+3. Sprints 8 y 9 (avanzado + v1.0)
 
 VERIFICACIONES PENDIENTES EN VIVO (happy path autenticado con datos reales):
 - Flujo venta parcial/total en UI Inversiones

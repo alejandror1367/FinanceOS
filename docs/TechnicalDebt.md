@@ -153,8 +153,8 @@ La deuda se concentra en **tres temas de fondo**: (1) **modelo contable** (el le
 |----|----------|--------|---------|-----|--------|
 | TD-50 ✅ | **`id_token` en querystring GET** — viaja en URL; queda en logs/historial/proxy | SEC-001 | Fuga de token de sesión (TTL 1h) | M | **HECHO** (`7242f95`): `apiClient.js` usa siempre POST — `idToken` viaja en body JSON, nunca en URL. ⚠ Pendiente deploy `Code.gs` (ya acepta reads vía POST). |
 | TD-51 ✅ | **`verifyGoogleToken_` sin validar `iss` ni `exp` explícito** | SEC-002 | Falta defensa en profundidad estándar GIS | S | **HECHO** (`7242f95`): `Auth.gs` valida `iss ∈ {accounts.google.com, https://…}` y `exp > now` antes de las comprobaciones de email/aud. ⚠ Pendiente deploy `Auth.gs`. |
-| TD-52 | **`goalForecast` usa `monthlySavingsAvg` global** — cada meta reclama el 100% del ahorro | FIN-011 | Fechas de cumplimiento optimistas con N metas activas | M | Abierto — Sprint 6 |
-| TD-53 | **`monthlySavingsAvg` no excluye meses sin datos** — diluye el promedio en histórico corto | FIN-012 | Forecast subestimado para usuarios nuevos | S | Abierto — Sprint 6 |
+| TD-52 ✅ | **`goalForecast` usa `monthlySavingsAvg` global** — cada meta reclama el 100% del ahorro | FIN-011 | Fechas de cumplimiento optimistas con N metas activas | M | **HECHO** (`0fcb1ab`): `savingsPerGoal = avg / activePending.length`; cada meta recibe su cuota proporcional. |
+| TD-53 ✅ | **`monthlySavingsAvg` no excluye meses sin datos** — diluye el promedio en histórico corto | FIN-012 | Forecast subestimado para usuarios nuevos | S | **HECHO** (`0fcb1ab`): filtra `active = cf.filter(m => m.income>0 || m.expense>0)` antes de promediar. |
 
 ---
 

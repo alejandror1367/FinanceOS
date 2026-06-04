@@ -31,6 +31,7 @@ Centraliza: patrimonio neto, presupuestos, flujo de caja, inversiones, metas, de
 | Integridad de sync | ✅ Idempotencia + preservación de id en TODOS los `create` (backend, desplegado) |
 | UX (Sprint 6) | ✅ Tooltips charts · validación inline (todos los forms) · **Command Palette ⌘K** |
 | Bugs sesión 2026-06-03 | ✅ 7 fixes de sync/datos corregidos y desplegados (ver §"Cambios 2026-06-03") |
+| Sprint 6 deudas/metas | ✅ avgRate multi-moneda · amortize con % · goalForecast repartido · savingsAvg activo |
 | Verificación en vivo | ✅ Playwright: 14 rutas sin errores JS · Sprint 5/6 confirmados |
 | Pendiente | Sin sprint asignado. Bugs P3 (TD-36/TD-37) + ver §18 |
 
@@ -666,7 +667,7 @@ commit: e6b3c77 · rama: main · SW: v0.2.43 · config.version: 0.2.43 · tests:
 
 > Leer esto antes que cualquier otra sección. Máximo 100 líneas. Fuente de verdad para retomar de inmediato.
 
-**HEAD:** `7242f95` · **SW/config.version:** `v0.2.54` · **Tests:** 75/75 · **Rama:** main · **Sync:** local (no pusheado)
+**HEAD:** `0fcb1ab` · **SW/config.version:** `v0.2.55` · **Tests:** 88/88 · **Rama:** main · **Sync:** local (no pusheado)
 
 > **MCP:** `.mcp.json` versionado con **playwright** + **context7** (scope de proyecto).
 > Tras `git pull`: **aprobar** ambos y **reiniciar Claude Code** (las tools MCP se fijan al arrancar).
@@ -720,12 +721,12 @@ Flujo: `Views → Services → Store → Views` (never direct to net/IndexedDB f
 - **SEC-001/TD-50:** `apiClient.js` usa siempre POST — `idToken` en body, nunca en URL (Sprint 5)
 - **SEC-002/TD-51:** `verifyGoogleToken_` valida `iss` + `exp` explícito antes de email/aud (Sprint 5)
 
-### Próximo sprint recomendado: Sprint 6 — Deudas y Metas (solo frontend)
+### Próximo sprint recomendado: Sprint 7 — Charts responsive + a11y avanzada
 ```
 Roadmap activo: docs/Roadmap-Implementacion-2026-06-03.md
-Sprint 5: ✅ COMPLETO (código). Pendiente deploy manual: Auth.gs, Import.gs.
-Sprint 6: avgRate multi-moneda · amortize() con minPayment% · goalForecast repartido · savingsAvg parcial · sameMonth normalizado.
-Sprint 6 es solo frontend — no requiere deploy de backend.
+Sprint 6: ✅ COMPLETO — no requiere deploy.
+Sprint 7: labels eje X decimados/rotados · tabla sr-only por serie · bottom-nav móvil "Más".
+Sprint 7 es solo frontend — no requiere deploy de backend.
 ```
 
 ### Archivos críticos
