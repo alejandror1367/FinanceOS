@@ -33,7 +33,7 @@ SESIÓN NOCHE (06d2c4c):
 - PDF patrimonial corregido: "Sin deudas" → muestra CC + liabilities; accountsValue excluye investment y CC
 - Nuevo selector: categoryTrends(s, n, topN)
 
-SPRINT 5 — CÓDIGO COMPLETO, PENDIENTE DEPLOY (7242f95):
+SPRINT 5 — COMPLETO Y DESPLEGADO (7242f95):
 - SEC-002/TD-51 ✅: Auth.gs valida iss ∈ {accounts.google.com, https://…} y exp > now
 - SEC-006/TD-09 ✅: logAudit_('AUTH_DENIED', 'Auth', null, email) en accesos denegados
 - SEC-001/TD-50 ✅: apiClient.js usa siempre POST — idToken en body, nunca en URL
@@ -41,8 +41,7 @@ SPRINT 5 — CÓDIGO COMPLETO, PENDIENTE DEPLOY (7242f95):
 - SEC-005 ✅: Import.gs trunca fileContent a 40k chars antes de enviar a Groq
 
 PENDIENTES EN ORDEN:
-1. DEPLOY BACKEND Sprint 5 (Auth.gs + Import.gs) — acción manual del dueño en Apps Script
-2. Sprint 6 (deudas/metas, solo frontend) — NO requiere deploy:
+1. Sprint 6 (deudas/metas, solo frontend) — NO requiere deploy:
    avgRate multi-moneda · amortize() con minPayment% · goalForecast repartido ·
    savingsAvg solo meses con actividad · sameMonth normalizado a YYYY-MM
 3. Sprint 7 (charts responsive + a11y avanzada) — NO requiere deploy
@@ -57,7 +56,6 @@ VERIFICACIONES PENDIENTES EN VIVO (happy path autenticado con datos reales):
 
 RIESGOS ABIERTOS:
 - Bootstrap limita a 24m de transacciones (intencional, verificar impacto)
-- Sprint 5 en producción hasta deploy de Auth.gs (código corregido, backend aún sin desplegar)
 
 FORMA DE TRABAJO: fases pequeñas y verificables · explicar qué/por qué ·
 correr node --test tests/selectors.test.js tras cada cambio de selector (75/75 base) ·

@@ -678,10 +678,8 @@ commit: e6b3c77 · rama: main · SW: v0.2.43 · config.version: 0.2.43 · tests:
 - **Sesión 2026-06-03 (tarde):** Sprint 2 (ventas parciales + CDT) + Sprint 3 (WCAG AA) + fix FIN-014 (doble conteo CC) + Sprint 4 (backend perf + sync)
 - **Sesión 2026-06-03 (noche):** Analítica reestructurada (identidad propia, sin duplicados Dashboard) + fix PDF patrimonial (CC en pasivos, accountsValue correcto)
 
-### Deploys pendientes (Sprint 5)
-⚠ **`Auth.gs`** — iss/exp validation + logAudit_ en accesos denegados (SEC-002, SEC-006)
-⚠ **`Import.gs`** — truncar fileContent a 40k chars antes de Groq (SEC-005)
-⚠ **`Code.gs`** ya acepta reads vía POST sin cambios, pero re-deploy confirma estado.
+### Sin deploys pendientes
+✅ Sprint 5 desplegado por el dueño: `Auth.gs` (iss/exp + logAudit_) + `Import.gs` (truncar fileContent).
 
 ### Arquitectura actual
 ```
@@ -709,7 +707,7 @@ Flujo: `Views → Services → Store → Views` (never direct to net/IndexedDB f
 
 ### Riesgos abiertos
 - `listTransactions_` ahora ventaneada a 24m — histórico más antiguo no carga en bootstrap (intencional, por confirmar impacto)
-- TD-50/51 ✅ cerrados en código (Sprint 5 · `7242f95`); **pendientes de deploy backend** (`Auth.gs`, `Import.gs`)
+- TD-50/51 ✅ cerrados y desplegados (Sprint 5 · `7242f95`)
 
 ### Decisiones arquitectónicas importantes
 - `totalLiabilities` excluye liabilities `type=credit_card` (cubiertas por cuentas CC) — FIN-014
