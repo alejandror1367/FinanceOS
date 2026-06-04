@@ -718,7 +718,9 @@ export function renderInvestments() {
     totRow.appendChild(el('td', { class: 'text-right tabular text-secondary' }, ['100%']));
     tbody.appendChild(totRow);
     tbl.appendChild(tbody);
-    summaryCard.appendChild(tbl);
+    const tblWrap = el('div', { class: 'inv-summary-wrap' });
+    tblWrap.appendChild(tbl);
+    summaryCard.appendChild(tblWrap);
 
     if (Object.keys(fxRates).length) {
       const note = Object.entries(fxRates).map(([c, r]) => `1 ${c} = ${formatMoney(r, 'COP')}`).join('  ·  ');

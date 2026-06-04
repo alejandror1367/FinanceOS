@@ -84,7 +84,9 @@ function projectionCard(debtList, cur) {
     tbody.appendChild(tr);
   });
   tbl.appendChild(tbody);
-  card.appendChild(tbl);
+  const tblWrap = el('div', { class: 'inv-summary-wrap' });
+  tblWrap.appendChild(tbl);
+  card.appendChild(tblWrap);
 
   const footer = el('div', { class: 'stack', style: 'margin-top:var(--space-3);gap:var(--space-2)' });
 

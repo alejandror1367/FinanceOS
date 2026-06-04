@@ -201,8 +201,8 @@ export function renderToday() {
           ]),
         ]),
         kpis,
-        healthCard,
-        paraHoyCard,
+        el('div', { class: 'section' }, [healthCard]),
+        el('div', { class: 'section' }, [paraHoyCard]),
         el('div', { class: 'grid grid--2 section' }, [
           recentCard,
           el('div', { class: 'stack' }, [upcomingCard, goalsCard]),

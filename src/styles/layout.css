@@ -127,6 +127,9 @@
   .content { padding: var(--space-6) var(--space-4) calc(var(--space-16) + 56px); }
   .topbar { padding: 0 var(--space-4); }
 
+  /* QA-001/005: el botón CTA del header no cabe junto al título en 375px — wrappea */
+  .page-header .row-flex.between { flex-wrap: wrap; gap: var(--space-2); }
+
   .bottom-nav {
     display: flex; position: fixed; left: 0; right: 0; bottom: 0;
     height: 60px; padding: 0 var(--space-2);
