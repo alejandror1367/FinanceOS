@@ -49,7 +49,8 @@ export const selectors = {
     const sum = s.investments.filter((i) => !i.isDeleted && !i.soldDate).reduce((acc, i) => {
       const lp    = priceService.priceFor(i.symbol);
       const price = lp?.price || i.currentPrice || 0;
-      const native = (i.quantity || 0) * price;
+      // Fondos FIC almacenan el valor total de la posición en currentValue (no qty×price).
+      const native = i.currentValue || ((i.quantity || 0) * price);
       if (!native) return acc;
       const cur = i.currency || base;
       if (cur === base) return acc + native;
