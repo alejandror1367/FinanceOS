@@ -23,7 +23,7 @@ Centraliza: patrimonio neto, presupuestos, flujo de caja, inversiones, metas, de
 | PWA instalada en celular | ✅ Funcionando |
 | Google OAuth | ✅ Activo (`patitosalmir@gmail.com` + `alejandrorr1367@gmail.com`) |
 | Backend Apps Script | ✅ Desplegado y verificado en producción |
-| Tests financieros | ✅ **75/75** pasando (15 suites) |
+| Tests financieros | ✅ **97/97** pasando (20 suites) |
 | Módulo Import | ✅ Completamente funcional (BUG-P0-1/P1-1/P1-2/P1-3 corregidos) |
 | Backend patrimonio neto | ✅ CC incluida como pasivo en `computeNetWorth_` (BUG-P0-2, desplegado) |
 | Snapshots de patrimonio | ✅ Crear · eliminar (soft delete) · masivo · outliers — **eliminar arreglado** (sesión 06-03) |
@@ -36,7 +36,10 @@ Centraliza: patrimonio neto, presupuestos, flujo de caja, inversiones, metas, de
 | Sprint 8 avanzado     | ✅ XIRR+CAGR (selectors) · roundMoney en _shiftBalance · fix docs Groq · comentario getDb_ |
 | Sprint 9 QA + v1.0   | ✅ QA Playwright 15/15 PASS · proyección presupuesto suavizada · validación solapamiento |
 | Verificación en vivo | ✅ Playwright: 14 rutas sin errores JS · Sprint 5/6 confirmados |
-| Pendiente | Sin sprint asignado. Bugs P3 (TD-36/TD-37) + ver §18 |
+| Fix auto-refresh precios (`app.js`) | ✅ Corregido — `700ba60` |
+| Alpaca API (`Quotes.gs`) | ✅ Implementado y desplegado — `527492b` |
+| Secciones desplegables (Inversiones) | ✅ Implementado — `843fed3` |
+| Pendiente | Simulador FIRE · Reportes Groq · Verificaciones en vivo |
 
 ---
 
@@ -486,21 +489,21 @@ HEAD pasó de `75eacca` a **`b870d6c`**. SW `v0.2.10 → v0.2.13`. Tests `33 →
 ```
 Rama:    main
 Remote:  https://github.com/alejandror1367/FinanceOS.git
-HEAD:    700ba60  fix(prices): corregir backgroundRefreshPrices — guardia isStale + parser BE-003
-SW:      v0.2.64  (sincronizado con config.version)
+HEAD:    843fed3  feat(investments): secciones desplegables con estado persistente
+SW:      v0.2.65  (sincronizado con config.version)
 Status:  limpio · sincronizado con origin/main (push 0 0)
 ```
 
 ### Commits recientes
 ```
+843fed3 feat(investments): secciones desplegables con estado persistente
+527492b feat(quotes): integrar Alpaca Markets como fuente primaria para equity US/ETF/crypto
+76898d1 docs: handoff 2026-06-04 — fix auto-refresh precios completado
 700ba60 fix(prices): corregir backgroundRefreshPrices — guardia isStale + parser BE-003
 be2901d chore(agents): documentation-writer especializado + handoff gate obligatorio
 c3ec5fc docs: handoff 2026-06-04 — análisis IA + Alpaca + 2 bugs auto-refresh identificados
 912c7ba fix(mobile): pulir layout movil — btn--outline, size, scroll tablas, rows
 c38e38c fix(mobile): corregir truncación y superposición en filas — cuentas, tx, deudas
-66e5be1 fix(mobile): corregir layout movil 375px — botones, tablas, espaciado
-012d019 fix(dashboard): QA-001 — investmentsValue incluye fondos FIC (currentValue)
-9690e7c docs: Sprint 9 completo — QA PASS 15/15, presupuestos v1.0
 ```
 
 ---
@@ -582,16 +585,16 @@ grep "version" src/core/config.js   # debe coincidir con sw.js VERSION (v0.2.63)
 
 | Tarea | Tipo | Complejidad | Deploy |
 |---|---|---|---|
-| ✅ **Fix auto-refresh precios** (`app.js` 2 bugs) — `700ba60` | Bug fix | Bajo (~5 líneas) | No |
-| **Integración Alpaca API** (`Quotes.gs`) | Feature | Medio (~60 líneas) | **Sí** |
+| ✅ **Fix auto-refresh precios** (`app.js` 2 bugs) — `700ba60` | Bug fix | Bajo | No |
+| ✅ **Integración Alpaca API** (`Quotes.gs`) — `527492b` | Feature | Medio | **Desplegado** |
+| ✅ **Secciones desplegables** (Inversiones) — `843fed3` | UX | Bajo | No |
 | **Simulador FIRE** (nueva ruta `#/fire`) | Feature | Medio (~300 líneas) | No |
 | **Reportes automáticos Groq** (trigger AS) | Feature | Medio (~80 líneas) | **Sí** |
-| **QA-001**: FIC sin precio vivo → $0 en Dashboard | Bug fix | Bajo | No |
 | **QA-003**: Migrar a FedCM (OAuth) | Mejora | Alto | **Sí** |
 
 **Orden recomendado:**
-1. Fix `app.js` bugs (impacto inmediato, bajo riesgo, sin deploy)
-2. Alpaca + deploy `Quotes.gs` (fiabilidad de precios, base para lo demás)
+1. ~~Fix `app.js` bugs~~ ✅
+2. ~~Alpaca + deploy `Quotes.gs`~~ ✅
 3. Simulador FIRE (alto ROI, cero costo, cero IA)
 4. Reportes automáticos Groq
 
@@ -667,7 +670,7 @@ commit: e6b3c77 · rama: main · SW: v0.2.43 · config.version: 0.2.43 · tests:
 
 > Leer esto antes que cualquier otra sección. Máximo 100 líneas. Fuente de verdad para retomar de inmediato.
 
-**HEAD:** `700ba60` · **SW/config.version:** `v0.2.64` · **Tests:** 97/97 (20 suites) · **Rama:** main · **Sync:** origin/main al día
+**HEAD:** `843fed3` · **SW/config.version:** `v0.2.65` · **Tests:** 97/97 (20 suites) · **Rama:** main · **Sync:** origin/main al día
 
 > **MCP:** `.mcp.json` versionado con **playwright** + **context7** (scope de proyecto).
 > Tras `git pull`: **aprobar** ambos y **reiniciar Claude Code** (las tools MCP se fijan al arrancar).
@@ -678,10 +681,11 @@ commit: e6b3c77 · rama: main · SW: v0.2.43 · config.version: 0.2.43 · tests:
 - **Tests:** **97/97** en `tests/selectors.test.js` — 20 suites
 - **Roadmap:** 9/9 sprints completados · QA Playwright 15/15 PASS
 - **Sesión 2026-06-04 (mañana):** análisis/planificación IA + Alpaca + diagnóstico 2 bugs
-- **Sesión 2026-06-04 (tarde):** fix auto-refresh precios (`700ba60`) — 2 bugs corregidos
+- **Sesión 2026-06-04 (tarde-1):** fix auto-refresh precios (`700ba60`) + Alpaca API (`527492b`)
+- **Sesión 2026-06-04 (tarde-2):** secciones desplegables en Inversiones (`843fed3`)
 
 ### Sin deploys pendientes
-Todo desplegado. No hay .gs pendiente de subir.
+Todo desplegado. `Quotes.gs` con Alpaca ya desplegado por el dueño.
 
 ### Arquitectura actual
 ```
@@ -693,7 +697,7 @@ Flujo: `Views → Services → Store → Views` (never direct to net/IndexedDB f
 ### Funcionalidades implementadas (completas)
 - Dashboard · Hoy · Transacciones · Cuentas · Presupuestos · Recurrentes
 - Patrimonio (CC como filas reales en Pasivos, sin doble conteo, snapshots)
-- Inversiones (ventas parciales/totales, CDT capitalizado, XIRR/CAGR, comisión/retención)
+- Inversiones (ventas parciales/totales, CDT capitalizado, XIRR/CAGR, comisión/retención, **secciones desplegables**, **Alpaca API**)
 - Metas · Deudas (Snowball/Avalanche, amortización) · Diario · Ajustes
 - Analítica: flujo de caja 3 series + selector 3/6/12m · tendencias top5 · insights históricos
 - Exportaciones · Command Palette (⌘K) · Validación inline · Import con Groq
@@ -706,16 +710,12 @@ Flujo: `Views → Services → Store → Views` (never direct to net/IndexedDB f
 - **QA-001:** Dashboard KPI "Inversiones" muestra $0 para FIC sin precio vivo en Yahoo
 - **QA-002:** Precios MU/VUG stale en primera carga (se resuelve con "Actualizar precios" — expected)
 
-### Pendientes identificados sesión 2026-06-04 (sin sprint asignado)
-1. ✅ **Fix auto-refresh de precios** en `src/core/app.js:backgroundRefreshPrices()` — `700ba60`
-   - Bug A: guardia `!priceService.isStale` eliminada → precios siempre refrescan al arrancar
-   - Bug B: parser corregido para `{ quotes, fxRates }` del backend (patrón de investments.js)
-2. **Integración Alpaca API** en `backend/Quotes.gs` (reemplaza Yahoo para acciones US/ETFs/crypto)
-   - US symbols sin punto → `fetchAlpaca_()` batch; BVC/.CL + FX → `fetchYahoo_()` (como hoy)
-   - Claves: `ALPACA_KEY_ID` + `ALPACA_SECRET_KEY` en Script Properties (no en repo)
-   - Requiere deploy de Quotes.gs tras implementar
-3. **Simulador FIRE** — nueva ruta `#/fire` (pura aritmética, sin IA, alto ROI)
-4. **Reportes automáticos con Groq** — Apps Script time trigger mensual → resumen en lenguaje natural
+### Pendientes identificados sesión 2026-06-04
+1. ✅ **Fix auto-refresh de precios** — `700ba60`
+2. ✅ **Alpaca API** en `backend/Quotes.gs` — `527492b` · desplegado · verificado en producción
+3. ✅ **Secciones desplegables** en Inversiones — `843fed3` · estado en localStorage
+4. **Simulador FIRE** — nueva ruta `#/fire` (pura aritmética, sin IA, alto ROI)
+5. **Reportes automáticos con Groq** — Apps Script time trigger mensual → resumen en lenguaje natural
 
 ### Riesgos abiertos
 - `getBootstrap_` limita transactions a ventana 24 meses (intencional — confirmar impacto en datos históricos reales)
@@ -734,9 +734,10 @@ src/store/selectors.js         — Lógica financiera + XIRR/CAGR + categoryTren
 src/services/priceService.js   — Registro global precios (TTL 15min, localStorage)
 src/services/dataService.js    — reconcileAndHydrate, _recalcAccountBalance
 src/services/syncEngine.js     — isTransient, flushBatch
-backend/Quotes.gs              — Yahoo Finance (candidato a integrar Alpaca)
+backend/Quotes.gs              — Alpaca (primario) + Yahoo (FX/BVC/fallback) — desplegado
+src/views/investments.js       — secciones desplegables (_collapsed módulo-level)
+src/utils/icons.js             — chevronDown añadido
 tests/selectors.test.js        — 97/97 tests (20 suites)
-docs/Live-Artifacts-Prompt.md  — Análisis completo integraciones IA (sesión 2026-06-04)
 ```
 
 ---
@@ -771,6 +772,55 @@ Sesión de análisis estratégico — sin cambios de código. Se evaluaron integ
 ```
 (ninguno — sesión de análisis sin código)
 ```
+
+---
+
+## Cambios realizados en sesión 2026-06-04 (tarde — Alpaca + fixes + UX Inversiones)
+
+### Resumen
+Sesión de implementación: 3 features/fixes completados y pusheados. SW v0.2.63 → v0.2.65.
+
+### Bugs corregidos
+| Bug | Commit | Descripción |
+|-----|--------|-------------|
+| Auto-refresh bloqueado | `700ba60` | Eliminado `!priceService.isStale` — precios siempre refrescan al arrancar |
+| Parser `{ quotes, fxRates }` | `700ba60` | `backgroundRefreshPrices` iteraba objeto raíz; corregido con patrón de investments.js |
+
+### Mejoras backend
+- **Alpaca API** (`527492b`): `Quotes.gs` integra Alpaca Markets como fuente primaria para acciones US/ETFs/crypto.
+  - `isUsEquity_()` enruta sin `.CL` ni `=X` → Alpaca; resto → Yahoo.
+  - `fetchAlpacaSnapshots_()` hace ≤2 requests batch (equity + crypto) vs N individuales.
+  - Fallback automático a Yahoo si Alpaca falla para algún ticker.
+  - Claves en Script Properties: `ALPACA_KEY_ID` / `ALPACA_SECRET_KEY` — desplegado y verificado en producción.
+
+### Mejoras UX/UI
+- **Secciones desplegables** (`843fed3`): cada sección de Inversiones (Acciones y ETFs, Criptomonedas, FIC, CDT, Operaciones cerradas) tiene header clicable con chevron animado.
+  - Estado persistido en `localStorage` (`financeOS:inv:collapsed`) — sobrevive recargas y re-renders reactivos.
+  - "Operaciones cerradas" colapsada por defecto (info secundaria).
+  - `aria-expanded` en cada header.
+  - `chevronDown` añadido a `icons.js`.
+
+### Decisiones arquitectónicas
+- Estado de colapso en variable **módulo-level** (`_collapsed` Set) fuera de `renderInvestments` — única forma de sobrevivir a los re-renders reactivos del store sin perder el estado visual.
+
+### Archivos modificados
+- `src/core/app.js` — backgroundRefreshPrices corregido
+- `backend/Quotes.gs` — Alpaca integrado
+- `src/views/investments.js` — secciones desplegables
+- `src/utils/icons.js` — chevronDown
+- `src/styles/components.css` — estilos toggle
+
+### Commits relevantes
+```
+843fed3 feat(investments): secciones desplegables con estado persistente
+527492b feat(quotes): integrar Alpaca Markets como fuente primaria para equity US/ETF/crypto
+700ba60 fix(prices): corregir backgroundRefreshPrices — guardia isStale + parser BE-003
+```
+
+### Estado posterior a esta sesión
+- Fix auto-refresh ✅ · Alpaca API ✅ (desplegado) · Secciones desplegables ✅
+- Simulador FIRE 🔴 pendiente · Reportes Groq 🔴 pendiente
+- Verificaciones en vivo 🟡 pendientes (venta parcial/total, getBootstrap 24m, Analítica tendencias)
 
 ---
 
@@ -1084,48 +1134,43 @@ Tras git pull deben APROBARSE y REINICIARSE Claude Code: las tools MCP se fijan 
 PROYECTO: FinanceOS — PWA financiera personal y privada de Alejo.
 Repo: https://github.com/alejandror1367/FinanceOS (rama main).
 Prod: https://alejandror1367.github.io/FinanceOS/
-HEAD: 700ba60 · SW v0.2.64 · config.version 0.2.64 · Tests 97/97 (20 suites)
+HEAD: 843fed3 · SW v0.2.65 · config.version 0.2.65 · Tests 97/97 (20 suites)
 
 INVARIANTES (ver CLAUDE.md): JS ES Modules sin build step · sin frameworks/bundlers ·
 cero deps npm en runtime · frontend abstraído tras src/services/ · Apps Script +
 Google Sheets (13 hojas) + GitHub Pages + OAuth de Google · offline-first.
 
-HECHO Y DESPLEGADO (roadmap completo + price fix):
-- Sprints 1–9 completos · QA Playwright 15/15 PASS
-- Fix mobile layout + QA-001 Dashboard KPI FIC (912c7ba/012d019)
-- Fix auto-refresh precios (700ba60): guardia isStale eliminada + parser BE-003 corregido
+HECHO Y DESPLEGADO (sesión 2026-06-04 completa):
+- Sprints 1–9 · QA Playwright 15/15 PASS · mobile fixes · QA-001 fix
+- Fix auto-refresh precios (700ba60): guardia isStale + parser BE-003 corregidos
+- Alpaca API (527492b): Quotes.gs desplegado y verificado en producción
+- Secciones desplegables en Inversiones (843fed3): estado en localStorage
 
 PENDIENTES EN ORDEN:
 
-1. INTEGRACIÓN ALPACA API (backend/Quotes.gs — requiere deploy):
-   - Alpaca free tier: acciones US/ETFs/crypto (sin tarjeta)
-   - fetchAlpaca_() batch: GET data.alpaca.markets/v2/stocks/snapshots?symbols=...
-   - Headers: APCA-API-KEY-ID + APCA-API-SECRET-KEY (Script Properties, no en repo)
-   - isUsSymbol_(): sin punto ni =X → Alpaca; con .CL o =X → Yahoo (igual que hoy)
-   - Crypto: data.alpaca.markets/v1beta3/crypto/snapshots?symbols=BTC/USD
-   - Formato salida no cambia: { quotes, fxRates }
+1. SIMULADOR FIRE (nueva ruta #/fire — sin deploy):
+   - Pura aritmética, sin IA · nueva vista views/fire.js + ruta en routes.js
+   - Inputs: tasa de ahorro actual (calculada), patrimonio actual, gastos anuales
+   - Usa selectores existentes: monthlySavings, investmentsValue, monthlyExpense
+   - Output: años hasta FIRE, patrimonio objetivo (25× gastos), tabla de sensibilidad
 
-2. SIMULADOR FIRE (nueva ruta #/fire — sin deploy):
-   - Pura aritmética, sin IA · nueva vista views/fire.js + entrada en routes.js
-   - Usa selectores existentes: ingresos, gastos, investmentsValue
-   - Responde: tasa de ahorro, años hasta FIRE, patrimonio objetivo, sensibilidad
-
-3. REPORTES AUTOMÁTICOS GROQ (backend/Insights.gs — requiere deploy):
-   - Time trigger día 1 · lee Sheets → llama Groq → escribe hoja Insights
+2. REPORTES AUTOMÁTICOS GROQ (nuevo backend/Insights.gs — requiere deploy):
+   - Apps Script time trigger día 1 de cada mes
+   - Lee aggregados de Sheets → llama Groq (llama-3.1-8b-instant, ya en Import.gs)
+   - Escribe resumen en nueva hoja Insights
    - Frontend: card "Resumen del mes" en Dashboard/Analítica
 
 BUGS ABIERTOS (no bloquean):
-- QA-003 (P2): FedCM warning GIS — migrar cuando Google lo fuerce
+- QA-003 (P2): FedCM warning en GIS — migrar cuando Google lo fuerce
 - QA-002 (P3): precios stale primera carga — expected behavior
 
 VERIFICACIONES PENDIENTES EN VIVO:
 - Flujo venta parcial/total en UI Inversiones
 - getBootstrap ventana 24m no rompe historial más antiguo
 - Analítica: tabla tendencias y selector de período en producción
-- backgroundRefreshPrices fix verificado con datos reales en producción
 
 RIESGOS ABIERTOS:
-- Bootstrap limita a 24m de transacciones (intencional, confirmar impacto)
+- Bootstrap limita a 24m de transacciones (intencional, confirmar impacto en datos históricos)
 
 FORMA DE TRABAJO: fases pequeñas y verificables · explicar qué/por qué ·
 correr node --test tests/selectors.test.js tras cada cambio de selector (97/97 base) ·
@@ -1136,4 +1181,4 @@ Empezar con: git log --oneline -5 · git status · node --test tests/selectors.t
 
 ---
 
-*Actualizado el 2026-06-04 por Claude Sonnet 4.6: sesión de análisis IA + Alpaca. HEAD 912c7ba · v0.2.63 · 97/97 tests. Sin deploys pendientes.*
+*Actualizado el 2026-06-04 por Claude Sonnet 4.6: Alpaca API + fix auto-refresh + secciones desplegables. HEAD 843fed3 · v0.2.65 · 97/97 tests.*

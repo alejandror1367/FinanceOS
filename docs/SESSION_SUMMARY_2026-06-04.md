@@ -1,64 +1,65 @@
 # Resumen de sesión — 2026-06-04
+*(actualizado al cierre del día — incluye sesión de mañana y tarde)*
 
 ## Resumen ejecutivo
 
-Sesión de análisis estratégico y planificación. No se escribió código. Se evaluaron integraciones de IA para FinanceOS, se diseñó un roadmap en 4 fases y se diagnosticaron dos bugs en el auto-refresh de precios que explican por qué los precios no se actualizan automáticamente al abrir la app.
+Sesión completa en dos bloques. La mañana fue de análisis estratégico (IA + Alpaca, sin código). La tarde fue de implementación pura: se corrigieron 2 bugs críticos en el auto-refresh de precios, se integró Alpaca Markets como fuente primaria para cotizaciones US (desplegado y verificado), y se añadieron secciones desplegables a Inversiones para mejor organización visual en desktop y mobile. SW v0.2.63 → v0.2.65.
 
-## Análisis realizado
+---
 
-### Claude Artifacts / Live Artifacts
-- Los Artifacts son iframes sandboxeados en claude.ai — no pueden hacer OAuth con Google.
-- Uso práctico inmediato sin código: Export JSON → pegar en Claude chat → análisis ad-hoc.
-- No son una integración arquitectónica directa con FinanceOS.
+## Sesión de mañana — análisis estratégico (sin código)
 
-### Roadmap IA en 4 fases
-| Fase | Contenido | Costo |
-|---|---|---|
-| 1 | Simulador FIRE + insights determinísticos | $0 |
-| 2 | Reportes automáticos Groq (trigger AS mensual) | $0 |
-| 3 | Chat IA con contexto financiero (proxy AS → Groq) | $0 |
-| 4 | Agente autónomo de inversiones | $0–$2/mes |
+- Evaluación de Claude Artifacts / Live Artifacts para integración directa (conclusión: no viable por OAuth en iframes sandboxeados).
+- Roadmap IA en 4 fases: FIRE + insights determinísticos → Groq mensual → chat IA → agente autónomo.
+- Diagnóstico de 2 bugs en `backgroundRefreshPrices()` en `app.js`.
+- Propuesta de Alpaca API como fuente primaria para acciones US.
 
-### Agente de inversiones (detalle)
-- 60% del valor es aritmética pura: alertas de concentración, CDTs próximos, comparación benchmark
-- Solo la narrativa necesita IA (Groq, gratis)
-- Solo sugiere, nunca ejecuta — siempre acción manual del usuario
+---
 
-## Bugs diagnosticados (pendientes de fix)
+## Sesión de tarde — implementación
 
-| Bug | Archivo | Impacto |
-|---|---|---|
-| **A**: guardia `!priceService.isStale` en `backgroundRefreshPrices()` | `src/core/app.js:112` | Al reabrir la app en <15 min, los precios no se actualizan automáticamente |
-| **B**: parser usa formato viejo de respuesta | `src/core/app.js:121-124` | `prices.quotes = {...}` en lugar de `prices.AAPL = {...}` — el Dashboard puede ver valores incorrectos en arranque |
+### Cambios implementados
 
-## Propuesta Alpaca API
+| Cambio | Commit | Impacto |
+|--------|--------|---------|
+| Fix `backgroundRefreshPrices` — guardia isStale | `700ba60` | Precios siempre refrescan al arrancar, no solo tras TTL de 15 min |
+| Fix parser `{ quotes, fxRates }` en app.js | `700ba60` | Elimina escritura de precios corruptos en cada arranque |
+| Alpaca API en `Quotes.gs` | `527492b` | Fuente fiable para US/ETFs/crypto; batch vs N requests; fallback Yahoo |
+| Secciones desplegables en Inversiones | `843fed3` | Reducción sobrecarga visual; estado persistido en localStorage |
+| `chevronDown` en `icons.js` | `843fed3` | Icono reutilizable para toggles |
 
-**Por qué:** Yahoo Finance es scraping no oficial, falla ~10-15%. Alpaca es REST API oficial, free tier, más fiable.
-
-**Arquitectura:**
-- US symbols → `fetchAlpaca_()` en Quotes.gs (batch, un solo request para N tickers)
-- BVC Colombia (.CL), FX (USDCOP=X) → `fetchYahoo_()` (igual que hoy)
-- Crypto → Alpaca endpoint `v1beta3/crypto/snapshots`
-- Claves en Script Properties: `ALPACA_KEY_ID` + `ALPACA_SECRET_KEY`
-- Formato de salida del backend no cambia
-
-## Archivos nuevos esta sesión
-- `docs/Live-Artifacts-Prompt.md` — análisis completo (prompt de análisis + respuesta elaborada)
-- `docs/SESSION_SUMMARY_2026-06-04.md` — este archivo
-
-## Commits realizados
+### Archivos modificados
 ```
-(docs): handoff 2026-06-04 — análisis IA + Alpaca + 2 bugs auto-refresh
+src/core/app.js               — backgroundRefreshPrices: guardia + parser
+backend/Quotes.gs             — Alpaca: isUsEquity_, fetchAlpacaSnapshots_, snapshotToQuote_
+src/views/investments.js      — secciones desplegables (_collapsed módulo-level)
+src/utils/icons.js            — chevronDown
+src/styles/components.css     — .inv-section-head--toggle / .inv-section-chevron
 ```
 
-## Próximas 5 tareas prioritarias (específicas y accionables)
+### Decisiones arquitectónicas
+- **`_collapsed` módulo-level**: fuera de `renderInvestments()` para sobrevivir re-renders reactivos del store — única forma de persistir estado visual sin perderlo en cada actualización de precios.
+- **Alpaca con fallback**: si Alpaca falla para un ticker, llama Yahoo para ese símbolo específico.
+- **Claves en Script Properties**: `ALPACA_KEY_ID` / `ALPACA_SECRET_KEY` nunca en repo.
 
-1. **Fix `src/core/app.js:backgroundRefreshPrices()`** — eliminar `|| !priceService.isStale` en línea 112 + fix parser líneas 121-124 para manejar `{ quotes, fxRates }`. Sin deploy. Tests deben seguir en 97/97.
+---
 
-2. **Implementar `fetchAlpaca_()` en `backend/Quotes.gs`** — función que hace batch GET a `data.alpaca.markets/v2/stocks/snapshots`, detecta US symbols con `isUsSymbol_()` y rutea a Yahoo los demás. Requiere que el usuario tenga claves Alpaca en Script Properties y haga deploy.
+## Trabajo pendiente al cierre
 
-3. **Nueva ruta `#/fire` — Simulador FIRE** — vista `views/fire.js` con: tasa de ahorro actual (usa selectores), input de tasa de retorno esperada, proyección de años hasta independence financiera (regla del 4%), gráfico de progresión. Sin IA, sin deploy.
+| Tarea | Tipo | Deploy |
+|-------|------|--------|
+| Simulador FIRE (`#/fire`) | Feature | No |
+| Reportes automáticos Groq (`Insights.gs`) | Feature | Sí |
+| Verificar venta parcial/total UI Inversiones | QA en vivo | — |
+| Verificar getBootstrap 24m con datos reales | QA en vivo | — |
+| Analítica: tendencias + selector período | QA en vivo | — |
 
-4. **Fix QA-001** — Dashboard KPI "Inversiones" muestra $0 para FIC (fondos sin precio en Yahoo). `investmentsValue()` en selectors.js excluye posiciones sin precio; los FIC deben usar `currentValue` del record en lugar de `qty × price`. Solo frontend.
+---
 
-5. **`backend/Insights.gs` + trigger mensual** — nuevo archivo .gs con función que: lee datos de Sheets, construye prompt financiero, llama a Groq API (`GROQ_API_KEY` en Script Properties), escribe en hoja `Insights`. Frontend añade card en Dashboard. Requiere deploy.
+## Próximas 5 tareas prioritarias
+
+1. **Simulador FIRE** — `views/fire.js` + `routes.js`: años hasta FIRE, patrimonio objetivo (25× gastos), tabla de sensibilidad. Sin deploy, alto ROI visual.
+2. **Verificar venta parcial/total** en UI Inversiones con datos reales en producción.
+3. **Verificar Analítica** — tabla tendencias y selector período funcionan en producción.
+4. **Reportes Groq** — `backend/Insights.gs` time trigger día 1 + card Dashboard. Requiere deploy.
+5. **Verificar getBootstrap 24m** — confirmar que la ventana no rompe historial más antiguo.
