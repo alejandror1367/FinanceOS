@@ -283,13 +283,14 @@ export const selectors = {
     const pct = amount ? (consumed / amount) * 100 : 0;
 
     // Proyección al cierre solo para el mes en curso.
+    // TD-36: no proyectar en días 1–3 (datos insuficientes → extrapolación engañosa).
     let projected = consumed;
     const now = new Date();
     const curMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     if (budget.period === 'monthly' && normPeriodKey(budget.periodKey, 7) === curMonthKey) {
       const day = now.getDate();
       const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-      projected = day > 0 ? (consumed / day) * daysInMonth : consumed;
+      projected = day > 3 ? (consumed / day) * daysInMonth : consumed;
     }
     return { amount, consumed, available, pct, projected };
   },

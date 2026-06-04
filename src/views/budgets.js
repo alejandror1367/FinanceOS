@@ -102,6 +102,16 @@ function openBudgetModal({ budget = {}, mode = 'create' }) {
       if (!data.categoryId) return mark('categoryId', 'Selecciona una categoría');
       if (!data.amount || data.amount <= 0) return mark('amount', 'El monto debe ser mayor a cero');
       if (!data.periodKey) return mark('periodKey', 'Indica el periodo');
+      // TD-37: impedir solapamiento (misma categoría + periodo + periodKey).
+      const isMonthly = data.period !== 'annual';
+      const normalizedKey = parsePeriodKey(data.periodKey, isMonthly);
+      const clash = (store.get().budgets || []).find((b) =>
+        b.id !== budget.id &&
+        b.categoryId === data.categoryId &&
+        b.period === data.period &&
+        parsePeriodKey(b.periodKey, isMonthly) === normalizedKey
+      );
+      if (clash) return mark('categoryId', 'Ya existe un presupuesto para esta categoría y periodo');
       return guardedSave(
         () => mode === 'edit' ? dataService.update('budgets', budget.id, data) : dataService.create('budgets', data),
         mode === 'edit' ? 'Presupuesto actualizado' : 'Presupuesto creado',
