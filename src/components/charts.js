@@ -8,13 +8,61 @@ export const CHART_PALETTE = [
   'var(--warning)', 'var(--negative)', 'var(--periwinkle-300)', 'var(--neutral)',
 ];
 
+// FE-011/TD-07: tabla accesible (sr-only) para lectores de pantalla — LineChart
+function buildLineSrTable(labels, series, fmt) {
+  const table = el('table', { class: 'sr-only' });
+  const thead = el('thead');
+  const hRow  = el('tr');
+  hRow.appendChild(el('th', { scope: 'col' }, ['Período']));
+  series.forEach((s) => hRow.appendChild(el('th', { scope: 'col' }, [s.name])));
+  thead.appendChild(hRow);
+  table.appendChild(thead);
+  const tbody = el('tbody');
+  labels.forEach((label, i) => {
+    const row = el('tr');
+    row.appendChild(el('th', { scope: 'row' }, [label]));
+    series.forEach((s) => row.appendChild(el('td', {}, [fmt(s.points[i] ?? 0)])));
+    tbody.appendChild(row);
+  });
+  table.appendChild(tbody);
+  return table;
+}
+
+// FE-011/TD-07: tabla accesible (sr-only) para lectores de pantalla — Donut
+function buildDonutSrTable(segments, total, fmt) {
+  const table = el('table', { class: 'sr-only' });
+  const thead = el('thead');
+  const hRow  = el('tr');
+  ['Categoría', 'Valor', 'Porcentaje'].forEach((h) => hRow.appendChild(el('th', { scope: 'col' }, [h])));
+  thead.appendChild(hRow);
+  table.appendChild(thead);
+  const tbody = el('tbody');
+  segments.forEach((s) => {
+    const row = el('tr');
+    row.appendChild(el('th', { scope: 'row' }, [s.label]));
+    row.appendChild(el('td', {}, [fmt(s.value || 0)]));
+    row.appendChild(el('td', {}, [((s.value || 0) / total * 100).toFixed(1) + '%']));
+    tbody.appendChild(row);
+  });
+  table.appendChild(tbody);
+  return table;
+}
+
 // series: [{ name, color, points: number[] }]. labels: string[].
 // opts: showValues (etiqueta el valor en cada punto), valueFormat(v)->string, ariaLabel (texto alternativo WCAG 1.1.1).
 export function LineChart({ labels = [], series = [], height = 210, showValues = true, valueFormat, ariaLabel } = {}) {
   const W = 640, H = height;
-  const padL = 12, padR = 12, padT = 26, padB = 26;
   const n = labels.length;
   const fmt = valueFormat || ((v) => String(Math.round(v)));
+
+  // FE-005/TD-40: decimación y rotación adaptativa de labels del eje X.
+  // Con n > 6 se rotan para evitar solapamiento; con n > 8 además se deciman.
+  const MAX_X_LABELS = 8;
+  const step = Math.max(1, Math.ceil(n / MAX_X_LABELS));
+  const rotateLabels = n > 6;
+  const padL = 12, padR = 12, padT = 26;
+  const padB = rotateLabels ? 44 : 26; // espacio extra para labels rotadas
+
   const all = series.flatMap((s) => s.points);
   const max = Math.max(1, ...all);
   const min = Math.min(0, ...all);
@@ -45,12 +93,22 @@ export function LineChart({ labels = [], series = [], height = 210, showValues =
     return `<polyline points="${pts}" fill="none" stroke="${s.color}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>${dots}${valueLabels}`;
   }).join('');
 
-  const xlabels = labels.map((l, i) =>
-    `<text x="${x(i).toFixed(1)}" y="${H - 7}" text-anchor="${anchor(i)}" font-size="11" fill="var(--text-tertiary)">${esc(l)}</text>`).join('');
+  // Labels del eje X: decimar cuando step > 1, rotar cuando n > 6
+  const xlabels = labels.map((l, i) => {
+    if (step > 1 && i % step !== 0 && i !== n - 1) return ''; // decimar (siempre pintar el último)
+    const xp = x(i).toFixed(1);
+    if (rotateLabels) {
+      const yp = (H - 10).toFixed(1);
+      return `<text x="${xp}" y="${yp}" text-anchor="end" font-size="11" fill="var(--text-tertiary)" transform="rotate(-35 ${xp} ${yp})">${esc(l)}</text>`;
+    }
+    return `<text x="${xp}" y="${(H - 7).toFixed(1)}" text-anchor="${anchor(i)}" font-size="11" fill="var(--text-tertiary)">${esc(l)}</text>`;
+  }).join('');
 
   const a11yLabel = ariaLabel || (series[0] ? series[0].name : 'Gráfico de líneas');
   const svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(a11yLabel)}" style="height:auto;display:block"><title>${esc(a11yLabel)}</title>${grid}${zeroLine}${paths}${xlabels}</svg>`;
-  return el('div', { class: 'chart', html: svg });
+  const wrapper = el('div', { class: 'chart', html: svg });
+  wrapper.appendChild(buildLineSrTable(labels, series, fmt));
+  return wrapper;
 }
 
 // segments: [{ label, value, color }]
@@ -75,7 +133,9 @@ export function Donut(segments = [], { size = 168, centerTop = '', centerSub = '
     (centerSub ? `<text x="${cx}" y="${cy + 16}" text-anchor="middle" font-size="11" fill="var(--text-secondary)">${centerSub}</text>` : '');
   const a11yLabel = ariaLabel || (segments.length ? 'Distribución: ' + segments.map((s) => s.label).join(', ') : 'Gráfico donut');
   const svg = `<svg viewBox="0 0 168 168" width="${size}" height="${size}" role="img" aria-label="${esc(a11yLabel)}"><title>${esc(a11yLabel)}</title>${arcs}${center}</svg>`;
-  return el('div', { class: 'donut', html: svg });
+  const wrapper = el('div', { class: 'donut', html: svg });
+  wrapper.appendChild(buildDonutSrTable(segments, total, fmt));
+  return wrapper;
 }
 
 // items: [{ label, color, value }]
