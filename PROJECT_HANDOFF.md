@@ -666,7 +666,7 @@ commit: e6b3c77 · rama: main · SW: v0.2.43 · config.version: 0.2.43 · tests:
 
 > Leer esto antes que cualquier otra sección. Máximo 100 líneas. Fuente de verdad para retomar de inmediato.
 
-**HEAD:** `06d2c4c` · **SW/config.version:** `v0.2.53` · **Tests:** 75/75 · **Rama:** main · **Sync:** limpio (pusheado)
+**HEAD:** `7242f95` · **SW/config.version:** `v0.2.54` · **Tests:** 75/75 · **Rama:** main · **Sync:** local (no pusheado)
 
 > **MCP:** `.mcp.json` versionado con **playwright** + **context7** (scope de proyecto).
 > Tras `git pull`: **aprobar** ambos y **reiniciar Claude Code** (las tools MCP se fijan al arrancar).
@@ -678,8 +678,10 @@ commit: e6b3c77 · rama: main · SW: v0.2.43 · config.version: 0.2.43 · tests:
 - **Sesión 2026-06-03 (tarde):** Sprint 2 (ventas parciales + CDT) + Sprint 3 (WCAG AA) + fix FIN-014 (doble conteo CC) + Sprint 4 (backend perf + sync)
 - **Sesión 2026-06-03 (noche):** Analítica reestructurada (identidad propia, sin duplicados Dashboard) + fix PDF patrimonial (CC en pasivos, accountsValue correcto)
 
-### Sin deploys pendientes
-Todos los `.gs` están actualizados en producción.
+### Deploys pendientes (Sprint 5)
+⚠ **`Auth.gs`** — iss/exp validation + logAudit_ en accesos denegados (SEC-002, SEC-006)
+⚠ **`Import.gs`** — truncar fileContent a 40k chars antes de Groq (SEC-005)
+⚠ **`Code.gs`** ya acepta reads vía POST sin cambios, pero re-deploy confirma estado.
 
 ### Arquitectura actual
 ```
@@ -707,7 +709,7 @@ Flujo: `Views → Services → Store → Views` (never direct to net/IndexedDB f
 
 ### Riesgos abiertos
 - `listTransactions_` ahora ventaneada a 24m — histórico más antiguo no carga en bootstrap (intencional, por confirmar impacto)
-- TD-50/51 (seguridad): `id_token` en URL + validación `iss`/`exp` — Sprint 5
+- TD-50/51 ✅ cerrados en código (Sprint 5 · `7242f95`); **pendientes de deploy backend** (`Auth.gs`, `Import.gs`)
 
 ### Decisiones arquitectónicas importantes
 - `totalLiabilities` excluye liabilities `type=credit_card` (cubiertas por cuentas CC) — FIN-014
@@ -717,13 +719,15 @@ Flujo: `Views → Services → Store → Views` (never direct to net/IndexedDB f
 - `repoReadAll_` tiene caché per-request + `repoCacheInvalidate_` tras escrituras (TD-05)
 - `purgeDeleted_` reconstruye hoja en bloque (`clearContent + setValues`) — N→2 ops Sheets
 - `getBootstrap_` limita transactions a ventana 24 meses; `listTransactions_` acepta `since`
+- **SEC-001/TD-50:** `apiClient.js` usa siempre POST — `idToken` en body, nunca en URL (Sprint 5)
+- **SEC-002/TD-51:** `verifyGoogleToken_` valida `iss` + `exp` explícito antes de email/aud (Sprint 5)
 
-### Próximo sprint recomendado: Sprint 5 — Seguridad
+### Próximo sprint recomendado: Sprint 6 — Deudas y Metas (solo frontend)
 ```
 Roadmap activo: docs/Roadmap-Implementacion-2026-06-03.md
-Sprint 5: iss/exp en verifyGoogleToken_, .gitignore secretos, id_token en POST, truncar fileContent IA
-Requiere deploy de backend (Auth.gs, Code.gs).
-Alternativa: Sprint 6 (deudas/metas, solo frontend) si no se quiere deploy inmediato.
+Sprint 5: ✅ COMPLETO (código). Pendiente deploy manual: Auth.gs, Import.gs.
+Sprint 6: avgRate multi-moneda · amortize() con minPayment% · goalForecast repartido · savingsAvg parcial · sameMonth normalizado.
+Sprint 6 es solo frontend — no requiere deploy de backend.
 ```
 
 ### Archivos críticos
