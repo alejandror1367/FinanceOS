@@ -669,7 +669,8 @@ commit: e6b3c77 · rama: main · SW: v0.2.43 · config.version: 0.2.43 · tests:
 
 > Leer esto antes que cualquier otra sección. Máximo 100 líneas. Fuente de verdad para retomar de inmediato.
 
-**HEAD:** `c94a5b5` · **SW/config.version:** `v0.2.57` · **Tests:** 97/97 · **Rama:** main · **Sync:** local (no pusheado)
+**HEAD:** `c94a5b5` · **SW/config.version:** `v0.2.57` · **Tests:** 97/97 · **Rama:** main · **Sync:** local (no pusheado)  
+**Deploy Sprint 8:** ✅ Accounts.gs desplegado por el dueño (adjustBalance_ con roundMoney).
 
 > **MCP:** `.mcp.json` versionado con **playwright** + **context7** (scope de proyecto).
 > Tras `git pull`: **aprobar** ambos y **reiniciar Claude Code** (las tools MCP se fijan al arrancar).

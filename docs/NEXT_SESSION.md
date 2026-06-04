@@ -44,8 +44,7 @@ SPRINT 8 — COMPLETO (c94a5b5). Pendiente deploy Accounts.gs (adjustBalance_ ro
 - SEC-005 ✅: Import.gs trunca fileContent a 40k chars antes de enviar a Groq
 
 PENDIENTES EN ORDEN:
-1. DEPLOY Accounts.gs (adjustBalance_ con roundMoney por divisa) — acción manual
-2. Sprint 9 (QA en vivo Playwright + pulido v1.0):
+1. Sprint 9 (QA en vivo Playwright + pulido v1.0):
    Re-lanzar playwright-reviewer: 15 rutas, responsive, dark/light, console errors.
    Proyección presupuesto suavizada (TD-36) · validación solapamiento (TD-37) ·
    docs a estado v1.0.
