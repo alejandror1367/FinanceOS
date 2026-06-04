@@ -109,7 +109,7 @@ function renderView(route, opts = {}) {
 // --- Precios en vivo: refresh silencioso al arrancar ---
 // Evita que el Dashboard muestre $0 en Inversiones en cold-start.
 async function backgroundRefreshPrices() {
-  if (!CONFIG.api.baseUrl || !priceService.isStale) return;
+  if (!CONFIG.api.baseUrl) return;
   const invs = store.get().investments || [];
   const syms = [...new Set(
     invs.filter((i) => !i.isDeleted && i.symbol && !['cdt', 'fund'].includes(i.assetType))
@@ -118,10 +118,16 @@ async function backgroundRefreshPrices() {
   if (!syms.length) return;
   try {
     const tickers = [...syms, 'USDCOP=X', 'EURCOP=X'].join(',');
-    const quotes = await apiClient.get('getQuotes', { tickers });
-    const prices = {}; const fx = {};
-    Object.entries(quotes || {}).forEach(([k, q]) => { if (q && !q.error) prices[k] = q; });
-    ['USD', 'EUR', 'GBP', 'BRL'].forEach((c) => { if (prices[`${c}COP=X`]?.price) fx[c] = prices[`${c}COP=X`].price; });
+    const resp = await apiClient.get('getQuotes', { tickers });
+    const quotesMap  = (resp && typeof resp.quotes  === 'object') ? resp.quotes  : (resp || {});
+    const fxFromBack = (resp && typeof resp.fxRates === 'object') ? resp.fxRates : {};
+    const prices = {};
+    Object.entries(quotesMap).forEach(([k, q]) => { if (q && !q.error) prices[k] = q; });
+    const fx = {};
+    Object.entries(fxFromBack).forEach(([cur, rate]) => { if (rate) fx[cur] = rate; });
+    if (!Object.keys(fxFromBack).length) {
+      ['USD', 'EUR', 'GBP', 'BRL'].forEach((c) => { if (prices[`${c}COP=X`]?.price) fx[c] = prices[`${c}COP=X`].price; });
+    }
     priceService.update(prices, fx);
     store.set({ _priceRevision: Date.now() });
   } catch (_) {}
