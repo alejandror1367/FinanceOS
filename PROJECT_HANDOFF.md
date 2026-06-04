@@ -486,21 +486,21 @@ HEAD pasó de `75eacca` a **`b870d6c`**. SW `v0.2.10 → v0.2.13`. Tests `33 →
 ```
 Rama:    main
 Remote:  https://github.com/alejandror1367/FinanceOS.git
-HEAD:    912c7ba  fix(mobile): pulir layout movil — btn--outline, size, scroll tablas, rows
-SW:      v0.2.63  (sincronizado con config.version)
+HEAD:    700ba60  fix(prices): corregir backgroundRefreshPrices — guardia isStale + parser BE-003
+SW:      v0.2.64  (sincronizado con config.version)
 Status:  limpio · sincronizado con origin/main (push 0 0)
 ```
 
 ### Commits recientes
 ```
+700ba60 fix(prices): corregir backgroundRefreshPrices — guardia isStale + parser BE-003
+be2901d chore(agents): documentation-writer especializado + handoff gate obligatorio
+c3ec5fc docs: handoff 2026-06-04 — análisis IA + Alpaca + 2 bugs auto-refresh identificados
 912c7ba fix(mobile): pulir layout movil — btn--outline, size, scroll tablas, rows
-1d4ac25 docs: handoff 2026-06-03 (tarde) — Sprints 2+3+4 + FIN-014
-6b45621 perf(backend): Sprint 4 Grupo B-2 — AuditLog archivado y ventana 24m en bootstrap
-056a5ba perf(backend): Sprint 4 Grupo B-1 — caché per-request y purgeDeleted en bloque
-7a4c43e fix(sync): Sprint 4 Grupo A — robustez del motor de sincronización frontend
-cd839e9 fix(networth): FIN-014 evitar doble conteo CC en totalLiabilities y mejorar UI de Pasivos
-b78eff6 fix(a11y): Sprint 3 — accesibilidad JS (3.2, 3.3, 3.5, 3.6)
-7c38299 fix(a11y/ds): Sprint 3 — contraste, tokens y DS (3.1, 3.7, 3.8, 3.9, 3.10)
+c38e38c fix(mobile): corregir truncación y superposición en filas — cuentas, tx, deudas
+66e5be1 fix(mobile): corregir layout movil 375px — botones, tablas, espaciado
+012d019 fix(dashboard): QA-001 — investmentsValue incluye fondos FIC (currentValue)
+9690e7c docs: Sprint 9 completo — QA PASS 15/15, presupuestos v1.0
 ```
 
 ---
@@ -582,7 +582,7 @@ grep "version" src/core/config.js   # debe coincidir con sw.js VERSION (v0.2.63)
 
 | Tarea | Tipo | Complejidad | Deploy |
 |---|---|---|---|
-| **Fix auto-refresh precios** (`app.js` 2 bugs) | Bug fix | Bajo (~5 líneas) | No |
+| ✅ **Fix auto-refresh precios** (`app.js` 2 bugs) — `700ba60` | Bug fix | Bajo (~5 líneas) | No |
 | **Integración Alpaca API** (`Quotes.gs`) | Feature | Medio (~60 líneas) | **Sí** |
 | **Simulador FIRE** (nueva ruta `#/fire`) | Feature | Medio (~300 líneas) | No |
 | **Reportes automáticos Groq** (trigger AS) | Feature | Medio (~80 líneas) | **Sí** |
@@ -667,7 +667,7 @@ commit: e6b3c77 · rama: main · SW: v0.2.43 · config.version: 0.2.43 · tests:
 
 > Leer esto antes que cualquier otra sección. Máximo 100 líneas. Fuente de verdad para retomar de inmediato.
 
-**HEAD:** `912c7ba` · **SW/config.version:** `v0.2.63` · **Tests:** 97/97 (20 suites) · **Rama:** main · **Sync:** origin/main al día
+**HEAD:** `700ba60` · **SW/config.version:** `v0.2.64` · **Tests:** 97/97 (20 suites) · **Rama:** main · **Sync:** origin/main al día
 
 > **MCP:** `.mcp.json` versionado con **playwright** + **context7** (scope de proyecto).
 > Tras `git pull`: **aprobar** ambos y **reiniciar Claude Code** (las tools MCP se fijan al arrancar).
@@ -677,7 +677,8 @@ commit: e6b3c77 · rama: main · SW: v0.2.43 · config.version: 0.2.43 · tests:
 - **Backend Apps Script:** ✅ **Todo desplegado** — Sprints 1–5 + Sprint 8 (XIRR/CAGR) desplegados
 - **Tests:** **97/97** en `tests/selectors.test.js` — 20 suites
 - **Roadmap:** 9/9 sprints completados · QA Playwright 15/15 PASS
-- **Sesión 2026-06-04:** solo análisis/planificación — sin cambios de código
+- **Sesión 2026-06-04 (mañana):** análisis/planificación IA + Alpaca + diagnóstico 2 bugs
+- **Sesión 2026-06-04 (tarde):** fix auto-refresh precios (`700ba60`) — 2 bugs corregidos
 
 ### Sin deploys pendientes
 Todo desplegado. No hay .gs pendiente de subir.
@@ -706,9 +707,9 @@ Flujo: `Views → Services → Store → Views` (never direct to net/IndexedDB f
 - **QA-002:** Precios MU/VUG stale en primera carga (se resuelve con "Actualizar precios" — expected)
 
 ### Pendientes identificados sesión 2026-06-04 (sin sprint asignado)
-1. **Fix auto-refresh de precios** en `src/core/app.js:backgroundRefreshPrices()` — 2 bugs:
-   - Bug A (`app.js:112`): guardia `!priceService.isStale` impide refresh al reabrir app en <15 min
-   - Bug B (`app.js:121-124`): parser usa formato viejo; backend devuelve `{ quotes, fxRates }` pero se itera el objeto raíz → `prices.quotes = {...}` en lugar de `prices.AAPL = {...}`
+1. ✅ **Fix auto-refresh de precios** en `src/core/app.js:backgroundRefreshPrices()` — `700ba60`
+   - Bug A: guardia `!priceService.isStale` eliminada → precios siempre refrescan al arrancar
+   - Bug B: parser corregido para `{ quotes, fxRates }` del backend (patrón de investments.js)
 2. **Integración Alpaca API** en `backend/Quotes.gs` (reemplaza Yahoo para acciones US/ETFs/crypto)
    - US symbols sin punto → `fetchAlpaca_()` batch; BVC/.CL + FX → `fetchYahoo_()` (como hoy)
    - Claves: `ALPACA_KEY_ID` + `ALPACA_SECRET_KEY` en Script Properties (no en repo)
@@ -718,7 +719,6 @@ Flujo: `Views → Services → Store → Views` (never direct to net/IndexedDB f
 
 ### Riesgos abiertos
 - `getBootstrap_` limita transactions a ventana 24 meses (intencional — confirmar impacto en datos históricos reales)
-- `backgroundRefreshPrices()` escribe precios corruptos al priceService en cada arranque (Bug B arriba)
 
 ### Decisiones arquitectónicas importantes
 - `totalLiabilities` excluye `type=credit_card` (FIN-014) · `reconcileAndHydrate` mergea update (TD-47)
@@ -729,7 +729,7 @@ Flujo: `Views → Services → Store → Views` (never direct to net/IndexedDB f
 ### Archivos críticos
 ```
 CLAUDE.md                      — Invariantes absolutos (leer SIEMPRE primero)
-src/core/app.js:111-128        — backgroundRefreshPrices() — 2 bugs pendientes de fix
+src/core/app.js:109-128        — backgroundRefreshPrices() — corregido (700ba60)
 src/store/selectors.js         — Lógica financiera + XIRR/CAGR + categoryTrends + FX
 src/services/priceService.js   — Registro global precios (TTL 15min, localStorage)
 src/services/dataService.js    — reconcileAndHydrate, _recalcAccountBalance
@@ -1084,46 +1084,35 @@ Tras git pull deben APROBARSE y REINICIARSE Claude Code: las tools MCP se fijan 
 PROYECTO: FinanceOS — PWA financiera personal y privada de Alejo.
 Repo: https://github.com/alejandror1367/FinanceOS (rama main).
 Prod: https://alejandror1367.github.io/FinanceOS/
-HEAD: 912c7ba · SW v0.2.63 · config.version 0.2.63 · Tests 97/97 (20 suites)
+HEAD: 700ba60 · SW v0.2.64 · config.version 0.2.64 · Tests 97/97 (20 suites)
 
 INVARIANTES (ver CLAUDE.md): JS ES Modules sin build step · sin frameworks/bundlers ·
 cero deps npm en runtime · frontend abstraído tras src/services/ · Apps Script +
 Google Sheets (13 hojas) + GitHub Pages + OAuth de Google · offline-first.
 
-HECHO Y DESPLEGADO (roadmap completo):
+HECHO Y DESPLEGADO (roadmap completo + price fix):
 - Sprints 1–9 completos · QA Playwright 15/15 PASS
 - Fix mobile layout + QA-001 Dashboard KPI FIC (912c7ba/012d019)
-- Todo el backend desplegado. Sin deploys pendientes actualmente.
-
-SESIÓN 2026-06-04 (solo análisis, sin código):
-- Análisis completo de integraciones IA (Claude Artifacts, Groq, Alpaca, roadmap 4 fases)
-- Diagnóstico 2 bugs en backgroundRefreshPrices() en app.js
-- Propuesta Alpaca API para reemplazar Yahoo Finance en acciones US
-- Ver docs/Live-Artifacts-Prompt.md para el análisis completo
+- Fix auto-refresh precios (700ba60): guardia isStale eliminada + parser BE-003 corregido
 
 PENDIENTES EN ORDEN:
 
-1. FIX AUTO-REFRESH PRECIOS (src/core/app.js — sin deploy, ~5 líneas):
-   Bug A (line 112): eliminar || !priceService.isStale de backgroundRefreshPrices()
-     → precios siempre refrescan al arrancar, no solo si han pasado >15 min
-   Bug B (lines 121-124): fix parser para { quotes, fxRates }
-     → const resp = await apiClient.get(...); rawQuotes = resp?.quotes ?? resp
-     → investments.js ya maneja ambos formatos (referencia: lines 563-580)
-
-2. INTEGRACIÓN ALPACA API (backend/Quotes.gs — requiere deploy):
-   - isUsSymbol_(): sin punto ni =X → fetchAlpaca_(); con .CL o =X → fetchYahoo_()
-   - Batch endpoint: GET data.alpaca.markets/v2/stocks/snapshots?symbols=AAPL,VUG
+1. INTEGRACIÓN ALPACA API (backend/Quotes.gs — requiere deploy):
+   - Alpaca free tier: acciones US/ETFs/crypto (sin tarjeta)
+   - fetchAlpaca_() batch: GET data.alpaca.markets/v2/stocks/snapshots?symbols=...
+   - Headers: APCA-API-KEY-ID + APCA-API-SECRET-KEY (Script Properties, no en repo)
+   - isUsSymbol_(): sin punto ni =X → Alpaca; con .CL o =X → Yahoo (igual que hoy)
    - Crypto: data.alpaca.markets/v1beta3/crypto/snapshots?symbols=BTC/USD
-   - Claves: ALPACA_KEY_ID + ALPACA_SECRET_KEY en Script Properties (usuario debe crear cuenta)
    - Formato salida no cambia: { quotes, fxRates }
 
-3. SIMULADOR FIRE (nueva ruta #/fire — sin deploy):
+2. SIMULADOR FIRE (nueva ruta #/fire — sin deploy):
    - Pura aritmética, sin IA · nueva vista views/fire.js + entrada en routes.js
-   - Inputs: gastos anuales, tasa retorno esperada · Output: años hasta FIRE, patrimonio objetivo
+   - Usa selectores existentes: ingresos, gastos, investmentsValue
+   - Responde: tasa de ahorro, años hasta FIRE, patrimonio objetivo, sensibilidad
 
-4. REPORTES AUTOMÁTICOS GROQ (backend/Insights.gs — requiere deploy):
+3. REPORTES AUTOMÁTICOS GROQ (backend/Insights.gs — requiere deploy):
    - Time trigger día 1 · lee Sheets → llama Groq → escribe hoja Insights
-   - Frontend: card "Resumen del mes" en Dashboard
+   - Frontend: card "Resumen del mes" en Dashboard/Analítica
 
 BUGS ABIERTOS (no bloquean):
 - QA-003 (P2): FedCM warning GIS — migrar cuando Google lo fuerce
@@ -1133,9 +1122,9 @@ VERIFICACIONES PENDIENTES EN VIVO:
 - Flujo venta parcial/total en UI Inversiones
 - getBootstrap ventana 24m no rompe historial más antiguo
 - Analítica: tabla tendencias y selector de período en producción
+- backgroundRefreshPrices fix verificado con datos reales en producción
 
 RIESGOS ABIERTOS:
-- backgroundRefreshPrices() escribe precios corruptos (Bug B) — fix en pendiente 1
 - Bootstrap limita a 24m de transacciones (intencional, confirmar impacto)
 
 FORMA DE TRABAJO: fases pequeñas y verificables · explicar qué/por qué ·
