@@ -125,10 +125,17 @@ export const auth = {
     location.reload();
   },
 
-  // Intenta renovar el token en silencio cuando está próximo a expirar.
-  // Llamar periódicamente desde app.js.
+  // Renueva el token en silencio cuando quedan <20 min para que expire.
+  // Se llama cada 45 min desde app.js: con tokens de 1h el refresh ocurre
+  // cuando el token tiene ~15 min de vida, antes de que expire.
+  // Bug anterior: usaba isAuthenticated() que devuelve true mientras sea válido,
+  // por lo que nunca disparaba hasta que ya había expirado.
   refreshSilent() {
-    if (this.isAuthenticated() || !window.google?.accounts?.id) return;
-    google.accounts.id.prompt();
+    if (!window.google?.accounts?.id) return;
+    const t = localStorage.getItem(LS_KEY);
+    if (!t) return;
+    const p = decodePayload(t);
+    if (p && p.exp > Date.now() / 1000 + 20 * 60) return; // >20 min restantes — OK
+    google.accounts.id.prompt(); // token próximo a expirar o ya expirado
   },
 };
