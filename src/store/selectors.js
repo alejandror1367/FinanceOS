@@ -445,6 +445,44 @@ export const selectors = {
     return Math.round(Math.min(100, Math.max(0, score)));
   },
 
+  // Desglose de los 4 factores del score para mostrar en el desplegable del KPI.
+  financialScoreBreakdown(s) {
+    const now = new Date();
+    const curMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const rate = selectors.savingsRate(s);
+    const rateScore = rate >= 20 ? 30 : rate >= 10 ? 20 : rate >= 0 ? Math.max(0, rate * 1.5) : 0;
+
+    const budgets = (s.budgets || []).filter((b) => b.period === 'monthly' && normPeriodKey(b.periodKey, 7) === curMonthKey);
+    let budgetScore = 15;
+    if (budgets.length > 0) {
+      const over = budgets.filter((b) => selectors.budgetStats(s, b).pct > 100).length;
+      const avgPct = budgets.reduce((sum, b) => sum + selectors.budgetStats(s, b).pct, 0) / budgets.length;
+      budgetScore = over === 0 ? (avgPct < 80 ? 30 : 20) : Math.max(0, 30 - over * 10);
+    }
+
+    const goals = selectors.activeGoals(s);
+    let goalsScore = 10;
+    if (goals.length > 0) {
+      const avg = goals.reduce((sum, g) => sum + (g.targetAmount ? Math.min(100, ((g.currentAmount || 0) / g.targetAmount) * 100) : 0), 0) / goals.length;
+      goalsScore = (avg / 100) * 20;
+    }
+
+    const monthExp = selectors.monthlyExpense(s);
+    const liq = selectors.totalLiquidity(s);
+    let liquidScore = 10;
+    if (monthExp > 0) {
+      const cov = liq / monthExp;
+      liquidScore = cov >= 3 ? 20 : cov >= 1 ? 12 : cov >= 0.5 ? 5 : 0;
+    }
+
+    return [
+      { factor: 'Tasa de ahorro', pts: Math.round(rateScore), max: 30 },
+      { factor: 'Presupuestos', pts: Math.round(budgetScore), max: 30 },
+      { factor: 'Metas activas', pts: Math.round(goalsScore), max: 20 },
+      { factor: 'Cobertura liquidez', pts: Math.round(liquidScore), max: 20 },
+    ];
+  },
+
   // ---- Vista Hoy: copiloto diario ----
 
   // Semáforo de salud del día: green / yellow / red + razones legibles.

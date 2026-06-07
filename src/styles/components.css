@@ -54,6 +54,29 @@
 .kpi__value--hero { font-size: var(--fs-display-xl); letter-spacing: var(--tracking-tighter); }
 @media (max-width: 720px) { .kpi--hero { grid-column: span 1; } }
 
+/* ── KPI — detalle desplegable ─────────────────────────────────────────── */
+.kpi__details { border-top: 1px solid var(--border-subtle); margin-top: var(--space-3); }
+.kpi__dtrig {
+  display: flex; align-items: center; justify-content: space-between;
+  list-style: none; cursor: pointer;
+  padding: var(--space-2) 0 var(--space-1);
+  font-size: var(--fs-caption); color: var(--text-tertiary);
+  user-select: none;
+}
+.kpi__dtrig::-webkit-details-marker { display: none; }
+.kpi__dchev { display: flex; transition: transform .18s ease; }
+.kpi__dchev svg { width: 12px; height: 12px; }
+details[open] .kpi__dchev { transform: rotate(180deg); }
+.kpi__dlist { list-style: none; padding: 0 0 var(--space-2); margin: 0; display: flex; flex-direction: column; }
+.kpi__drow {
+  display: flex; justify-content: space-between; align-items: baseline;
+  gap: var(--space-2); padding: var(--space-1) 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.kpi__drow:last-child { border-bottom: none; }
+.kpi__dlabel { font-size: var(--fs-caption); color: var(--text-secondary); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kpi__dvalue { font-size: var(--fs-caption); color: var(--text-primary); font-weight: var(--fw-medium); flex-shrink: 0; }
+
 /* ---------- Badge ---------- */
 .badge {
   display: inline-flex; align-items: center; gap: var(--space-1);

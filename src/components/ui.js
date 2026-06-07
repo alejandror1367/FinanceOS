@@ -14,10 +14,24 @@ export function Card({ title, action, body, padSm = false } = {}) {
   return el('section', { class: `card${padSm ? ' card--pad-sm' : ''}` }, [head, body].filter(Boolean));
 }
 
-export function KpiCard({ label, value, iconName, variant = '', foot, hero = false } = {}) {
+export function KpiCard({ label, value, iconName, variant = '', foot, hero = false, details } = {}) {
   const classes = ['kpi'];
   if (hero) classes.push('kpi--hero');
   if (variant) classes.push('kpi--' + variant);
+  const detailsEl = details?.length
+    ? el('details', { class: 'kpi__details' }, [
+        el('summary', { class: 'kpi__dtrig' }, [
+          el('span', { text: 'Detalle' }),
+          el('span', { class: 'kpi__dchev', html: icon('chevronDown') }),
+        ]),
+        el('ul', { class: 'kpi__dlist' },
+          details.map((r) => el('li', { class: 'kpi__drow' }, [
+            el('span', { class: 'kpi__dlabel', text: r.label }),
+            el('span', { class: 'kpi__dvalue tabular', text: r.value }),
+          ]))
+        ),
+      ])
+    : null;
   return el('article', { class: classes.join(' ') }, [
     el('div', { class: 'kpi__top' }, [
       el('span', { class: 'kpi__label', text: label }),
@@ -25,6 +39,7 @@ export function KpiCard({ label, value, iconName, variant = '', foot, hero = fal
     ]),
     el('div', { class: `kpi__value tabular${hero ? ' kpi__value--hero' : ''}`, text: value }),
     foot ? el('div', { class: 'kpi__foot' }, foot) : null,
+    detailsEl,
   ]);
 }
 

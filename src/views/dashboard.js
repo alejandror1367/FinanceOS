@@ -4,7 +4,7 @@
 import { el, mount } from '../utils/dom.js';
 import { icon } from '../utils/icons.js';
 import { store } from '../store/store.js';
-import { selectors } from '../store/selectors.js';
+import { selectors, isExpenseLike } from '../store/selectors.js';
 import { formatMoney, formatPercent, relativeDay, formatDate } from '../utils/format.js';
 import {
   Card, KpiCard, Trend, Badge, BarChart, ProgressBar, EmptyState, Button,
@@ -61,6 +61,67 @@ export function renderDashboard() {
       (g) => g.targetAmount && ((g.currentAmount || 0) / g.targetAmount) >= 0.9
     );
 
+    // ── Detalles desplegables por KPI ────────────────────────────────────────
+    const curKey = new Date().toISOString().slice(0, 7);
+    const debtAccIds = new Set(s.accounts.filter((a) => a.type === 'credit_card').map((a) => a.id));
+
+    const detailsExpense = (() => {
+      const txs = s.transactions
+        .filter((t) => isExpenseLike(t, debtAccIds) && String(t.date).slice(0, 7) === curKey)
+        .sort((a, b) => b.amount - a.amount);
+      const rows = txs.slice(0, 7).map((t) => {
+        const cat = selectors.categoryById(s, t.categoryId);
+        return { label: t.description || cat?.name || 'Sin descripción', value: formatMoney(t.amount, cur) };
+      });
+      if (txs.length > 7) rows.push({ label: `+${txs.length - 7} más`, value: '' });
+      return rows;
+    })();
+
+    const detailsIncome = s.transactions
+      .filter((t) => t.type === 'income' && String(t.date).slice(0, 7) === curKey)
+      .sort((a, b) => b.amount - a.amount)
+      .map((t) => ({ label: t.description || 'Ingreso', value: formatMoney(t.amount, cur) }));
+
+    const detailsSavings = [
+      { label: 'Ingresos del mes', value: formatMoney(income, cur) },
+      { label: '− Gastos del mes', value: formatMoney(expense, cur) },
+      { label: '= Ahorro', value: formatMoney(savings, cur) },
+      { label: 'Tasa de ahorro', value: formatPercent(savingsRate) },
+    ];
+
+    const detailsLiquidity = selectors.liquidAccounts(s)
+      .sort((a, b) => (b.balance || 0) - (a.balance || 0))
+      .map((a) => ({ label: a.name, value: formatMoney(a.balance || 0, a.currency || cur) }));
+
+    const detailsNetWorth = (() => {
+      const normalSum = s.accounts
+        .filter((a) => !a.isArchived && a.type !== 'investment' && a.type !== 'credit_card')
+        .reduce((sum, a) => sum + (a.balance || 0), 0);
+      const otherSum = (s.assets || []).reduce((sum, a) => sum + (a.value || 0), 0);
+      const ccDebt = selectors.creditCardAccounts(s).reduce((sum, a) => sum + Math.abs(a.balance || 0), 0);
+      const liabDebt = (s.liabilities || []).filter((l) => l.type !== 'credit_card').reduce((sum, l) => sum + (l.balance || 0), 0);
+      return [
+        { label: '+ Cuentas', value: formatMoney(normalSum, cur) },
+        { label: '+ Inversiones', value: formatMoney(invValue, cur) },
+        ...(otherSum > 0 ? [{ label: '+ Otros activos', value: formatMoney(otherSum, cur) }] : []),
+        { label: '− Tarjetas de crédito', value: formatMoney(ccDebt, cur) },
+        ...(liabDebt > 0 ? [{ label: '− Créditos / deudas', value: formatMoney(liabDebt, cur) }] : []),
+      ];
+    })();
+
+    const detailsInvestments = (() => {
+      const cost = selectors.investmentsCost(s);
+      return [
+        { label: 'Valor de mercado', value: formatMoney(invValue, cur) },
+        { label: 'Costo base', value: formatMoney(cost, cur) },
+        { label: 'P&L no realizado', value: formatMoney(invValue - cost, cur) },
+        { label: 'Rentabilidad', value: formatPercent(invReturn) },
+      ];
+    })();
+
+    const detailsScore = selectors.financialScoreBreakdown(s)
+      .map((f) => ({ label: f.factor, value: `${f.pts} / ${f.max} pts` }));
+
     // ── KPIs ─────────────────────────────────────────────────────────────────
     const expenseAlert = maxBudgetPct >= 100
       ? Badge('Superado', 'negative')
@@ -77,16 +138,19 @@ export function renderDashboard() {
           netWorthTrend !== null ? Trend(netWorthTrend) : null,
           el('span', { class: 't-caption', text: netWorthTrend !== null ? 'vs. snapshot anterior' : 'sin comparativa aún' }),
         ].filter(Boolean),
+        details: detailsNetWorth,
       }),
       KpiCard({
         label: 'Score financiero', value: String(score), iconName: 'analytics', variant: sm.variant,
         foot: [Badge(sm.label, sm.variant), el('span', { class: 't-caption', text: 'de 100 puntos' })],
+        details: detailsScore,
       }),
       KpiCard({
         label: 'Inversiones', value: formatMoney(invValue, cur), iconName: 'investments', variant: 'emerald',
         foot: invValue > 0
           ? [Trend(invReturn), el('span', { class: 't-caption', text: 'rentabilidad' })]
           : [el('span', { class: 't-caption', text: 'sin posiciones activas' })],
+        details: invValue > 0 ? detailsInvestments : undefined,
       }),
       KpiCard({
         label: 'Gastos del mes', value: formatMoney(expense, cur), iconName: 'arrowDown', variant: maxBudgetPct >= 100 ? 'negative' : 'neutral',
@@ -94,14 +158,17 @@ export function renderDashboard() {
           expenseAlert,
           expenseAlert ? null : el('span', { class: 't-caption', text: `${((expense / (income || 1)) * 100).toFixed(0)}% de ingresos` }),
         ].filter(Boolean),
+        details: detailsExpense,
       }),
       KpiCard({
         label: 'Ingresos del mes', value: formatMoney(income, cur), iconName: 'arrowUp', variant: 'neutral',
         foot: [el('span', { class: 't-caption', text: currentMonthLabel })],
+        details: detailsIncome,
       }),
       KpiCard({
         label: 'Ahorro del mes', value: formatMoney(savings, cur), iconName: 'wallet', variant: 'neutral',
         foot: [Badge(formatPercent(savingsRate), savings >= 0 ? 'positive' : 'negative'), el('span', { class: 't-caption', text: 'tasa de ahorro' })],
+        details: detailsSavings,
       }),
       KpiCard({
         label: 'Liquidez disponible', value: formatMoney(liquidity, cur), iconName: 'accounts', variant: 'neutral',
@@ -110,6 +177,7 @@ export function renderDashboard() {
           liquidityAlert ? null : el('span', { class: 't-caption', text:
             `${selectors.liquidAccounts(s).length} cuentas${expense > 0 ? ` · ${(liquidity / expense).toFixed(1)} meses` : ''}` }),
         ].filter(Boolean),
+        details: detailsLiquidity,
       }),
     ]);
 
