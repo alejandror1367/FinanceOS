@@ -43,6 +43,24 @@ async function loadFromLocal() {
   store.hydrate(patch);
 }
 
+// Convención: saldo CC siempre negativo (−200k = debes 200k). Balance positivo en CC
+// invierte el signo de transferencias y gastos. Normaliza datos anteriores al cambio.
+async function normalizeCCBalancesInDB() {
+  if (!db.available()) return;
+  try {
+    const accounts = await db.getAll('accounts');
+    const positiveCC = accounts.filter((a) => a.type === 'credit_card' && (a.balance || 0) > 0);
+    if (!positiveCC.length) return;
+    for (const a of positiveCC) {
+      await db.put('accounts', { ...a, balance: -Math.abs(a.balance), updatedAt: new Date().toISOString() });
+    }
+    const updated = await db.getAll('accounts');
+    store.hydrate({ accounts: updated });
+  } catch (e) {
+    console.warn('[dataService] normalizeCCBalancesInDB falló:', e.message);
+  }
+}
+
 // Siembra mock una sola vez (solo modo local).
 async function seedMockIfNeeded() {
   const seeded = await db.kvGet(SEED_FLAG);
@@ -183,6 +201,7 @@ export const dataService = {
         if (db.available()) {
           await seedMockIfNeeded();
           await loadFromLocal();
+          await normalizeCCBalancesInDB();
           syncEngine.start();
           return { source: 'indexeddb', connected: false };
         }
@@ -203,6 +222,7 @@ export const dataService = {
     try {
       if (db.available()) await loadFromLocal(); // render instantáneo desde caché
     } catch (e) { /* caché vacía, continuamos */ }
+    await normalizeCCBalancesInDB(); // normaliza CCs con balance positivo (datos antiguos)
 
     syncEngine.start();
     try { await syncEngine.flush(); } catch (e) { /* offline: se reintenta */ }
@@ -217,6 +237,7 @@ export const dataService = {
           await new Promise((r) => setTimeout(r, 800));
           res = await pullData();
         }
+        await normalizeCCBalancesInDB(); // re-normaliza tras sync (backend puede devolver positivo)
       }
       catch (e) { console.warn('[dataService] pull falló (se usa caché):', e); }
     }
