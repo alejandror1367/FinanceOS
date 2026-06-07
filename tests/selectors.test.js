@@ -450,12 +450,12 @@ describe('deudas', () => {
     assert.equal(st.count, 0);
   });
 
-  test('creditCardDebt: consolida cuentas credit_card + liabilities credit_card', () => {
+  test('creditCardDebt: solo cuentas credit_card (liabilities CC excluidas para evitar doble conteo)', () => {
     const s = mkState({
       accounts: [acc('c1', -2_500_000, 'credit_card'), acc('b1', 1_000_000, 'bank')],
       liabilities: [{ id: 'l1', name: 'Tarjeta vieja', type: 'credit_card', balance: 1_330_000 }],
     });
-    assert.equal(selectors.creditCardDebt(s), 3_830_000);
+    assert.equal(selectors.creditCardDebt(s), 2_500_000);
   });
 });
 

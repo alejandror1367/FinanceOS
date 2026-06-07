@@ -234,7 +234,9 @@ export const selectors = {
   // Los créditos/hipotecas son Liabilities con balance, interestRate y minimumPayment.
   debtList(s) {
     const out = [];
-    (s.liabilities || []).filter((l) => (l.balance || 0) > 0).forEach((l) => out.push({
+    // credit_card liabilities excluidas: las CCs se gestionan como cuentas (source:'account').
+    // Incluirlas aquí causa doble conteo con creditCardAccounts (distintos saldos → KPIs inconsistentes).
+    (s.liabilities || []).filter((l) => (l.balance || 0) > 0 && l.type !== 'credit_card').forEach((l) => out.push({
       id: l.id, source: 'liability', name: l.name, type: l.type || 'other',
       balance: l.balance || 0, interestRate: l.interestRate || 0,
       minPayment: l.minimumPayment || 0, currency: l.currency, dueDate: l.dueDate || null, raw: l,
@@ -271,14 +273,10 @@ export const selectors = {
     return { total, minPayment, avgRate, count: list.length, list };
   },
 
-  // Total adeudado solo en tarjetas (cuentas credit_card + Liabilities type credit_card).
+  // Total adeudado en tarjetas (solo cuentas credit_card — liabilities tipo credit_card excluidas).
   creditCardDebt(s) {
-    const fromAccounts = selectors.creditCardAccounts(s)
+    return selectors.creditCardAccounts(s)
       .reduce((sum, a) => sum + Math.abs(a.balance || 0), 0);
-    const fromLiabilities = (s.liabilities || [])
-      .filter((l) => l.type === 'credit_card' && (l.balance || 0) > 0)
-      .reduce((sum, l) => sum + (l.balance || 0), 0);
-    return fromAccounts + fromLiabilities;
   },
 
   // ---- Presupuestos (valores derivados, no persistidos) ----
