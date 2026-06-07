@@ -6,6 +6,7 @@ import { icon } from '../utils/icons.js';
 import { store } from '../store/store.js';
 import { dataService } from '../services/dataService.js';
 import { formatMoney, formatDate } from '../utils/format.js';
+import { isExpenseLike } from '../store/selectors.js';
 import { Button, EmptyState } from '../components/ui.js';
 import { openModal, confirmDialog } from '../components/modal.js';
 import { field, textInput, numberInput, textarea, select, segmented, setFieldError, focusFieldError } from '../components/forms.js';
@@ -157,23 +158,29 @@ function dateGroupLabel(isoDate) {
   return formatDate(isoDate, 'short');
 }
 
-function groupNet(txList, cur) {
+function groupNet(txList, m, cur) {
+  const debtIds = new Set(
+    Object.values(m.acc).filter((a) => a.type === 'credit_card').map((a) => a.id),
+  );
   let net = 0;
   for (const t of txList) {
     if (t.type === 'income') net += t.amount;
-    else if (t.type === 'expense') net -= t.amount;
+    else if (isExpenseLike(t, debtIds)) net -= t.amount;
   }
   if (net === 0) return '';
   return formatMoney(net, cur, { signed: true });
 }
 
 // ---------- Resumen de filtro ----------
-function buildSummary(filtered, cur) {
+function buildSummary(filtered, m, cur) {
   if (!filtered.length) return '';
+  const debtIds = new Set(
+    Object.values(m.acc).filter((a) => a.type === 'credit_card').map((a) => a.id),
+  );
   let income = 0, expense = 0;
   for (const t of filtered) {
     if (t.type === 'income') income += t.amount;
-    else if (t.type === 'expense') expense += t.amount;
+    else if (isExpenseLike(t, debtIds)) expense += t.amount;
   }
   const net = income - expense;
   const count = filtered.length === 1 ? '1 transacción' : `${filtered.length} transacciones`;
@@ -192,15 +199,18 @@ function updateOpts(selectEl, opts) {
 function txRow(t, m, cur) {
   const isIncome = t.type === 'income';
   const isTransfer = t.type === 'transfer';
+  const toAcc = m.acc[t.toAccountId];
+  const isDebtPayment = isTransfer && toAcc && toAcc.type === 'credit_card';
   const cat = m.cat[t.categoryId];
   const acc = m.acc[t.accountId];
-  const toAcc = m.acc[t.toAccountId];
-  const sign = isIncome ? '+' : isTransfer ? '' : '−';
-  const cls = isIncome ? 'text-positive' : isTransfer ? '' : 'text-negative';
-  const label = isTransfer ? 'Transferencia' : (cat ? cat.name : 'Sin categoría');
+  const sign = isIncome ? '+' : (isTransfer && !isDebtPayment) ? '' : '−';
+  const cls = isIncome ? 'text-positive' : (isTransfer && !isDebtPayment) ? '' : 'text-negative';
+  const label = isDebtPayment
+    ? `Pago ${toAcc.name}`
+    : isTransfer ? 'Transferencia' : (cat ? cat.name : 'Sin categoría');
   const iconName = isTransfer ? 'transactions' : (cat ? cat.icon : 'wallet');
   const subLabel = isTransfer
-    ? `Transferencia · ${acc ? acc.name : '?'} → ${toAcc ? toAcc.name : '?'} · ${formatDate(t.date, 'short')}`
+    ? `${isDebtPayment ? 'Pago deuda' : 'Transferencia'} · ${acc ? acc.name : '?'} → ${toAcc ? toAcc.name : '?'} · ${formatDate(t.date, 'short')}`
     : `${label} · ${acc ? acc.name : ''} · ${formatDate(t.date, 'short')}`;
 
   return el('div', { class: 'row' }, [
@@ -271,7 +281,7 @@ export function renderTransactions() {
     const filtered = applyFilters(all, m);
 
     // Línea de resumen (TX-4)
-    summaryEl.textContent = buildSummary(filtered, cur);
+    summaryEl.textContent = buildSummary(filtered, m, cur);
 
     // Lista agrupada por fecha (TX-1)
     const groups = groupByDate(filtered);
@@ -280,7 +290,7 @@ export function renderTransactions() {
           el('div', { class: 'row-list' }, [...groups.entries()].flatMap(([date, txs]) => [
             el('div', { class: 'tx-date-header' }, [
               el('span', { class: 'tx-date-label', text: dateGroupLabel(date) }),
-              el('span', { class: 'tx-date-total', text: groupNet(txs, cur) }),
+              el('span', { class: 'tx-date-total', text: groupNet(txs, m, cur) }),
             ]),
             ...txs.map((t) => txRow(t, m, cur)),
           ])),

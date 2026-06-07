@@ -20,6 +20,22 @@ function sameMonth(iso, ref = new Date()) {
   return isoKey === refKey;
 }
 
+// Retorna el Set de IDs de cuentas de tipo deuda (credit_card).
+// Una transferencia cuyo toAccountId esté en este Set se trata como gasto en el flujo de caja.
+function debtAccountIds(s) {
+  const ids = new Set();
+  for (const a of s.accounts) {
+    if (a.type === 'credit_card') ids.add(a.id);
+  }
+  return ids;
+}
+
+// true si la transacción es un gasto directo o un pago a cuenta de deuda.
+export function isExpenseLike(t, debtIds) {
+  if (t.type === 'expense') return true;
+  return t.type === 'transfer' && !!t.toAccountId && debtIds.has(t.toAccountId);
+}
+
 const MONTH_ABBR = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 function ymKey(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; }
 function lastMonths(n) {
@@ -130,8 +146,9 @@ export const selectors = {
   },
 
   monthlyExpense(s, ref) {
+    const debtIds = debtAccountIds(s);
     return s.transactions
-      .filter((t) => t.type === 'expense' && sameMonth(t.date, ref))
+      .filter((t) => isExpenseLike(t, debtIds) && sameMonth(t.date, ref))
       .reduce((sum, t) => sum + (t.amount || 0), 0);
   },
 
@@ -300,13 +317,14 @@ export const selectors = {
   // Flujo de caja por mes (últimos n meses, incluye el actual).
   cashflow(s, n = 6) {
     const months = lastMonths(n);
+    const debtIds = debtAccountIds(s);
     const acc = {};
     months.forEach((m) => { acc[m.key] = { key: m.key, label: m.label, income: 0, expense: 0 }; });
     for (const t of s.transactions) {
       const key = String(t.date).slice(0, 7);
       if (!acc[key]) continue;
       if (t.type === 'income') acc[key].income += t.amount || 0;
-      else if (t.type === 'expense') acc[key].expense += t.amount || 0;
+      else if (isExpenseLike(t, debtIds)) acc[key].expense += t.amount || 0;
     }
     return months.map((m) => {
       const r = acc[m.key];
