@@ -34,6 +34,7 @@ function initGSI() {
     callback: onCredential,
     auto_select: true,           // Sign-in automático si el dispositivo tiene sesión activa de Google
     cancel_on_tap_outside: false,
+    use_fedcm_for_prompt: true,  // Migración FedCM requerida por Google (silencia el warning QA-003)
   });
   renderLoginScreen();
   // One Tap — resuelve sin interacción si hay sesión activa en el dispositivo.

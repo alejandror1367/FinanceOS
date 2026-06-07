@@ -13,10 +13,10 @@ let _fetchedAt = 0;
 
 try {
   const ts = Number(localStorage.getItem(LS_FETCH_AT) || 0);
-  if (ts && Date.now() - ts < PRICE_TTL) {
+  if (ts) {
     _prices    = JSON.parse(localStorage.getItem(LS_PRICES) || '{}');
     _fxRates   = JSON.parse(localStorage.getItem(LS_FX)     || '{}');
-    _fetchedAt = ts;
+    _fetchedAt = ts; // isStale derivado de ts; backgroundRefreshPrices corre si stale
   }
 } catch (_) {}
 
