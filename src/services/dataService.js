@@ -238,6 +238,10 @@ export const dataService = {
           res = await pullData();
         }
         await normalizeCCBalancesInDB(); // re-normaliza tras sync (backend puede devolver positivo)
+        // Backfill: crea categorías base faltantes en instalaciones existentes.
+        const cats = store.get().categories || [];
+        const hasOtros = cats.some((c) => c.name === 'Otros' && c.kind === 'expense' && !c.isDeleted);
+        if (!hasOtros) await this.create('categories', { name: 'Otros', kind: 'expense', color: 'slate', icon: 'wallet' }).catch(() => {});
       }
       catch (e) { console.warn('[dataService] pull falló (se usa caché):', e); }
     }

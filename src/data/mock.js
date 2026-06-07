@@ -34,6 +34,7 @@ export const mockData = {
     { id: 'cat_rent', name: 'Arriendo', kind: 'expense', color: 'slate', icon: 'home' },
     { id: 'cat_transport', name: 'Transporte', kind: 'expense', color: 'blue', icon: 'car' },
     { id: 'cat_subs', name: 'Suscripciones', kind: 'expense', color: 'red', icon: 'cloud' },
+    { id: 'cat_otros', name: 'Otros', kind: 'expense', color: 'slate', icon: 'wallet' },
   ],
 
   transactions: [

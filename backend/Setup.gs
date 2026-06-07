@@ -65,6 +65,7 @@ function seedDefaults_() {
       { name: 'Arriendo', kind: 'expense', color: 'slate', icon: 'home' },
       { name: 'Transporte', kind: 'expense', color: 'periwinkle', icon: 'car' },
       { name: 'Suscripciones', kind: 'expense', color: 'red', icon: 'cloud' },
+      { name: 'Otros', kind: 'expense', color: 'slate', icon: 'wallet' },
     ];
     defaults.forEach(function (c) {
       c.parentId = '';
