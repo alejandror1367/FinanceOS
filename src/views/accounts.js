@@ -65,7 +65,9 @@ function accountForm(existing) {
   const nameEl  = textInput({ name: 'name',        value: existing?.name        || '', placeholder: 'Ej. Bancolombia', required: true });
   const typeEl  = select({ name: 'type',           value: existing?.type        || 'bank', options: TYPES.map((t) => ({ value: t.value, label: t.label })) });
   const curEl   = textInput({ name: 'currency',    value: existing?.currency    || 'COP' });
-  const balEl   = numberInput({ name: 'balance',   value: existing?.balance     ?? 0 });
+  // CC almacena el saldo como negativo (−200k = debes 200k). En el form mostramos el valor
+  // absoluto para que el usuario ingrese "200000" (lo que debe), no "-200000".
+  const balEl   = numberInput({ name: 'balance',   value: existing?.type === 'credit_card' ? Math.abs(existing?.balance ?? 0) : (existing?.balance ?? 0) });
   const instEl  = textInput({ name: 'institution', value: existing?.institution || '', placeholder: 'Opcional' });
   const ccExtra = el('div');
 
@@ -126,11 +128,15 @@ export function openAccountModal(existing, { defaults = null } = {}) {
     submitLabel: existing ? 'Guardar' : 'Crear',
     onSubmit: async () => {
       const get = (n) => body.querySelector(`[name="${n}"]`);
+      const rawBalance = Number(get('balance').value) || 0;
+      const accType    = get('type').value;
       const data = {
         name:        get('name').value.trim(),
-        type:        get('type').value,
+        type:        accType,
         currency:    (get('currency').value || 'COP').trim().toUpperCase().slice(0, 3),
-        balance:     Number(get('balance').value) || 0,
+        // CC: el usuario ingresa el monto que debe (positivo); se guarda como negativo.
+        // Convención: balance < 0 en CC → más deuda al gastar → _adjustAccountBalances correcto.
+        balance:     accType === 'credit_card' ? -Math.abs(rawBalance) : rawBalance,
         institution: get('institution').value.trim(),
       };
       if (data.type === 'credit_card') {
