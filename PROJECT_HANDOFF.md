@@ -489,21 +489,21 @@ HEAD pasó de `75eacca` a **`b870d6c`**. SW `v0.2.10 → v0.2.13`. Tests `33 →
 ```
 Rama:    main
 Remote:  https://github.com/alejandror1367/FinanceOS.git
-HEAD:    843fed3  feat(investments): secciones desplegables con estado persistente
-SW:      v0.2.65  (sincronizado con config.version)
+HEAD:    f0d8ff1  fix(backend): permitir balance negativo en cuentas CC (toSignedAmount_)
+SW:      v0.2.75  (sincronizado con config.version)
 Status:  limpio · sincronizado con origin/main (push 0 0)
 ```
 
 ### Commits recientes
 ```
+f0d8ff1 fix(backend): permitir balance negativo en cuentas CC (toSignedAmount_)
+2717604 fix(debts): excluir liabilities credit_card de debtList y creditCardDebt
+3bb0dcd feat(categories): agregar categoría de gasto "Otros"
+db42956 fix(debts): normalizar saldos CC negativos al inicializar app
+1b0e979 fix(accounts): CC balance almacenado como negativo — gastos aumentan la deuda
+c385baf fix(fire): eliminar store.subscribe — inputs no se recrean en cada store change
+9280006 fix(auth): refreshSilent proactivo — renueva token con <20 min restantes
 843fed3 feat(investments): secciones desplegables con estado persistente
-527492b feat(quotes): integrar Alpaca Markets como fuente primaria para equity US/ETF/crypto
-76898d1 docs: handoff 2026-06-04 — fix auto-refresh precios completado
-700ba60 fix(prices): corregir backgroundRefreshPrices — guardia isStale + parser BE-003
-be2901d chore(agents): documentation-writer especializado + handoff gate obligatorio
-c3ec5fc docs: handoff 2026-06-04 — análisis IA + Alpaca + 2 bugs auto-refresh identificados
-912c7ba fix(mobile): pulir layout movil — btn--outline, size, scroll tablas, rows
-c38e38c fix(mobile): corregir truncación y superposición en filas — cuentas, tx, deudas
 ```
 
 ---
@@ -570,9 +570,9 @@ Todos los backends han sido desplegados. El estado del backend en producción es
 
 ### Verificación rápida del estado
 ```bash
-git log --oneline -5          # HEAD debe ser 912c7ba
+git log --oneline -5          # HEAD debe ser f0d8ff1
 node --test tests/selectors.test.js  # 97/97
-grep "version" src/core/config.js   # debe coincidir con sw.js VERSION (v0.2.63)
+grep "version" src/core/config.js   # debe coincidir con sw.js VERSION (v0.2.75)
 ```
 
 ---
@@ -670,7 +670,7 @@ commit: e6b3c77 · rama: main · SW: v0.2.43 · config.version: 0.2.43 · tests:
 
 > Leer esto antes que cualquier otra sección. Máximo 100 líneas. Fuente de verdad para retomar de inmediato.
 
-**HEAD:** `843fed3` · **SW/config.version:** `v0.2.65` · **Tests:** 97/97 (20 suites) · **Rama:** main · **Sync:** origin/main al día
+**HEAD:** `f0d8ff1` · **SW/config.version:** `v0.2.75` · **Tests:** 97/97 (20 suites) · **Rama:** main · **Sync:** origin/main al día
 
 > **MCP:** `.mcp.json` versionado con **playwright** + **context7** (scope de proyecto).
 > Tras `git pull`: **aprobar** ambos y **reiniciar Claude Code** (las tools MCP se fijan al arrancar).
@@ -683,9 +683,14 @@ commit: e6b3c77 · rama: main · SW: v0.2.43 · config.version: 0.2.43 · tests:
 - **Sesión 2026-06-04 (mañana):** análisis/planificación IA + Alpaca + diagnóstico 2 bugs
 - **Sesión 2026-06-04 (tarde-1):** fix auto-refresh precios (`700ba60`) + Alpaca API (`527492b`)
 - **Sesión 2026-06-04 (tarde-2):** secciones desplegables en Inversiones (`843fed3`)
+- **Sesión 2026-06-07:** diagnóstico dead-letter queue + fix backend CC balance negativo (`f0d8ff1`)
 
-### Sin deploys pendientes
-Todo desplegado. `Quotes.gs` con Alpaca ya desplegado por el dueño.
+### Deploy pendiente — ACCIÓN MANUAL REQUERIDA
+**`backend/Accounts.gs` + `backend/Utils.gs`** — fix CC balance negativo (`f0d8ff1`).
+Subir ambos archivos al editor de Apps Script y republicar el deployment.
+Luego desde el browser: re-encolar las ops en dead-letter (ver NEXT_SESSION.md).
+
+Todo lo demás desplegado. `Quotes.gs` con Alpaca ya desplegado por el dueño.
 
 ### Arquitectura actual
 ```
@@ -703,6 +708,10 @@ Flujo: `Views → Services → Store → Views` (never direct to net/IndexedDB f
 - Exportaciones · Command Palette (⌘K) · Validación inline · Import con Groq
 
 ### Bugs abiertos
+**P1 — requiere acción:**
+- **BUG-CC-1:** `updateAccount` falla para cuentas CC con saldo negativo → ops en dead-letter en IndexedDB.
+  Fix commiteado (`f0d8ff1`) pero **backend pendiente de deploy**. Tras deploy, re-encolar con el snippet de NEXT_SESSION.md.
+
 **P2:**
 - **QA-003:** FedCM warning en GIS — migrar OAuth cuando Google lo fuerce (no urgente)
 
@@ -710,12 +719,14 @@ Flujo: `Views → Services → Store → Views` (never direct to net/IndexedDB f
 - **QA-001:** Dashboard KPI "Inversiones" muestra $0 para FIC sin precio vivo en Yahoo
 - **QA-002:** Precios MU/VUG stale en primera carga (se resuelve con "Actualizar precios" — expected)
 
-### Pendientes identificados sesión 2026-06-04
+### Pendientes en orden
 1. ✅ **Fix auto-refresh de precios** — `700ba60`
 2. ✅ **Alpaca API** en `backend/Quotes.gs` — `527492b` · desplegado · verificado en producción
 3. ✅ **Secciones desplegables** en Inversiones — `843fed3` · estado en localStorage
-4. **Simulador FIRE** — nueva ruta `#/fire` (pura aritmética, sin IA, alto ROI)
-5. **Reportes automáticos con Groq** — Apps Script time trigger mensual → resumen en lenguaje natural
+4. ⚠️ **Deploy backend CC fix** — subir `Accounts.gs` + `Utils.gs` y republicar Apps Script (`f0d8ff1`)
+5. ⚠️ **Re-encolar dead-letter** — tras deploy, ejecutar snippet en consola del browser (ver NEXT_SESSION.md)
+6. **Simulador FIRE** — nueva ruta `#/fire` (pura aritmética, sin IA, alto ROI)
+7. **Reportes automáticos con Groq** — Apps Script time trigger mensual → resumen en lenguaje natural
 
 ### Riesgos abiertos
 - `getBootstrap_` limita transactions a ventana 24 meses (intencional — confirmar impacto en datos históricos reales)
@@ -739,6 +750,28 @@ src/views/investments.js       — secciones desplegables (_collapsed módulo-le
 src/utils/icons.js             — chevronDown añadido
 tests/selectors.test.js        — 97/97 tests (20 suites)
 ```
+
+---
+
+## Cambios realizados en sesión 2026-06-07
+
+### Diagnóstico y fix — dead-letter queue / CC balance negativo
+
+**Auditorías realizadas:** ninguna formal.
+
+**Bugs corregidos:**
+- **BUG-CC-1**: `updateAccount` para tarjetas de crédito fallaba silenciosamente. Las ops quedaban en dead-letter con error `"El monto no puede ser negativo en balance"`. Causa: `toAmount_()` en `Utils.gs` rechaza `n < 0`, pero desde `1b0e979` el frontend almacena saldos CC como negativos. Fix: nueva función `toSignedAmount_()` (permite negativo, solo valida `isNaN`); `createAccount_` y `updateAccount_` usan `toSignedAmount_` para el campo `balance`; todos los demás campos monetarios (creditLimit, interestRate, etc.) conservan `toAmount_`.
+
+**Bugs pendientes:**
+- Deploy del fix (`f0d8ff1`) a Apps Script todavía no realizado.
+- Ops en dead-letter (seqs 131/132/139/140/152/153/174) deben re-encolarse tras el deploy.
+
+**Archivos modificados:**
+- `backend/Utils.gs` — agrega `toSignedAmount_`
+- `backend/Accounts.gs` — usa `toSignedAmount_` para `balance` en create/update
+
+**Commits relevantes:**
+- `f0d8ff1` fix(backend): permitir balance negativo en cuentas CC (toSignedAmount_)
 
 ---
 
