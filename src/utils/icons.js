@@ -44,6 +44,7 @@ export const icons = {
   cloud: wrap('<path d="M7 18a4 4 0 0 1 0-8 5 5 0 0 1 9.6-1.4A3.5 3.5 0 0 1 18 18z"/>'),
   bolt: wrap('<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>'),
   importFile: wrap('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/>'),
+  fire: wrap('<path d="M12 2c0 0-1 4-1 7 0 1.5.5 3 2 4-1-3 1-5 1-5s2 3 2 6a5 5 0 0 1-10 0c0-4 3-8 6-12z"/><path d="M12 17c0 1.1-.9 2-2 2"/>'),
 };
 
 export function icon(name) {

@@ -1,0 +1,342 @@
+// views/fire.js — Simulador FIRE (Financial Independence, Retire Early).
+// Cálculo 100% local: FV con aportaciones mensuales + tabla de sensibilidad 3×3.
+// No hay llamadas a red ni a IndexedDB. Los inputs se prelllenan desde los selectores
+// y se actualizan en tiempo real (evento "input") sin botón de envío.
+
+import { el, mount } from '../utils/dom.js';
+import { store } from '../store/store.js';
+import { selectors } from '../store/selectors.js';
+import { formatMoney, formatNumber } from '../utils/format.js';
+import { Card, KpiCard } from '../components/ui.js';
+
+// ---------- Matemáticas FIRE ----------
+
+/**
+ * Años hasta FIRE usando FV con aportaciones mensuales y crecimiento compuesto.
+ * @param {number} patrimonioActual  Patrimonio neto actual (puede ser negativo)
+ * @param {number} objetivo          Patrimonio objetivo FIRE (gastos / SWR)
+ * @param {number} ahorroMensual     Aportación mensual (COP/mes)
+ * @param {number} rendimientoAnual  Rendimiento real anual en tanto por uno (p.ej. 0.07)
+ * @returns {number} Años (puede ser Infinity si no converge)
+ */
+function yearsToFire(patrimonioActual, objetivo, ahorroMensual, rendimientoAnual) {
+  const falta = objetivo - patrimonioActual;
+  if (falta <= 0) return 0; // ya alcanzado
+
+  const monthlyRate = Math.pow(1 + rendimientoAnual, 1 / 12) - 1;
+
+  let n; // número de meses
+  if (ahorroMensual > 0 && monthlyRate > 0) {
+    // n = log(1 + falta * r / PMT) / log(1 + r)
+    const arg = 1 + (falta * monthlyRate) / ahorroMensual;
+    if (arg <= 0) return Infinity; // el crecimiento nunca alcanza el objetivo
+    n = Math.log(arg) / Math.log(1 + monthlyRate);
+  } else if (ahorroMensual > 0) {
+    // Sin rendimiento: contribuciones lineales
+    n = falta / ahorroMensual;
+  } else {
+    return Infinity; // sin ahorros, nunca llega
+  }
+
+  return n / 12;
+}
+
+/**
+ * Tasa de ahorro implícita basada en ahorro mensual y gastos anuales.
+ * Ingresos estimados = ahorroMensual * 12 + gastosAnuales
+ */
+function savingsRateFromInputs(ahorroMensual, gastosAnuales) {
+  const ingresoAnual = ahorroMensual * 12 + gastosAnuales;
+  if (ingresoAnual <= 0) return 0;
+  return (ahorroMensual * 12) / ingresoAnual * 100;
+}
+
+// ---------- Helpers de formato ----------
+
+function fmtYears(years) {
+  if (!isFinite(years)) return '∞';
+  if (years <= 0) return '0';
+  const y = Math.floor(years);
+  const m = Math.round((years - y) * 12);
+  if (y === 0) return `${m} mes${m !== 1 ? 'es' : ''}`;
+  if (m === 0) return `${y} año${y !== 1 ? 's' : ''}`;
+  return `${y} año${y !== 1 ? 's' : ''} ${m} mes${m !== 1 ? 'es' : ''}`;
+}
+
+function fmtYearsShort(years) {
+  if (!isFinite(years)) return '∞';
+  if (years <= 0) return '0a';
+  const y = Math.ceil(years * 10) / 10;
+  return `${formatNumber(y, { maximumFractionDigits: 1 })}a`;
+}
+
+// ---------- Componente de input numérico ----------
+
+/**
+ * Crea un campo de input numérico con etiqueta y nota opcional.
+ * Devuelve { wrapper, input } para poder leer/escribir el valor.
+ */
+function numField({ id, label, value, min, max, step = 'any', note, suffix }) {
+  const input = el('input', {
+    id,
+    class: 'input',
+    type: 'number',
+    value: String(value),
+    ...(min !== undefined ? { min: String(min) } : {}),
+    ...(max !== undefined ? { max: String(max) } : {}),
+    step,
+    'aria-label': label,
+  });
+
+  const labelEl = el('label', { for: id, class: 't-caption text-secondary', text: label });
+  const noteEl = note ? el('span', { class: 't-micro text-tertiary', text: note }) : null;
+
+  const wrapper = el('div', { class: 'fire-field' }, [
+    el('div', { class: 'fire-field__head' }, [labelEl, noteEl].filter(Boolean)),
+    el('div', { class: 'fire-field__control' }, [
+      input,
+      suffix ? el('span', { class: 'fire-field__suffix t-caption text-tertiary', text: suffix }) : null,
+    ].filter(Boolean)),
+  ]);
+
+  return { wrapper, input };
+}
+
+// ---------- Tabla de sensibilidad ----------
+
+function buildSensTable(baseAhorro, baseRendimiento, patrimonioActual, objetivo, cur) {
+  const savingsMultipliers = [0.75, 1.0, 1.25];
+  const returns = [0.05, 0.07, 0.09];
+  const returnLabels = ['5%', '7%', '9%'];
+  const savingsLabels = ['−25%', 'Base', '+25%'];
+
+  // Encabezados: rendimiento en columnas
+  const headerRow = el('tr', {}, [
+    el('th', { class: 'fire-table__corner', text: 'Ahorro / Rend.' }),
+    ...returnLabels.map((lbl) => el('th', { class: 'fire-table__th', text: lbl })),
+  ]);
+
+  const bodyRows = savingsMultipliers.map((sMult, ri) => {
+    const cells = returns.map((ret, ci) => {
+      const ahorro = baseAhorro * sMult;
+      const years = yearsToFire(patrimonioActual, objetivo, ahorro, ret);
+      const isCenter = ri === 1 && ci === 1;
+      return el('td', {
+        class: `fire-table__td${isCenter ? ' fire-table__td--highlight' : ''}`,
+        text: fmtYearsShort(years),
+        title: `Ahorro ${formatMoney(ahorro, cur)}/mes · Rendimiento ${(ret * 100).toFixed(0)}% → ${fmtYears(years)}`,
+      });
+    });
+    return el('tr', {}, [
+      el('td', { class: 'fire-table__label', text: savingsLabels[ri] }),
+      ...cells,
+    ]);
+  });
+
+  return el('table', { class: 'fire-table', role: 'table', 'aria-label': 'Tabla de sensibilidad: años hasta FIRE' }, [
+    el('thead', {}, [headerRow]),
+    el('tbody', {}, bodyRows),
+  ]);
+}
+
+// ---------- Vista principal ----------
+
+export function renderFire() {
+  const root = el('div');
+
+  // Persiste los valores editados por el usuario entre repaints (p.ej. refresh de precios).
+  // null = no editado todavía → se usa el valor del selector.
+  const userValues = {
+    gastosAnuales: null,
+    ahorroMensual: null,
+    patrimonioActual: null,
+    rendimientoAnual: null,  // porcentaje entero: 7 → 0.07
+    tasaRetiro: null,        // porcentaje entero: 4 → 0.04
+  };
+
+  function repaint() {
+    const s = store.get();
+    const cur = s.baseCurrency || 'COP';
+
+    // Valores por defecto desde el estado (solo se usan si el usuario no ha editado)
+    const defaultGastosAnuales = Math.round(selectors.monthlyExpense(s) * 12);
+    const defaultAhorroMensual = Math.round(Math.max(0, selectors.monthlySavingsAvg(s, 3)));
+    const defaultPatrimonio = Math.round(selectors.netWorth(s));
+
+    // Estado interno de los inputs — respeta ediciones previas del usuario
+    let gastosAnuales = userValues.gastosAnuales ?? defaultGastosAnuales;
+    let ahorroMensual = userValues.ahorroMensual ?? defaultAhorroMensual;
+    let patrimonioActual = userValues.patrimonioActual ?? defaultPatrimonio;
+    let rendimientoAnual = (userValues.rendimientoAnual ?? 7) / 100;
+    let tasaRetiro = (userValues.tasaRetiro ?? 4) / 100;
+
+    // ---- Construir inputs (valor inicial = edición previa del usuario, o default del selector) ----
+    const { wrapper: gastosW, input: gastosI } = numField({
+      id: 'fire-gastos',
+      label: 'Gastos anuales',
+      value: gastosAnuales,  // ya resuelto: userValues.gastosAnuales ?? defaultGastosAnuales
+      min: 0,
+      step: 100000,
+      note: 'Base = gasto mensual × 12',
+      suffix: cur,
+    });
+
+    const { wrapper: ahorroW, input: ahorroI } = numField({
+      id: 'fire-ahorro',
+      label: 'Ahorro mensual',
+      value: ahorroMensual,  // ya resuelto
+      min: 0,
+      step: 100000,
+      note: 'Prom. 3 meses',
+      suffix: `${cur}/mes`,
+    });
+
+    const { wrapper: patrimonioW, input: patrimonioI } = numField({
+      id: 'fire-patrimonio',
+      label: 'Patrimonio actual',
+      value: patrimonioActual,  // ya resuelto
+      step: 1000000,
+      note: 'Activos − Pasivos',
+      suffix: cur,
+    });
+
+    const { wrapper: rendimientoW, input: rendimientoI } = numField({
+      id: 'fire-rendimiento',
+      label: 'Rendimiento esperado',
+      value: userValues.rendimientoAnual ?? 7,
+      min: 0,
+      max: 30,
+      step: 0.5,
+      note: 'Real (post-inflación)',
+      suffix: '% anual',
+    });
+
+    const { wrapper: tasaW, input: tasaI } = numField({
+      id: 'fire-tasa',
+      label: 'Tasa de retiro (SWR)',
+      value: userValues.tasaRetiro ?? 4,
+      min: 0.1,
+      max: 10,
+      step: 0.1,
+      note: 'Regla del 4%',
+      suffix: '%',
+    });
+
+    // ---- Área de resultados (se actualiza en cada cambio de input) ----
+    const resultsArea = el('div', { class: 'fire-results' });
+    const sensArea = el('div', { class: 'fire-sens' });
+
+    function updateResults() {
+      const objetivo = gastosAnuales / tasaRetiro;
+      const falta = Math.max(0, objetivo - patrimonioActual);
+      const years = yearsToFire(patrimonioActual, objetivo, ahorroMensual, rendimientoAnual);
+      const sr = savingsRateFromInputs(ahorroMensual, gastosAnuales);
+      const reached = patrimonioActual >= objetivo;
+
+      // KPIs
+      const kpiObjetivo = KpiCard({
+        label: 'Patrimonio objetivo FIRE',
+        value: formatMoney(objetivo, cur, { compact: true }),
+        iconName: 'fire',
+        variant: 'accent',
+      });
+
+      const kpiFalta = KpiCard({
+        label: reached ? 'Superávit' : 'Falta acumular',
+        value: reached ? formatMoney(patrimonioActual - objetivo, cur, { compact: true }) : formatMoney(falta, cur, { compact: true }),
+        iconName: reached ? 'goals' : 'networth',
+        variant: reached ? 'positive' : '',
+      });
+
+      const kpiAnios = KpiCard({
+        label: reached ? '¡Ya alcanzaste FIRE!' : 'Años hasta FIRE',
+        value: reached ? '0' : fmtYearsShort(years),
+        iconName: 'today',
+        variant: reached ? 'positive' : !isFinite(years) ? 'negative' : '',
+        foot: reached ? null : [el('span', { class: 't-micro text-secondary', text: fmtYears(years) })],
+      });
+
+      const kpiSR = KpiCard({
+        label: 'Tasa de ahorro implícita',
+        value: `${sr.toFixed(1)}%`,
+        iconName: 'analytics',
+        variant: sr >= 50 ? 'positive' : sr >= 25 ? 'info' : sr > 0 ? 'warning' : 'negative',
+      });
+
+      mount(resultsArea,
+        el('div', { class: 'grid grid--kpi' }, [kpiObjetivo, kpiFalta, kpiAnios, kpiSR]),
+      );
+
+      // Tabla de sensibilidad
+      if (ahorroMensual > 0 && gastosAnuales > 0) {
+        mount(sensArea,
+          Card({
+            title: 'Tabla de sensibilidad',
+            body: el('div', {}, [
+              el('p', { class: 't-caption text-secondary', text: 'Años hasta FIRE variando ahorro mensual (filas) y rendimiento real (columnas). La celda central es tu escenario base.' }),
+              buildSensTable(ahorroMensual, rendimientoAnual, patrimonioActual, objetivo, cur),
+            ]),
+          }),
+        );
+      } else {
+        mount(sensArea); // vacío
+      }
+    }
+
+    // ---- Conectar listeners ----
+    function readInputs() {
+      gastosAnuales = Math.max(0, Number(gastosI.value) || 0);
+      ahorroMensual = Math.max(0, Number(ahorroI.value) || 0);
+      patrimonioActual = Number(patrimonioI.value) || 0;
+      rendimientoAnual = Math.max(0, (Number(rendimientoI.value) || 7)) / 100;
+      tasaRetiro = Math.max(0.001, (Number(tasaI.value) || 4)) / 100;
+      // Persistir para que el siguiente repaint no borre lo que el usuario editó
+      userValues.gastosAnuales = gastosAnuales;
+      userValues.ahorroMensual = ahorroMensual;
+      userValues.patrimonioActual = patrimonioActual;
+      userValues.rendimientoAnual = rendimientoAnual * 100;
+      userValues.tasaRetiro = tasaRetiro * 100;
+      updateResults();
+    }
+
+    for (const inp of [gastosI, ahorroI, patrimonioI, rendimientoI, tasaI]) {
+      inp.addEventListener('input', readInputs);
+    }
+
+    // ---- Empty state si no hay datos ----
+    const hasData = defaultGastosAnuales > 0 || defaultAhorroMensual > 0;
+
+    const inputsCard = Card({
+      title: 'Parámetros',
+      body: el('div', { class: 'fire-inputs' }, [
+        el('div', { class: 'fire-inputs__grid' }, [gastosW, ahorroW, patrimonioW, rendimientoW, tasaW]),
+        !hasData
+          ? el('p', { class: 't-caption text-secondary fire-inputs__hint', text: 'No hay transacciones registradas. Ajusta los valores manualmente para simular tu camino a la independencia financiera.' })
+          : null,
+      ].filter(Boolean)),
+    });
+
+    mount(root,
+      el('div', {}, [
+        el('div', { class: 'page-header' }, [
+          el('div', {}, [
+            el('h2', { class: 't-h1', text: 'Simulador FIRE' }),
+            el('p', { class: 'page-header__sub', text: 'Financial Independence, Retire Early — ¿cuándo puedes dejar de trabajar por dinero?' }),
+          ]),
+        ]),
+        el('div', { class: 'stack' }, [
+          inputsCard,
+          resultsArea,
+          sensArea,
+        ]),
+      ]),
+    );
+
+    // Calcular con los valores iniciales
+    updateResults();
+  }
+
+  store.subscribe(() => { if (root.isConnected) repaint(); });
+  repaint();
+  return root;
+}

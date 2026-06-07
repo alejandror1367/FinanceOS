@@ -557,3 +557,53 @@ body.modal-open { overflow: hidden; }
 
 /* Transacciones — resumen de filtro */
 .tx-summary { font-size: var(--fs-caption); color: var(--text-secondary); margin-bottom: var(--space-3); min-height: 1em; }
+
+/* ---------- Vista FIRE — inputs y tabla de sensibilidad ---------- */
+.fire-inputs__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-4);
+}
+.fire-inputs__hint { margin-top: var(--space-3); }
+
+.fire-field { display: flex; flex-direction: column; gap: var(--space-1); }
+.fire-field__head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2); }
+.fire-field__control { display: flex; align-items: center; gap: var(--space-2); }
+.fire-field__control .input { flex: 1; min-width: 0; }
+.fire-field__suffix { white-space: nowrap; flex-shrink: 0; }
+
+.fire-results { display: contents; }
+
+/* Tabla de sensibilidad */
+.fire-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-caption);
+  font-variant-numeric: tabular-nums;
+  margin-top: var(--space-4);
+}
+.fire-table th,
+.fire-table td {
+  padding: var(--space-2) var(--space-3);
+  text-align: center;
+  border: 1px solid var(--border-subtle);
+}
+.fire-table__corner,
+.fire-table__label {
+  text-align: left;
+  color: var(--text-secondary);
+  font-weight: var(--fw-medium);
+  background: var(--bg-elevated);
+}
+.fire-table__th {
+  color: var(--text-secondary);
+  font-weight: var(--fw-semibold);
+  background: var(--bg-elevated);
+}
+.fire-table__td { color: var(--text-primary); }
+.fire-table__td--highlight {
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-weight: var(--fw-bold);
+  border-color: var(--accent);
+}

@@ -16,6 +16,7 @@ import { renderJournal } from '../views/journal.js';
 import { renderExports } from '../views/exports.js';
 import { renderSettings } from '../views/settings.js';
 import { renderImport } from '../views/import.js';
+import { renderFire } from '../views/fire.js';
 
 export const routes = {
   dashboard:    { title: 'Dashboard',     icon: 'dashboard',    nav: 'primary', render: renderDashboard },
@@ -31,6 +32,7 @@ export const routes = {
   debts:        { title: 'Deudas',        icon: 'debts',        nav: 'wealth',  render: renderDebts },
 
   analytics:    { title: 'Analítica',     icon: 'analytics',    nav: 'insights', render: renderAnalytics },
+  fire:         { title: 'Simulador FIRE', icon: 'fire',        nav: 'insights', render: renderFire },
   journal:      { title: 'Diario',        icon: 'journal',      nav: 'insights', render: renderJournal },
   exports:      { title: 'Exportaciones', icon: 'exports',      nav: 'insights', render: renderExports },
   import:       { title: 'Importar',      icon: 'importFile',   nav: 'insights', render: renderImport },
