@@ -489,21 +489,21 @@ HEAD pasó de `75eacca` a **`b870d6c`**. SW `v0.2.10 → v0.2.13`. Tests `33 →
 ```
 Rama:    main
 Remote:  https://github.com/alejandror1367/FinanceOS.git
-HEAD:    f0d8ff1  fix(backend): permitir balance negativo en cuentas CC (toSignedAmount_)
-SW:      v0.2.75  (sincronizado con config.version)
+HEAD:    57f144e  feat(dashboard): desplegable de detalle en cada KPI card
+SW:      v0.2.76  (sincronizado con config.version)
 Status:  limpio · sincronizado con origin/main (push 0 0)
 ```
 
 ### Commits recientes
 ```
+57f144e feat(dashboard): desplegable de detalle en cada KPI card
+0839335 docs: handoff 2026-06-07 — fix backend CC balance + dead-letter queue
 f0d8ff1 fix(backend): permitir balance negativo en cuentas CC (toSignedAmount_)
 2717604 fix(debts): excluir liabilities credit_card de debtList y creditCardDebt
 3bb0dcd feat(categories): agregar categoría de gasto "Otros"
 db42956 fix(debts): normalizar saldos CC negativos al inicializar app
 1b0e979 fix(accounts): CC balance almacenado como negativo — gastos aumentan la deuda
 c385baf fix(fire): eliminar store.subscribe — inputs no se recrean en cada store change
-9280006 fix(auth): refreshSilent proactivo — renueva token con <20 min restantes
-843fed3 feat(investments): secciones desplegables con estado persistente
 ```
 
 ---
@@ -570,9 +570,9 @@ Todos los backends han sido desplegados. El estado del backend en producción es
 
 ### Verificación rápida del estado
 ```bash
-git log --oneline -5          # HEAD debe ser f0d8ff1
+git log --oneline -5          # HEAD debe ser 57f144e
 node --test tests/selectors.test.js  # 97/97
-grep "version" src/core/config.js   # debe coincidir con sw.js VERSION (v0.2.75)
+grep "version" src/core/config.js   # debe coincidir con sw.js VERSION (v0.2.76)
 ```
 
 ---
@@ -670,7 +670,7 @@ commit: e6b3c77 · rama: main · SW: v0.2.43 · config.version: 0.2.43 · tests:
 
 > Leer esto antes que cualquier otra sección. Máximo 100 líneas. Fuente de verdad para retomar de inmediato.
 
-**HEAD:** `f0d8ff1` · **SW/config.version:** `v0.2.75` · **Tests:** 97/97 (20 suites) · **Rama:** main · **Sync:** origin/main al día
+**HEAD:** `57f144e` · **SW/config.version:** `v0.2.76` · **Tests:** 97/97 (20 suites) · **Rama:** main · **Sync:** origin/main al día
 
 > **MCP:** `.mcp.json` versionado con **playwright** + **context7** (scope de proyecto).
 > Tras `git pull`: **aprobar** ambos y **reiniciar Claude Code** (las tools MCP se fijan al arrancar).
@@ -683,7 +683,8 @@ commit: e6b3c77 · rama: main · SW: v0.2.43 · config.version: 0.2.43 · tests:
 - **Sesión 2026-06-04 (mañana):** análisis/planificación IA + Alpaca + diagnóstico 2 bugs
 - **Sesión 2026-06-04 (tarde-1):** fix auto-refresh precios (`700ba60`) + Alpaca API (`527492b`)
 - **Sesión 2026-06-04 (tarde-2):** secciones desplegables en Inversiones (`843fed3`)
-- **Sesión 2026-06-07:** diagnóstico dead-letter queue + fix backend CC balance negativo (`f0d8ff1`)
+- **Sesión 2026-06-07 (mañana):** diagnóstico dead-letter queue + fix backend CC balance negativo (`f0d8ff1`)
+- **Sesión 2026-06-07 (tarde):** desplegables de detalle en KPIs del dashboard (`57f144e`)
 
 ### Deploy pendiente — ACCIÓN MANUAL REQUERIDA
 **`backend/Accounts.gs` + `backend/Utils.gs`** — fix CC balance negativo (`f0d8ff1`).
@@ -723,10 +724,11 @@ Flujo: `Views → Services → Store → Views` (never direct to net/IndexedDB f
 1. ✅ **Fix auto-refresh de precios** — `700ba60`
 2. ✅ **Alpaca API** en `backend/Quotes.gs` — `527492b` · desplegado · verificado en producción
 3. ✅ **Secciones desplegables** en Inversiones — `843fed3` · estado en localStorage
-4. ⚠️ **Deploy backend CC fix** — subir `Accounts.gs` + `Utils.gs` y republicar Apps Script (`f0d8ff1`)
-5. ⚠️ **Re-encolar dead-letter** — tras deploy, ejecutar snippet en consola del browser (ver NEXT_SESSION.md)
-6. **Simulador FIRE** — nueva ruta `#/fire` (pura aritmética, sin IA, alto ROI)
-7. **Reportes automáticos con Groq** — Apps Script time trigger mensual → resumen en lenguaje natural
+4. ✅ **KPI desplegables** en Dashboard — `57f144e` · sin deploy (solo frontend)
+5. ⚠️ **Deploy backend CC fix** — subir `Accounts.gs` + `Utils.gs` y republicar Apps Script (`f0d8ff1`)
+6. ⚠️ **Re-encolar dead-letter** — tras deploy, ejecutar snippet en consola del browser (ver NEXT_SESSION.md)
+7. **Simulador FIRE** — nueva ruta `#/fire` (pura aritmética, sin IA, alto ROI)
+8. **Reportes automáticos con Groq** — Apps Script time trigger mensual → resumen en lenguaje natural
 
 ### Riesgos abiertos
 - `getBootstrap_` limita transactions a ventana 24 meses (intencional — confirmar impacto en datos históricos reales)
@@ -753,7 +755,39 @@ tests/selectors.test.js        — 97/97 tests (20 suites)
 
 ---
 
-## Cambios realizados en sesión 2026-06-07
+## Cambios realizados en sesión 2026-06-07 (tarde)
+
+### feat: KPI desplegables en Dashboard
+
+**Mejoras UX/UI:**
+- Cada KPI del dashboard tiene ahora un `<details>` nativo que se expande al clicar "Detalle ▾"
+- **Gastos del mes:** top 7 transacciones del mes por monto desc + "+N más"
+- **Ingresos del mes:** todas las transacciones de ingreso del mes
+- **Ahorro del mes:** ingresos − gastos + tasa de ahorro (muestra la fórmula)
+- **Liquidez disponible:** cada cuenta líquida con su saldo individual
+- **Patrimonio neto:** cuentas + inversiones + otros activos − tarjetas − créditos
+- **Inversiones:** valor de mercado / costo base / P&L no realizado / rentabilidad
+- **Score financiero:** 4 factores con puntos obtenidos / máximo (tasa ahorro · presupuestos · metas · cobertura liquidez)
+
+**Verificación matemática realizada:**
+- Ahorro = 4.236.000 − 5.064.458 = −828.458 ✓
+- Tasa = −19.6% ✓
+- Score 35 = 0 (ahorro neg) + 20 (ppto) + 10 (metas) + 5 (liquidez 0.76×) ✓
+
+**Archivos modificados:**
+- `src/components/ui.js` — `KpiCard` acepta nuevo prop `details?: {label,value}[]`
+- `src/styles/components.css` — clases `.kpi__details`, `.kpi__dtrig`, `.kpi__dchev`, `.kpi__dlist`, `.kpi__drow`, `.kpi__dlabel`, `.kpi__dvalue`
+- `src/store/selectors.js` — nuevo método `financialScoreBreakdown(s)` (4 factores)
+- `src/views/dashboard.js` — importa `isExpenseLike`, computa y pasa `details` a cada KpiCard
+
+**Verificado en vivo:** ⛔ no verificable sin auth activa en Playwright local/producción.
+
+**Commits:**
+- `57f144e` feat(dashboard): desplegable de detalle en cada KPI card
+
+---
+
+## Cambios realizados en sesión 2026-06-07 (mañana)
 
 ### Diagnóstico y fix — dead-letter queue / CC balance negativo
 
