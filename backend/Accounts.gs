@@ -22,7 +22,7 @@ function createAccount_(d) {
     name: sanitizeString_(d.name, 80),
     type: d.type,
     currency: sanitizeString_(d.currency || APP.baseCurrency, 3),
-    balance: toAmount_(d.balance || 0, 'balance'),
+    balance: toSignedAmount_(d.balance || 0, 'balance'),
     institution: sanitizeString_(d.institution || '', 80),
     isArchived: d.isArchived === true,
     creditLimit:  toAmount_(d.creditLimit  || 0, 'creditLimit'),
@@ -43,7 +43,7 @@ function updateAccount_(d) {
   if (d.name !== undefined) patch.name = sanitizeString_(d.name, 80);
   if (d.type !== undefined) patch.type = d.type;
   if (d.currency !== undefined) patch.currency = sanitizeString_(d.currency, 3);
-  if (d.balance !== undefined) patch.balance = toAmount_(d.balance, 'balance');
+  if (d.balance !== undefined) patch.balance = toSignedAmount_(d.balance, 'balance');
   if (d.institution !== undefined) patch.institution = sanitizeString_(d.institution, 80);
   if (d.isArchived    !== undefined) patch.isArchived    = d.isArchived === true;
   if (d.creditLimit   !== undefined) patch.creditLimit   = toAmount_(d.creditLimit,  'creditLimit');

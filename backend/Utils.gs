@@ -293,6 +293,13 @@ function toAmount_(value, field) {
   return n;
 }
 
+// Igual que toAmount_ pero permite negativos (p.ej. saldo de CC que crece con deuda).
+function toSignedAmount_(value, field) {
+  var n = Number(value);
+  if (isNaN(n)) throw new Error('Monto invalido en ' + field);
+  return n;
+}
+
 function isIsoDate_(value) {
   return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value);
 }
