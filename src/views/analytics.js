@@ -35,23 +35,30 @@ function buildInsights(s, cur) {
   const savings = income - expense;
   const rate = income ? (savings / income) * 100 : 0;
 
-  // Proyección al cierre del mes (único en esta vista — Dashboard no lo tiene).
+  // Proyección al cierre del mes: proyecta solo gastos (son lineales).
+  // No proyectar ingresos — el sueldo suele llegar un día fijo y una proyección lineal
+  // desde el día 1 da números absurdos el resto del mes.
   const day = now.getDate();
   const dim = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
   if (income || expense) {
-    const projSavings = day > 0 ? (savings / day) * dim : savings;
+    const projExpense = day > 0 ? (expense / day) * dim : expense;
+    const projSavings = income - projExpense;
     out.push(insightRow(
       projSavings >= 0 ? 'arrowUp' : 'arrowDown',
       projSavings >= 0 ? 'positive' : 'negative',
-      `Si mantienes este ritmo, este mes ${projSavings >= 0 ? 'ahorrarás' : 'tendrás un déficit de'} <b>${formatMoney(Math.abs(projSavings), cur)}</b>.`,
+      `Si mantienes este ritmo de gastos, este mes ${projSavings >= 0 ? 'ahorrarás' : 'tendrás un déficit de'} <b>${formatMoney(Math.abs(projSavings), cur)}</b>.`,
     ));
   }
 
-  // Tasa de ahorro actual vs. promedio histórico 3 meses.
+  // Tasa de ahorro actual vs. promedio histórico 3 meses completos.
+  // Bug fix: usar los mismos meses activos para numerador y denominador.
+  // Antes: avg3 promediaba solo meses activos pero avgIncome dividía siempre por 3 → tasa incorrecta.
   if (income) {
-    const avg3 = selectors.monthlySavingsAvg(s, 3);
-    const avgIncome = selectors.cashflow(s, 4).slice(0, 3).reduce((a, m) => a + m.income, 0) / 3;
-    const avgRate = avgIncome ? (avg3 / avgIncome) * 100 : null;
+    const cf3 = selectors.cashflow(s, 4).slice(0, 3);
+    const active3 = cf3.filter((m) => m.income > 0 || m.expense > 0);
+    const totalIncome3 = active3.reduce((a, m) => a + m.income, 0);
+    const totalSavings3 = active3.reduce((a, m) => a + m.savings, 0);
+    const avgRate = totalIncome3 > 0 ? (totalSavings3 / totalIncome3) * 100 : null;
     const rateLabel = `Tasa de ahorro: <b>${formatPercent(rate)}</b> este mes`;
     const comparison = avgRate !== null
       ? ` · promedio 3m: <b>${formatPercent(avgRate)}</b>`
