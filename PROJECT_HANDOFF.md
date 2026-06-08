@@ -493,21 +493,21 @@ HEAD pasó de `75eacca` a **`b870d6c`**. SW `v0.2.10 → v0.2.13`. Tests `33 →
 ```
 Rama:    main
 Remote:  https://github.com/alejandror1367/FinanceOS.git
-HEAD:    57f144e  feat(dashboard): desplegable de detalle en cada KPI card
-SW:      v0.2.76  (sincronizado con config.version)
-Status:  limpio · sincronizado con origin/main (push 0 0)
+HEAD:    d2be879  docs: auditoría estratégica 2026-06-08 — 9 iniciativas, sprints 10-13
+SW:      v0.2.77  (sincronizado con config.version)
+Status:  limpio · sincronizado con origin/main (push 0 0) — por confirmar tras push
 ```
 
 ### Commits recientes
 ```
+d2be879 docs: auditoría estratégica 2026-06-08 — 9 iniciativas, sprints 10-13
+2445be7 docs: cerrar QA-001/QA-002/QA-003 en handoff (sesion 2026-06-08)
+a27de76 fix(selectors): costBasis fallback en investmentsValue para FIC sin precio vivo (QA-001)
+13c2e2b docs: actualizar roadmap 2026-06-08 — FIRE + CC fix + dead-letter resueltos
+54aa310 docs: agregar prompt de auditoría estratégica 2026-06-08
+80319df docs: handoff 2026-06-07 tarde — KPI desplegables + actualización estado
 57f144e feat(dashboard): desplegable de detalle en cada KPI card
-0839335 docs: handoff 2026-06-07 — fix backend CC balance + dead-letter queue
 f0d8ff1 fix(backend): permitir balance negativo en cuentas CC (toSignedAmount_)
-2717604 fix(debts): excluir liabilities credit_card de debtList y creditCardDebt
-3bb0dcd feat(categories): agregar categoría de gasto "Otros"
-db42956 fix(debts): normalizar saldos CC negativos al inicializar app
-1b0e979 fix(accounts): CC balance almacenado como negativo — gastos aumentan la deuda
-c385baf fix(fire): eliminar store.subscribe — inputs no se recrean en cada store change
 ```
 
 ---
@@ -583,29 +583,29 @@ grep "version" src/core/config.js   # debe coincidir con sw.js VERSION (v0.2.76)
 
 ## 18. Próximos pasos recomendados
 
-**Roadmap original 1–9: completado** · QA Playwright 15/15 PASS · Tests 97/97
+**Roadmap original 1–9: completado** · Roadmap nuevo 10–13: planificado en `docs/Audit-Estrategica-2026-06-08.md`
 
-**Próximas acciones identificadas (sesión 2026-06-04):**
+**Sprints ejecutados:**
 
-| Tarea | Tipo | Complejidad | Deploy |
-|---|---|---|---|
-| ✅ **Fix auto-refresh precios** (`app.js` 2 bugs) — `700ba60` | Bug fix | Bajo | No |
-| ✅ **Integración Alpaca API** (`Quotes.gs`) — `527492b` | Feature | Medio | **Desplegado** |
-| ✅ **Secciones desplegables** (Inversiones) — `843fed3` | UX | Bajo | No |
-| ✅ **KPI desplegables** (Dashboard) — `57f144e` | UX | Bajo | No |
-| ✅ **Fix backend CC balance** — `f0d8ff1` | Bug fix | Bajo | **Desplegado 2026-06-08** |
-| ✅ **Simulador FIRE** (`#/fire`) — `5da9b05`+`c385baf` | Feature | Medio | No |
-| **Reportes automáticos Groq** (trigger AS) | Feature | Medio (~80 líneas) | **Sí** |
-| **QA-003**: Migrar a FedCM (OAuth) | Mejora | Alto | **Sí** |
+| Tarea | Estado | Commit |
+|---|---|---|
+| Fix auto-refresh precios | ✅ | `700ba60` |
+| Alpaca API (`Quotes.gs`) | ✅ desplegado | `527492b` |
+| Secciones desplegables Inversiones | ✅ | `843fed3` |
+| KPI desplegables Dashboard | ✅ verificado producción | `57f144e` |
+| Fix backend CC balance negativo | ✅ desplegado 2026-06-08 | `f0d8ff1` |
+| Re-encolar dead-letter | ✅ 2026-06-08 | — |
+| Simulador FIRE (`#/fire`) | ✅ | `5da9b05`+`c385baf` |
+| Auditoría estratégica 9 iniciativas | ✅ 2026-06-08 | `d2be879` |
 
-**Orden recomendado:**
-1. ~~Fix `app.js` bugs~~ ✅
-2. ~~Alpaca + deploy `Quotes.gs`~~ ✅
-3. ~~Simulador FIRE~~ ✅
-4. **Reportes automáticos Groq** ← siguiente
+**Orden recomendado (sprints nuevos):**
+1. **Sprint 10** ← siguiente — FIRE enriquecido + Insights analítica (~1 día, solo `fire.js`+`selectors.js`+`analytics.js`, sin deploy)
+2. **Sprint 11** — Snooze pagos + Snapshot enriquecido (~1 día + deploy `Config.gs`+`NetWorth.gs`)
+3. **Sprint 12** — Cuentas remuneradas + Alertas portafolio (~1.5 días + deploy)
+4. **Sprint 13** — IA narrativa portafolio + Import/Export mejorado (~1.5 días + deploy)
 
-**Verificaciones pendientes en vivo (happy-path autenticado con datos reales):**
-- Flujo venta parcial/total en UI Inversiones
+**Verificaciones pendientes en vivo:**
+- Flujo venta parcial/total en UI Inversiones (verificación Playwright con auth real)
 - `getBootstrap` ventana 24m no rompe historial más antiguo
 - Analítica: tabla tendencias y selector de período funcionan en producción
 
@@ -676,7 +676,7 @@ commit: e6b3c77 · rama: main · SW: v0.2.43 · config.version: 0.2.43 · tests:
 
 > Leer esto antes que cualquier otra sección. Máximo 100 líneas. Fuente de verdad para retomar de inmediato.
 
-**HEAD:** `54aa310` · **SW/config.version:** `v0.2.76` · **Tests:** 97/97 (20 suites) · **Rama:** main · **Sync:** origin/main al día
+**HEAD:** `d2be879` · **SW/config.version:** `v0.2.77` · **Tests:** 97/97 (20 suites) · **Rama:** main · **Sync:** origin/main al día
 
 > **MCP:** `.mcp.json` versionado con **playwright** + **context7** (scope de proyecto).
 > Tras `git pull`: **aprobar** ambos y **reiniciar Claude Code** (las tools MCP se fijan al arrancar).
@@ -685,18 +685,12 @@ commit: e6b3c77 · rama: main · SW: v0.2.43 · config.version: 0.2.43 · tests:
 - **App en producción:** https://alejandror1367.github.io/FinanceOS/ (PWA instalada, OAuth activo)
 - **Backend Apps Script:** ✅ **Todo desplegado** — Sprints 1–5 + Sprint 8 (XIRR/CAGR) desplegados
 - **Tests:** **97/97** en `tests/selectors.test.js` — 20 suites
-- **Roadmap:** 9/9 sprints completados · QA Playwright 15/15 PASS
-- **Sesión 2026-06-04 (mañana):** análisis/planificación IA + Alpaca + diagnóstico 2 bugs
-- **Sesión 2026-06-04 (tarde-1):** fix auto-refresh precios (`700ba60`) + Alpaca API (`527492b`)
-- **Sesión 2026-06-04 (tarde-2):** secciones desplegables en Inversiones (`843fed3`)
-- **Sesión 2026-06-07 (mañana):** diagnóstico dead-letter queue + fix backend CC balance negativo (`f0d8ff1`)
-- **Sesión 2026-06-07 (tarde):** desplegables de detalle en KPIs del dashboard (`57f144e`)
-- **Sesión 2026-06-08:** deploy backend CC fix + re-encolar dead-letter + verificar KPI desplegables + Simulador FIRE (`5da9b05`+`c385baf`)
-- **Sesión 2026-06-08 (bugs):** QA-003 verificado resuelto · QA-001 fix `selectors.js:69` (costBasis fallback) · QA-002 documentado como expected
+- **Roadmap original (1–9):** ✅ Completado · QA Playwright 15/15 PASS
+- **Roadmap nuevo (10–13):** Generado en auditoría estratégica 2026-06-08 — **Sprint 10 es el siguiente**
+- **Sesión 2026-06-08 (tarde):** Auditoría estratégica 9 iniciativas → `docs/Audit-Estrategica-2026-06-08.md` + Sprints 10–13 en Roadmap
 
 ### Deploy — todo desplegado ✅
-`Accounts.gs` + `Utils.gs` (CC fix `f0d8ff1`) desplegados y verificados en producción 2026-06-08.
-Dead-letter re-encolado y sincronizado. `Quotes.gs` con Alpaca desplegado. Backend al día.
+`Accounts.gs` + `Utils.gs` (CC fix) · `Quotes.gs` (Alpaca) · `Reports.gs` (CC en patrimonio). Backend al día. Próximo deploy: Sprint 11 (`NetWorth.gs` snapshot enriquecido) o Sprint 12 (`Accounts.gs` `lastYieldDate`).
 
 ### Arquitectura actual
 ```
@@ -708,54 +702,79 @@ Flujo: `Views → Services → Store → Views` (never direct to net/IndexedDB f
 ### Funcionalidades implementadas (completas)
 - Dashboard (KPIs desplegables) · Hoy · Transacciones · Cuentas · Presupuestos · Recurrentes
 - Patrimonio (CC como filas reales en Pasivos, sin doble conteo, snapshots)
-- Inversiones (ventas parciales/totales, CDT capitalizado, XIRR/CAGR, comisión/retención, **secciones desplegables**, **Alpaca API**)
+- Inversiones (ventas parciales/totales, CDT capitalizado, XIRR/CAGR, comisión/retención, secciones desplegables, Alpaca API)
 - Metas · Deudas (Snowball/Avalanche, amortización) · Diario · Ajustes
 - Analítica: flujo de caja 3 series + selector 3/6/12m · tendencias top5 · insights históricos
 - Exportaciones · Command Palette (⌘K) · Validación inline · Import con Groq
 - **Simulador FIRE** (`#/fire`) — años hasta independencia financiera, tabla de sensibilidad
 
 ### Bugs abiertos
-
-Sin bugs abiertos conocidos. Ver "Resueltos 2026-06-08" abajo.
-
-**Resueltos 2026-06-08:**
-- ~~**BUG-CC-1:**~~ `updateAccount` CC balance negativo → dead-letter. Fix desplegado (`f0d8ff1`), ops re-encoladas y sincronizadas. ✅
-- ~~**QA-003:**~~ FedCM warning en GIS — `use_fedcm_for_prompt: true` ya presente en `src/core/auth.js:37` desde sesiones anteriores. Migración completa; no requiere más cambios. ✅
-- ~~**QA-001:**~~ Dashboard KPI "Inversiones" mostraba $0 para FIC sin precio vivo en Yahoo. Fix: `selectors.investmentsValue()` añade `|| i.costBasis || 0` como fallback final cuando no hay `currentValue` ni precio calculado. FIC ahora muestra al menos el costo de compra. `src/store/selectors.js:69`. ✅
-- ~~**QA-002:**~~ Precios MU/VUG stale en primera carga — comportamiento esperado y documentado. `backgroundRefreshPrices()` ya se dispara incondicionalmente en bootstrap (`app.js:215`, fix `700ba60`). El store re-renderiza reactivamente cuando los precios llegan (~1-3 s). No requiere indicador visual: agregar complejidad para una ventana de 1-3 s que se auto-resuelve viola el principio de simplicidad. Marcado como resolved/expected. ✅
+Sin bugs abiertos conocidos. Todos los P0/P1/P2/QA resueltos.
 
 ### Pendientes en orden
-1. ✅ **Fix auto-refresh de precios** — `700ba60`
-2. ✅ **Alpaca API** en `backend/Quotes.gs` — `527492b` · desplegado · verificado en producción
-3. ✅ **Secciones desplegables** en Inversiones — `843fed3` · estado en localStorage
-4. ✅ **KPI desplegables** en Dashboard — `57f144e` · verificado en producción 2026-06-08
-5. ✅ **Deploy backend CC fix** — `Accounts.gs` + `Utils.gs` desplegados · `f0d8ff1` · 2026-06-08
-6. ✅ **Re-encolar dead-letter** — ejecutado · ops sincronizadas · 2026-06-08
-7. ✅ **Simulador FIRE** — `#/fire` · `5da9b05` + `c385baf` · 2026-06-08
-8. **Reportes automáticos con Groq** — Apps Script time trigger mensual → resumen en lenguaje natural
+1–7. ✅ Todos completados (fix precios, Alpaca, desplegables, KPIs, deploy CC, dead-letter, FIRE)
+8. **Sprint 10** (siguiente) — FIRE enriquecido (fecha estimada, ProgressBar, tooltips, variantes) + 3 insights analítica
+9. **Sprint 11** — Snooze de pagos + Snapshot enriquecido (deploy backend)
+10. **Sprint 12** — Cuentas remuneradas + Alertas portafolio (deploy backend)
+11. **Sprint 13** — IA narrativa portafolio + Import/Export mejorado (deploy backend)
+12. **Reportes automáticos Groq** — Apps Script time trigger mensual (puede ir en Sprint 13)
 
 ### Riesgos abiertos
 - `getBootstrap_` limita transactions a ventana 24 meses (intencional — confirmar impacto en datos históricos reales)
+- Alertas portafolio (Sprint 12): narrativa Groq debe ser estrictamente descriptiva (riesgo regulatorio AMV)
 
 ### Decisiones arquitectónicas importantes
 - `totalLiabilities` excluye `type=credit_card` (FIN-014) · `reconcileAndHydrate` mergea update (TD-47)
 - `flushBatch` empareja por entityId (TD-26) · `isTransient`: 401 → dead-letter (TD-10)
 - `apiClient.js` siempre POST, idToken en body (SEC-001/TD-50) · `verifyGoogleToken_` valida iss+exp (SEC-002/TD-51)
 - Precios en vivo: `priceService.js` (registro global) · `investments.js` escribe · `selectors.js` lee
+- Snooze de pagos (Sprint 11): filtro en VISTA, NO en `selectors.upcomingPayments` (preserva pureza del selector)
 
 ### Archivos críticos
 ```
-CLAUDE.md                      — Invariantes absolutos (leer SIEMPRE primero)
-src/core/app.js:109-128        — backgroundRefreshPrices() — corregido (700ba60)
-src/store/selectors.js         — Lógica financiera + XIRR/CAGR + categoryTrends + FX
-src/services/priceService.js   — Registro global precios (TTL 15min, localStorage)
-src/services/dataService.js    — reconcileAndHydrate, _recalcAccountBalance
-src/services/syncEngine.js     — isTransient, flushBatch
-backend/Quotes.gs              — Alpaca (primario) + Yahoo (FX/BVC/fallback) — desplegado
-src/views/investments.js       — secciones desplegables (_collapsed módulo-level)
-src/utils/icons.js             — chevronDown añadido
-tests/selectors.test.js        — 97/97 tests (20 suites)
+CLAUDE.md                          — Invariantes absolutos (leer SIEMPRE primero)
+docs/Audit-Estrategica-2026-06-08.md — Análisis de 9 iniciativas + sprints 10-13
+docs/Roadmap-Implementacion-2026-06-02.md — Roadmap completo (sprints 1-13)
+src/core/app.js:109-128            — backgroundRefreshPrices() — corregido (700ba60)
+src/store/selectors.js             — Lógica financiera + XIRR/CAGR + categoryTrends + FX
+src/services/priceService.js       — Registro global precios (TTL 15min, localStorage)
+src/services/dataService.js        — reconcileAndHydrate, _recalcAccountBalance
+src/services/syncEngine.js         — isTransient, flushBatch
+backend/Quotes.gs                  — Alpaca (primario) + Yahoo (FX/BVC/fallback) — desplegado
+src/views/investments.js           — secciones desplegables (_collapsed módulo-level)
+src/views/fire.js                  — Simulador FIRE (yearsToFire, tabla sensibilidad)
+tests/selectors.test.js            — 97/97 tests (20 suites)
 ```
+
+---
+
+## Cambios realizados en sesión 2026-06-08 (tarde)
+
+### Auditoría estratégica — 9 iniciativas, Sprints 10–13
+
+**Auditorías realizadas:**
+- Análisis estratégico completo del estado del proyecto vs 9 iniciativas propuestas
+- Generado `docs/Audit-Estrategica-2026-06-08.md` con: auditoría de viabilidad, gap analysis, arquitectura propuesta, riesgos, quick wins, roadmap actualizado
+
+**Implementaciones:** Ninguna (sesión de solo análisis)
+
+**Decisiones arquitectónicas:**
+- I1 (Autenticación Biométrica): **descartada** — OAuth+FedCM suficiente para app personal; complejidad desproporcionada
+- I3 (Multicuenta/Multiusuario): **descartada** — viola concepto central del producto; familiares deben usar instancia separada
+- I7 (IA Inversiones): versión reducida — alertas determinísticas (concentración, CDT, P&L negativo, diversificación) + narrativa Groq opt-in solo descriptiva (no prescriptiva, sin riesgo AMV)
+
+**Roadmap generado (Sprints 10–13):**
+- Sprint 10: FIRE enriquecido + 3 insights analítica (~1 día, sin deploy)
+- Sprint 11: Snooze pagos + Snapshot enriquecido (~1 día + deploy)
+- Sprint 12: Cuentas remuneradas + Alertas portafolio (~1.5 días + deploy)
+- Sprint 13: IA narrativa + Import/Export mejorado (~1.5 días + deploy)
+
+**Archivos modificados:**
+- `docs/Audit-Estrategica-2026-06-08.md` (nuevo, ~350 líneas)
+- `docs/Roadmap-Implementacion-2026-06-02.md` (Sprints 10–13 añadidos)
+
+**Commits:**
+- `d2be879` docs: auditoría estratégica 2026-06-08 — 9 iniciativas, sprints 10-13
 
 ---
 
@@ -1205,43 +1224,59 @@ Tras git pull deben APROBARSE y REINICIARSE Claude Code: las tools MCP se fijan 
 PROYECTO: FinanceOS — PWA financiera personal y privada de Alejo.
 Repo: https://github.com/alejandror1367/FinanceOS (rama main).
 Prod: https://alejandror1367.github.io/FinanceOS/
-HEAD: 843fed3 · SW v0.2.65 · config.version 0.2.65 · Tests 97/97 (20 suites)
+HEAD: d2be879 · SW v0.2.77 · config.version 0.2.77 · Tests 97/97 (20 suites)
 
 INVARIANTES (ver CLAUDE.md): JS ES Modules sin build step · sin frameworks/bundlers ·
 cero deps npm en runtime · frontend abstraído tras src/services/ · Apps Script +
 Google Sheets (13 hojas) + GitHub Pages + OAuth de Google · offline-first.
 
-HECHO Y DESPLEGADO (sesión 2026-06-04 completa):
-- Sprints 1–9 · QA Playwright 15/15 PASS · mobile fixes · QA-001 fix
-- Fix auto-refresh precios (700ba60): guardia isStale + parser BE-003 corregidos
-- Alpaca API (527492b): Quotes.gs desplegado y verificado en producción
-- Secciones desplegables en Inversiones (843fed3): estado en localStorage
+HECHO Y DESPLEGADO:
+- Sprints 1–9 completados · QA Playwright 15/15 PASS · 97/97 tests
+- Fix auto-refresh precios (700ba60) · Alpaca API (527492b) · KPIs desplegables (57f144e)
+- Fix backend CC balance negativo (f0d8ff1) · Re-encolar dead-letter ✅
+- Simulador FIRE #/fire (5da9b05+c385baf) · QA-001/QA-002/QA-003 cerrados
+
+AUDITORÍA ESTRATÉGICA 2026-06-08 (solo análisis, nada implementado):
+- docs/Audit-Estrategica-2026-06-08.md: 9 iniciativas evaluadas
+- Roadmap-Implementacion-2026-06-02.md: Sprints 10-13 añadidos
+- I1 (biométrica) e I3 (multiusuario) descartados definitivamente
+- I7 (IA inversiones): solo versión reducida — alertas determinísticas + narrativa Groq descriptiva opt-in
 
 PENDIENTES EN ORDEN:
 
-1. SIMULADOR FIRE (nueva ruta #/fire — sin deploy):
-   - Pura aritmética, sin IA · nueva vista views/fire.js + ruta en routes.js
-   - Inputs: tasa de ahorro actual (calculada), patrimonio actual, gastos anuales
-   - Usa selectores existentes: monthlySavings, investmentsValue, monthlyExpense
-   - Output: años hasta FIRE, patrimonio objetivo (25× gastos), tabla de sensibilidad
+1. SPRINT 10 ← SIGUIENTE (sin deploy, ~1 día):
+   Archivos: src/views/fire.js · src/store/selectors.js · src/views/analytics.js
+   - FIRE: fecha estimada ("Alcanzarías en [Mes Año]") · ProgressBar avance · tooltips conceptos
+   - FIRE: variantes LeanFIRE/FatFIRE/BaristaFIRE (radio selector, ajusta SWR)
+   - FIRE: EmptyState explicativo si no hay datos
+   - Analytics: liquidityCoverageMonths(s) + insight "X meses de cobertura"
+   - Analytics: savingsStreak(s) + insight "N meses seguidos ahorrando"
+   - Analytics: insight concentración gastos (categoría top como % del total)
 
-2. REPORTES AUTOMÁTICOS GROQ (nuevo backend/Insights.gs — requiere deploy):
-   - Apps Script time trigger día 1 de cada mes
-   - Lee aggregados de Sheets → llama Groq (llama-3.1-8b-instant, ya en Import.gs)
-   - Escribe resumen en nueva hoja Insights
-   - Frontend: card "Resumen del mes" en Dashboard/Analítica
+2. SPRINT 11 (~1 día + deploy Config.gs+NetWorth.gs):
+   - snoozeService.js (nuevo): snooze(id,days), isActive(id), clearExpired() — localStorage
+   - Botón "Visto ✓" en upcomingPayments de today.js + dashboard.js (filtro en VISTA, no en selector)
+   - Schema NetWorthSnapshots: 7 campos append-only (liquidity, investmentsValue, etc.)
+   - saveNetWorthSnapshot_: capturar 7 campos enriquecidos
 
-BUGS ABIERTOS (no bloquean):
-- QA-003 (P2): FedCM warning en GIS — migrar cuando Google lo fuerce
-- QA-002 (P3): precios stale primera carga — expected behavior
+3. SPRINT 12 (~1.5 días + deploy Config.gs+Accounts.gs):
+   - Cuentas remuneradas: badge EA%, calcYield(), modal "Registrar rendimiento"
+   - selectors.portfolioAlerts(s): 4 alertas determinísticas (concentración, CDT, PnL, diversif.)
+   - Sección "Análisis" colapsable en investments.js
 
-VERIFICACIONES PENDIENTES EN VIVO:
-- Flujo venta parcial/total en UI Inversiones
-- getBootstrap ventana 24m no rompe historial más antiguo
-- Analítica: tabla tendencias y selector de período en producción
+4. SPRINT 13 (~1.5 días + deploy Analysis.gs+Code.gs):
+   - backend/Analysis.gs: endpoint analyzePortfolio → Groq narrativa DESCRIPTIVA (no prescriptiva)
+   - Import: calidad del parsing + validación montos + dupKey mejorado + perfil RappiCuenta
+   - Export: selector de período
+
+BUGS ABIERTOS: ninguno conocido.
 
 RIESGOS ABIERTOS:
 - Bootstrap limita a 24m de transacciones (intencional, confirmar impacto en datos históricos)
+- Sprint 13 narrativa IA: prompt debe ser estrictamente descriptivo (riesgo AMV)
+
+VERIFICACIONES PENDIENTES EN VIVO:
+- Flujo venta parcial/total en UI Inversiones
 
 FORMA DE TRABAJO: fases pequeñas y verificables · explicar qué/por qué ·
 correr node --test tests/selectors.test.js tras cada cambio de selector (97/97 base) ·

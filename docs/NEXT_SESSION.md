@@ -1,6 +1,6 @@
 # Prompt de continuación — FinanceOS
-**Generado:** 2026-06-07 (sesión tarde — KPI desplegables en Dashboard)
-**HEAD:** `57f144e` · **SW:** `v0.2.76` · **Tests:** 97/97 (20 suites)
+**Generado:** 2026-06-08 (sesión tarde — auditoría estratégica 9 iniciativas)
+**HEAD:** `d2be879` · **SW:** `v0.2.77` · **Tests:** 97/97 (20 suites)
 
 ---
 
@@ -13,70 +13,62 @@ Tras git pull deben APROBARSE y REINICIARSE Claude Code: las tools MCP se fijan 
 PROYECTO: FinanceOS — PWA financiera personal y privada de Alejo.
 Repo: https://github.com/alejandror1367/FinanceOS (rama main).
 Prod: https://alejandror1367.github.io/FinanceOS/
-HEAD: 57f144e · SW v0.2.76 · config.version 0.2.76 · Tests 97/97 (20 suites)
+HEAD: d2be879 · SW v0.2.77 · config.version 0.2.77 · Tests 97/97 (20 suites)
 
 INVARIANTES (ver CLAUDE.md): JS ES Modules sin build step · sin frameworks/bundlers ·
 cero deps npm en runtime · frontend abstraído tras src/services/ · Apps Script +
 Google Sheets (13 hojas) + GitHub Pages + OAuth de Google · offline-first.
 
-HECHO Y DESPLEGADO (sesiones anteriores):
-- Sprints 1–9 · QA Playwright 15/15 PASS · mobile fixes
-- Fix auto-refresh precios (700ba60): guardia isStale + parser BE-003
-- Alpaca API (527492b): Quotes.gs desplegado y verificado en producción
-- Secciones desplegables en Inversiones (843fed3): estado en localStorage
+HECHO Y DESPLEGADO:
+- Sprints 1–9 completados · QA Playwright 15/15 PASS · 97/97 tests
+- Fix auto-refresh precios (700ba60) · Alpaca API (527492b) · KPIs desplegables (57f144e)
+- Fix backend CC balance negativo (f0d8ff1) · Re-encolar dead-letter ✅
+- Simulador FIRE #/fire (5da9b05+c385baf) · QA-001/QA-002/QA-003 cerrados
 
-HECHO SESIÓN 2026-06-07 (commiteado, algunos pendientes de deploy):
-- fix(backend) f0d8ff1: toSignedAmount_() — CC balance negativo ya no va a dead-letter
-  → PENDIENTE DE DEPLOY a Apps Script
-- feat(dashboard) 57f144e: desplegables de detalle en todos los KPIs
-  → solo frontend, sin deploy necesario (GitHub Pages sirve automáticamente)
+AUDITORÍA ESTRATÉGICA 2026-06-08 (solo análisis, nada implementado):
+- docs/Audit-Estrategica-2026-06-08.md: 9 iniciativas evaluadas
+- Roadmap-Implementacion-2026-06-02.md: Sprints 10-13 añadidos
+- I1 (biométrica) e I3 (multiusuario) descartados definitivamente
+- I7 (IA inversiones): solo versión reducida — alertas determinísticas + narrativa Groq descriptiva opt-in
 
 PENDIENTES EN ORDEN:
 
-1. DEPLOY BACKEND — ACCIÓN MANUAL:
-   - Abrir editor Apps Script del proyecto FinanceOS
-   - Reemplazar backend/Utils.gs y backend/Accounts.gs con versiones del repo (f0d8ff1)
-   - Republicar el deployment (nueva versión)
+1. SPRINT 10 ← SIGUIENTE (sin deploy, ~1 día):
+   Archivos: src/views/fire.js · src/store/selectors.js · src/views/analytics.js
+   - FIRE: fecha estimada ("Alcanzarías en [Mes Año]") · ProgressBar avance · tooltips conceptos
+   - FIRE: variantes LeanFIRE/FatFIRE/BaristaFIRE (radio selector, ajusta SWR)
+   - FIRE: EmptyState explicativo si no hay datos
+   - Analytics: liquidityCoverageMonths(s) + insight "X meses de cobertura"
+   - Analytics: savingsStreak(s) + insight "N meses seguidos ahorrando"
+   - Analytics: insight concentración gastos (categoría top como % del total)
 
-2. RE-ENCOLAR OPS FALLIDAS (hacer tras deploy):
-   Pegar en consola del browser (producción autenticado):
-   indexedDB.open('financeos').onsuccess = function(e) {
-     var tx = e.target.result.transaction('syncQueue','readwrite');
-     tx.objectStore('syncQueue').getAll().onsuccess = function(e) {
-       e.target.result
-         .filter(function(o) { return o.dead; })
-         .forEach(function(o) {
-           tx.objectStore('syncQueue').put(
-             Object.assign({}, o, {dead:false, attempts:0, lastError:''})
-           );
-         });
-       console.log('ops re-encoladas — ir a Ajustes y forzar sync');
-     };
-   };
+2. SPRINT 11 (~1 día + deploy Config.gs+NetWorth.gs):
+   - snoozeService.js (nuevo): snooze(id,days), isActive(id), clearExpired() — localStorage
+   - Botón "Visto ✓" en upcomingPayments de today.js + dashboard.js (filtro en VISTA, no en selector)
+   - Schema NetWorthSnapshots: 7 campos append-only (liquidity, investmentsValue, etc.)
+   - saveNetWorthSnapshot_: capturar 7 campos enriquecidos
 
-3. VERIFICAR KPI DESPLEGABLES en producción:
-   - Navegar al Dashboard autenticado
-   - Verificar que cada KPI muestra "Detalle ▾" y abre correctamente
-   - Confirmar que los valores coinciden con el total del KPI
+3. SPRINT 12 (~1.5 días + deploy Config.gs+Accounts.gs):
+   - Cuentas remuneradas: badge EA%, calcYield(), modal "Registrar rendimiento"
+   - selectors.portfolioAlerts(s): 4 alertas determinísticas (concentración, CDT, PnL, diversif.)
+   - Sección "Análisis" colapsable en investments.js
 
-4. SIMULADOR FIRE (nueva ruta #/fire — sin deploy):
-   - Pura aritmética, sin IA · nueva vista views/fire.js + ruta en routes.js
-   - Inputs: tasa de ahorro actual (calculada), patrimonio actual, gastos anuales
-   - Usa selectores existentes: monthlySavings, investmentsValue, monthlyExpense
-   - Output: años hasta FIRE, patrimonio objetivo (25× gastos), tabla de sensibilidad
+4. SPRINT 13 (~1.5 días + deploy Analysis.gs+Code.gs):
+   - backend/Analysis.gs: endpoint analyzePortfolio → Groq narrativa DESCRIPTIVA (no prescriptiva)
+   - Import: calidad del parsing + validación montos + dupKey mejorado + perfil RappiCuenta
+   - Export: selector de período
 
-5. REPORTES AUTOMÁTICOS GROQ (nuevo backend/Insights.gs — requiere deploy):
-   - Apps Script time trigger día 1 de cada mes
-   - Lee aggregados de Sheets → llama Groq (llama-3.1-8b-instant, ya en Import.gs)
-   - Escribe resumen en nueva hoja Insights
-   - Frontend: card "Resumen del mes" en Dashboard/Analítica
+BUGS ABIERTOS: ninguno conocido.
 
-BUGS ABIERTOS:
-- QA-003 (P2): FedCM warning en GIS — migrar cuando Google lo fuerce
-- BUG-CC-1: ops en dead-letter por CC balance neg — se resuelve con pasos 1+2 arriba
+RIESGOS ABIERTOS:
+- Bootstrap limita a 24m de transacciones (intencional, confirmar impacto en datos históricos)
+- Sprint 13 narrativa IA: prompt debe ser estrictamente descriptivo (riesgo AMV)
+
+VERIFICACIONES PENDIENTES EN VIVO:
+- Flujo venta parcial/total en UI Inversiones
 
 FORMA DE TRABAJO: fases pequeñas y verificables · explicar qué/por qué ·
 correr node --test tests/selectors.test.js tras cada cambio de selector (97/97 base) ·
 commits atómicos por feature · hook auto-bumpa SW + config.version al commitear src/.
-Empezar con: git log --oneline -5 · git status · node --test tests/selectors.test.js.
+Para mensajes de commit multilínea: git commit -F _commitmsg.txt (archivo temporal).
 ```
