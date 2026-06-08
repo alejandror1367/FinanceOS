@@ -692,6 +692,7 @@ commit: e6b3c77 · rama: main · SW: v0.2.43 · config.version: 0.2.43 · tests:
 - **Sesión 2026-06-07 (mañana):** diagnóstico dead-letter queue + fix backend CC balance negativo (`f0d8ff1`)
 - **Sesión 2026-06-07 (tarde):** desplegables de detalle en KPIs del dashboard (`57f144e`)
 - **Sesión 2026-06-08:** deploy backend CC fix + re-encolar dead-letter + verificar KPI desplegables + Simulador FIRE (`5da9b05`+`c385baf`)
+- **Sesión 2026-06-08 (bugs):** QA-003 verificado resuelto · QA-001 fix `selectors.js:69` (costBasis fallback) · QA-002 documentado como expected
 
 ### Deploy — todo desplegado ✅
 `Accounts.gs` + `Utils.gs` (CC fix `f0d8ff1`) desplegados y verificados en producción 2026-06-08.
@@ -714,15 +715,14 @@ Flujo: `Views → Services → Store → Views` (never direct to net/IndexedDB f
 - **Simulador FIRE** (`#/fire`) — años hasta independencia financiera, tabla de sensibilidad
 
 ### Bugs abiertos
-**P2:**
-- **QA-003:** FedCM warning en GIS — migrar OAuth cuando Google lo fuerce (no urgente)
 
-**P3 (cosméticos):**
-- **QA-001:** Dashboard KPI "Inversiones" muestra $0 para FIC sin precio vivo en Yahoo
-- **QA-002:** Precios MU/VUG stale en primera carga (se resuelve con "Actualizar precios" — expected)
+Sin bugs abiertos conocidos. Ver "Resueltos 2026-06-08" abajo.
 
 **Resueltos 2026-06-08:**
 - ~~**BUG-CC-1:**~~ `updateAccount` CC balance negativo → dead-letter. Fix desplegado (`f0d8ff1`), ops re-encoladas y sincronizadas. ✅
+- ~~**QA-003:**~~ FedCM warning en GIS — `use_fedcm_for_prompt: true` ya presente en `src/core/auth.js:37` desde sesiones anteriores. Migración completa; no requiere más cambios. ✅
+- ~~**QA-001:**~~ Dashboard KPI "Inversiones" mostraba $0 para FIC sin precio vivo en Yahoo. Fix: `selectors.investmentsValue()` añade `|| i.costBasis || 0` como fallback final cuando no hay `currentValue` ni precio calculado. FIC ahora muestra al menos el costo de compra. `src/store/selectors.js:69`. ✅
+- ~~**QA-002:**~~ Precios MU/VUG stale en primera carga — comportamiento esperado y documentado. `backgroundRefreshPrices()` ya se dispara incondicionalmente en bootstrap (`app.js:215`, fix `700ba60`). El store re-renderiza reactivamente cuando los precios llegan (~1-3 s). No requiere indicador visual: agregar complejidad para una ventana de 1-3 s que se auto-resuelve viola el principio de simplicidad. Marcado como resolved/expected. ✅
 
 ### Pendientes en orden
 1. ✅ **Fix auto-refresh de precios** — `700ba60`
