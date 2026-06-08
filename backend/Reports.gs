@@ -44,10 +44,20 @@ function computeNetWorth_(ctx) {
 
   var otherAssets = sum_(ctx.assets, function (a) { return a.value; });
   var totalAssets = accountsValue + investmentsValue + otherAssets;
+
+  // FIN-014 (R0-A): paridad con selectors.js:131 — excluir liabilities de tipo
+  // 'credit_card' para evitar doble conteo: las cuentas CC ya se capturan en ccDebt.
+  var liabilitiesDebt = sum_(ctx.liabilities.filter(function (l) {
+    return l.type !== 'credit_card';
+  }), function (l) { return l.balance; });
+
   var ccDebt = ctx.accounts.filter(function (a) {
     return a.type === 'credit_card' && !a.isArchived;
   }).reduce(function (sum, a) { return sum + Math.abs(a.balance || 0); }, 0);
-  var totalLiabilities = sum_(ctx.liabilities, function (l) { return l.balance; }) + ccDebt;
+
+  var totalLiabilities = liabilitiesDebt + ccDebt;
+
+  // ⚠ requiere deploy — cambios en computeNetWorth_ (R0-A sprint pre-flight).
   return {
     totalAssets: totalAssets,
     totalLiabilities: totalLiabilities,
@@ -56,6 +66,8 @@ function computeNetWorth_(ctx) {
     investmentsCost: investmentsCost,
     accountsValue: accountsValue,
     otherAssets: otherAssets,
+    ccDebt: ccDebt,             // suma de tarjetas de crédito (cuentas CC activas)
+    liabilitiesDebt: liabilitiesDebt, // suma de pasivos normales (excluye type=credit_card)
   };
 }
 
