@@ -185,7 +185,11 @@ Los ítems avanzados (XIRR, Sharpe) son opcionales y complejos.
 | **Sprint 7** | Performance | ~1.5d | 🟢 Bajo |
 | **Sprint 8** | Analítica avanzada | ~2d | 🟢 Medio |
 | **Sprint 9** | Pulido + P3 | ~2d | 🟢 Bajo |
-| **Total** | | **~12 días** | |
+| **Sprint 10** | FIRE enriquecido + Insights analítica | ~1d | 🟢 Alto |
+| **Sprint 11** | Snooze pagos + Snapshot enriquecido | ~1d + deploy | 🟡 Alto |
+| **Sprint 12** | Cuentas remuneradas + Alertas portafolio | ~1.5d + deploy | 🟡 Alto |
+| **Sprint 13** | IA narrativa + Import/Export mejorado | ~1.5d + deploy | 🟢 Medio-Alto |
+| **Total** | | **~17 días** | |
 
 ---
 
@@ -201,4 +205,90 @@ Los ítems avanzados (XIRR, Sharpe) son opcionales y complejos.
 
 ---
 
-*Generado por auditoría global 2026-06-02*
+## Sprints 10–13 — Evolución post-v1.0
+> Añadidos por auditoría estratégica 2026-06-08. Ver detalle completo en `docs/Audit-Estrategica-2026-06-08.md`.
+
+### Sprint 10 — FIRE enriquecido + Insights adicionales (~1 día)
+**Objetivo:** Completar la experiencia FIRE recién implementada y añadir 3 insights de alto impacto.  
+**Dependencias:** Ninguna. **Riesgo:** Ninguno. **ROI:** Alto.
+
+| # | Tarea | Archivo | Esfuerzo |
+|---|---|---|---|
+| 10.1 | FIRE: fecha estimada de independencia ("Alcanzarías en [Mes Año]") | `src/views/fire.js` | S |
+| 10.2 | FIRE: ProgressBar de avance (patrimonio/objetivo %) | `src/views/fire.js` | S |
+| 10.3 | FIRE: tooltips de conceptos (SWR, regla del 4%, CAGR) | `src/views/fire.js` | S |
+| 10.4 | FIRE: variantes LeanFIRE / FatFIRE / BaristaFIRE (radio selector) | `src/views/fire.js` | S |
+| 10.5 | FIRE: EmptyState explicativo si no hay datos financieros | `src/views/fire.js` | S |
+| 10.6 | Analytics: `liquidityCoverageMonths(s)` + insight "X meses de cobertura" | `src/store/selectors.js` + `analytics.js` | S |
+| 10.7 | Analytics: `savingsStreak(s)` + insight "N meses seguidos ahorrando" | `src/store/selectors.js` + `analytics.js` | S |
+| 10.8 | Analytics: insight concentración gastos (categoría top como % del total) | `src/views/analytics.js` | S |
+
+---
+
+### Sprint 11 — Snooze de pagos + Snapshots enriquecidos (~1 día + deploy)
+**Objetivo:** Eliminar ruido de recordatorios revisados y capturar desglose en snapshots desde ahora.  
+**Dependencias:** Sprint 10. **Riesgo:** Bajo. **ROI:** Alto.
+
+| # | Tarea | Archivo | Esfuerzo |
+|---|---|---|---|
+| 11.1 | `snoozeService.js`: `snooze(id, days)`, `isActive(id)`, `clearExpired()` — localStorage | `src/services/snoozeService.js` (nuevo) | S |
+| 11.2 | Botón "Visto ✓" en filas de `upcomingPayments` (today.js + dashboard.js) | `src/views/today.js`, `dashboard.js` | S |
+| 11.3 | Tests para `snoozeService` | `tests/` | S |
+| 11.4 | Schema `NetWorthSnapshots`: 7 campos append-only (liquidity, investmentsValue, investmentsCost, accountsValue, otherAssets, ccDebt, liabilitiesDebt) | `backend/Config.gs` | S |
+| 11.5 | `saveNetWorthSnapshot_`: capturar y guardar los 7 campos | `backend/NetWorth.gs` | S |
+| 11.6 | Deploy `Config.gs` + `NetWorth.gs` + re-ejecutar `setupDatabase()` | backend | M |
+| 11.7 | `networth.js`: mostrar desglose en detalle del snapshot | `src/views/networth.js` | S |
+
+> Nota: El selector `upcomingPayments` NO se modifica. El filtro snooze se aplica en la vista (preserva pureza del selector).
+
+---
+
+### Sprint 12 — Cuentas remuneradas + Alertas de portafolio (~1.5 días + deploy)
+**Objetivo:** Soportar Global66/RappiCuenta y añadir análisis automático del portafolio de inversiones.  
+**Dependencias:** Sprint 11. **Riesgo:** Bajo. **ROI:** Alto.
+
+| # | Tarea | Archivo | Esfuerzo |
+|---|---|---|---|
+| 12.1 | Schema `Accounts`: añadir `lastYieldDate` (append-only) | `backend/Config.gs` | S |
+| 12.2 | `accounts.js`: badge "X% EA" en cuentas con `interestRate > 0` | `src/views/accounts.js` | S |
+| 12.3 | `calcYield(account, today)`: interés compuesto diario | `src/views/accounts.js` | S |
+| 12.4 | Modal "Registrar rendimiento": preview → confirmación → tx ingreso + update cuenta | `src/views/accounts.js` | M |
+| 12.5 | Preset `RappiCuenta` (type:savings, interestRate:9, currency:COP) | `src/views/accounts.js` | S |
+| 12.6 | Deploy `Config.gs` + `Accounts.gs` | backend | M |
+| 12.7 | `selectors.portfolioAlerts(s)`: concentración >30%, CDT <30d, P&L <-20%, sin diversificación | `src/store/selectors.js` | M |
+| 12.8 | Sección "Análisis" colapsable en `investments.js` con alertas | `src/views/investments.js` | M |
+| 12.9 | Tests: `portfolioAlerts` (4 escenarios) | `tests/selectors.test.js` | S |
+
+---
+
+### Sprint 13 — IA narrativa de portafolio + Import/Export mejorado (~1.5 días + deploy)
+**Objetivo:** Narrativa descriptiva del portafolio con Groq (opt-in) y mejoras de calidad al import/export.  
+**Dependencias:** Sprint 12. **Riesgo:** Medio (IA) / Bajo (Import/Export). **ROI:** Medio-Alto.
+
+| # | Tarea | Archivo | Esfuerzo |
+|---|---|---|---|
+| 13.1 | `backend/Analysis.gs` (nuevo): endpoint `analyzePortfolio` → Groq narrativa descriptiva | `backend/Analysis.gs` (nuevo) | M |
+| 13.2 | `backend/Code.gs`: registrar acción `analyzePortfolio` | `backend/Code.gs` | S |
+| 13.3 | Deploy `Analysis.gs` + `Code.gs` | backend | S |
+| 13.4 | `investments.js`: botón "Analizar con IA" + narrativa + timestamp (opt-in, fallback graceful) | `src/views/investments.js` | S |
+| 13.5 | Import: resumen de calidad (N/M sin categoría asignada) | `src/views/import.js` | S |
+| 13.6 | Import: validar montos cero/negativos antes del preview | `src/services/importService.js` | S |
+| 13.7 | Import: `dupKey` mejorado → `date|amount|descNorm` | `src/views/import.js` | S |
+| 13.8 | Import: perfil `RappiCuenta` en `bankProfiles.js` | `src/services/parsers/bankProfiles.js` | S |
+| 13.9 | Export: selector de período (fecha desde/hasta) | `src/views/exports.js` + `src/utils/export.js` | M |
+
+> Nota regulatoria: prompt de `Analysis.gs` estrictamente descriptivo. Disclaimer "Esto no es asesoría financiera" visible en UI.
+
+---
+
+## Iniciativas evaluadas y descartadas (2026-06-08)
+
+| Iniciativa | Decisión | Motivo |
+|---|---|---|
+| Autenticación Biométrica (WebAuthn/Passkeys) | No implementar | OAuth+FedCM es suficiente. Complejidad desproporcionada para 1 usuario. Violación del principio de simplicidad. |
+| Multicuenta / Multiusuario | No implementar | Viola el concepto central del producto (app personal). Solución para familiares: clonar repo + instancia separada en GitHub Pages. |
+
+---
+
+*Sprints 1–9 generados por auditoría global 2026-06-02*  
+*Sprints 10–13 generados por auditoría estratégica 2026-06-08*
