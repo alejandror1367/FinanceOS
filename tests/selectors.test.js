@@ -134,6 +134,24 @@ describe('totalLiabilities', () => {
     });
     assert.equal(selectors.totalLiabilities(s), 2_000_000); // solo la cuenta, no 4M
   });
+
+  // FIN-014 (R0-B) — Paridad FE↔BE: totalLiabilities = liabilitiesDebt + ccDebt,
+  // donde liabilitiesDebt excluye type='credit_card' y ccDebt viene de cuentas CC.
+  // Replica el contrato que computeNetWorth_ en Reports.gs debe respetar.
+  test('FIN-014 paridad FE↔BE: mix de liability normal, liability CC y cuenta CC', () => {
+    // Hipoteca (normal): 10M → debe sumarse
+    // liability type=credit_card: 3M → NO debe sumarse (doble conteo con cuenta CC)
+    // cuenta CC: 3M → suma como ccDebt
+    // totalLiabilities = 10M (normal) + 3M (CC account) = 13M (no 16M)
+    const s = mkState({
+      accounts: [acc('cc1', 3_000_000, 'credit_card')],
+      liabilities: [
+        { id: 'l1', balance: 10_000_000 },                       // hipoteca, sin type
+        { id: 'l2', balance: 3_000_000, type: 'credit_card' },   // misma CC como liability
+      ],
+    });
+    assert.equal(selectors.totalLiabilities(s), 13_000_000);
+  });
 });
 
 // ── netWorth ──────────────────────────────────────────────────────────────────
