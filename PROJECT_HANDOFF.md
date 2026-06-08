@@ -39,7 +39,11 @@ Centraliza: patrimonio neto, presupuestos, flujo de caja, inversiones, metas, de
 | Fix auto-refresh precios (`app.js`) | ✅ Corregido — `700ba60` |
 | Alpaca API (`Quotes.gs`) | ✅ Implementado y desplegado — `527492b` |
 | Secciones desplegables (Inversiones) | ✅ Implementado — `843fed3` |
-| Pendiente | Simulador FIRE · Reportes Groq · Verificaciones en vivo |
+| KPI desplegables (Dashboard) | ✅ Implementado y verificado en prod — `57f144e` |
+| Fix backend CC balance negativo | ✅ Desplegado y verificado — `f0d8ff1` |
+| Re-encolar dead-letter (BUG-CC-1) | ✅ Ejecutado — ops sincronizadas |
+| Simulador FIRE (`#/fire`) | ✅ Implementado — `5da9b05` + `c385baf` |
+| Pendiente | Reportes automáticos Groq |
 
 ---
 
@@ -588,15 +592,17 @@ grep "version" src/core/config.js   # debe coincidir con sw.js VERSION (v0.2.76)
 | ✅ **Fix auto-refresh precios** (`app.js` 2 bugs) — `700ba60` | Bug fix | Bajo | No |
 | ✅ **Integración Alpaca API** (`Quotes.gs`) — `527492b` | Feature | Medio | **Desplegado** |
 | ✅ **Secciones desplegables** (Inversiones) — `843fed3` | UX | Bajo | No |
-| **Simulador FIRE** (nueva ruta `#/fire`) | Feature | Medio (~300 líneas) | No |
+| ✅ **KPI desplegables** (Dashboard) — `57f144e` | UX | Bajo | No |
+| ✅ **Fix backend CC balance** — `f0d8ff1` | Bug fix | Bajo | **Desplegado 2026-06-08** |
+| ✅ **Simulador FIRE** (`#/fire`) — `5da9b05`+`c385baf` | Feature | Medio | No |
 | **Reportes automáticos Groq** (trigger AS) | Feature | Medio (~80 líneas) | **Sí** |
 | **QA-003**: Migrar a FedCM (OAuth) | Mejora | Alto | **Sí** |
 
 **Orden recomendado:**
 1. ~~Fix `app.js` bugs~~ ✅
 2. ~~Alpaca + deploy `Quotes.gs`~~ ✅
-3. Simulador FIRE (alto ROI, cero costo, cero IA)
-4. Reportes automáticos Groq
+3. ~~Simulador FIRE~~ ✅
+4. **Reportes automáticos Groq** ← siguiente
 
 **Verificaciones pendientes en vivo (happy-path autenticado con datos reales):**
 - Flujo venta parcial/total en UI Inversiones
@@ -670,7 +676,7 @@ commit: e6b3c77 · rama: main · SW: v0.2.43 · config.version: 0.2.43 · tests:
 
 > Leer esto antes que cualquier otra sección. Máximo 100 líneas. Fuente de verdad para retomar de inmediato.
 
-**HEAD:** `57f144e` · **SW/config.version:** `v0.2.76` · **Tests:** 97/97 (20 suites) · **Rama:** main · **Sync:** origin/main al día
+**HEAD:** `54aa310` · **SW/config.version:** `v0.2.76` · **Tests:** 97/97 (20 suites) · **Rama:** main · **Sync:** origin/main al día
 
 > **MCP:** `.mcp.json` versionado con **playwright** + **context7** (scope de proyecto).
 > Tras `git pull`: **aprobar** ambos y **reiniciar Claude Code** (las tools MCP se fijan al arrancar).
@@ -685,13 +691,11 @@ commit: e6b3c77 · rama: main · SW: v0.2.43 · config.version: 0.2.43 · tests:
 - **Sesión 2026-06-04 (tarde-2):** secciones desplegables en Inversiones (`843fed3`)
 - **Sesión 2026-06-07 (mañana):** diagnóstico dead-letter queue + fix backend CC balance negativo (`f0d8ff1`)
 - **Sesión 2026-06-07 (tarde):** desplegables de detalle en KPIs del dashboard (`57f144e`)
+- **Sesión 2026-06-08:** deploy backend CC fix + re-encolar dead-letter + verificar KPI desplegables + Simulador FIRE (`5da9b05`+`c385baf`)
 
-### Deploy pendiente — ACCIÓN MANUAL REQUERIDA
-**`backend/Accounts.gs` + `backend/Utils.gs`** — fix CC balance negativo (`f0d8ff1`).
-Subir ambos archivos al editor de Apps Script y republicar el deployment.
-Luego desde el browser: re-encolar las ops en dead-letter (ver NEXT_SESSION.md).
-
-Todo lo demás desplegado. `Quotes.gs` con Alpaca ya desplegado por el dueño.
+### Deploy — todo desplegado ✅
+`Accounts.gs` + `Utils.gs` (CC fix `f0d8ff1`) desplegados y verificados en producción 2026-06-08.
+Dead-letter re-encolado y sincronizado. `Quotes.gs` con Alpaca desplegado. Backend al día.
 
 ### Arquitectura actual
 ```
@@ -701,18 +705,15 @@ PWA offline-first · IndexedDB local · OAuth Google · sin frameworks · sin bu
 Flujo: `Views → Services → Store → Views` (never direct to net/IndexedDB from views)
 
 ### Funcionalidades implementadas (completas)
-- Dashboard · Hoy · Transacciones · Cuentas · Presupuestos · Recurrentes
+- Dashboard (KPIs desplegables) · Hoy · Transacciones · Cuentas · Presupuestos · Recurrentes
 - Patrimonio (CC como filas reales en Pasivos, sin doble conteo, snapshots)
 - Inversiones (ventas parciales/totales, CDT capitalizado, XIRR/CAGR, comisión/retención, **secciones desplegables**, **Alpaca API**)
 - Metas · Deudas (Snowball/Avalanche, amortización) · Diario · Ajustes
 - Analítica: flujo de caja 3 series + selector 3/6/12m · tendencias top5 · insights históricos
 - Exportaciones · Command Palette (⌘K) · Validación inline · Import con Groq
+- **Simulador FIRE** (`#/fire`) — años hasta independencia financiera, tabla de sensibilidad
 
 ### Bugs abiertos
-**P1 — requiere acción:**
-- **BUG-CC-1:** `updateAccount` falla para cuentas CC con saldo negativo → ops en dead-letter en IndexedDB.
-  Fix commiteado (`f0d8ff1`) pero **backend pendiente de deploy**. Tras deploy, re-encolar con el snippet de NEXT_SESSION.md.
-
 **P2:**
 - **QA-003:** FedCM warning en GIS — migrar OAuth cuando Google lo fuerce (no urgente)
 
@@ -720,14 +721,17 @@ Flujo: `Views → Services → Store → Views` (never direct to net/IndexedDB f
 - **QA-001:** Dashboard KPI "Inversiones" muestra $0 para FIC sin precio vivo en Yahoo
 - **QA-002:** Precios MU/VUG stale en primera carga (se resuelve con "Actualizar precios" — expected)
 
+**Resueltos 2026-06-08:**
+- ~~**BUG-CC-1:**~~ `updateAccount` CC balance negativo → dead-letter. Fix desplegado (`f0d8ff1`), ops re-encoladas y sincronizadas. ✅
+
 ### Pendientes en orden
 1. ✅ **Fix auto-refresh de precios** — `700ba60`
 2. ✅ **Alpaca API** en `backend/Quotes.gs` — `527492b` · desplegado · verificado en producción
 3. ✅ **Secciones desplegables** en Inversiones — `843fed3` · estado en localStorage
-4. ✅ **KPI desplegables** en Dashboard — `57f144e` · sin deploy (solo frontend)
-5. ⚠️ **Deploy backend CC fix** — subir `Accounts.gs` + `Utils.gs` y republicar Apps Script (`f0d8ff1`)
-6. ⚠️ **Re-encolar dead-letter** — tras deploy, ejecutar snippet en consola del browser (ver NEXT_SESSION.md)
-7. **Simulador FIRE** — nueva ruta `#/fire` (pura aritmética, sin IA, alto ROI)
+4. ✅ **KPI desplegables** en Dashboard — `57f144e` · verificado en producción 2026-06-08
+5. ✅ **Deploy backend CC fix** — `Accounts.gs` + `Utils.gs` desplegados · `f0d8ff1` · 2026-06-08
+6. ✅ **Re-encolar dead-letter** — ejecutado · ops sincronizadas · 2026-06-08
+7. ✅ **Simulador FIRE** — `#/fire` · `5da9b05` + `c385baf` · 2026-06-08
 8. **Reportes automáticos con Groq** — Apps Script time trigger mensual → resumen en lenguaje natural
 
 ### Riesgos abiertos
