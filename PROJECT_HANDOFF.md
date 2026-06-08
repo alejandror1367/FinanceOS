@@ -583,7 +583,8 @@ grep "version" src/core/config.js   # debe coincidir con sw.js VERSION (v0.2.76)
 
 ## 18. Próximos pasos recomendados
 
-**Roadmap original 1–9: completado** · Roadmap nuevo 10–13: planificado en `docs/Audit-Estrategica-2026-06-08.md`
+**Roadmap original 1–9: completado** · Plan activo: **revisado Opus R0–R8** (`docs/Roadmap-Revisado-Opus.md`).
+Sprints 10–13 de Sonnet (`docs/Audit-Estrategica-2026-06-08.md`) **SUPERSEDED** por la revisión Opus 2026-06-08.
 
 **Sprints ejecutados:**
 
@@ -598,11 +599,16 @@ grep "version" src/core/config.js   # debe coincidir con sw.js VERSION (v0.2.76)
 | Simulador FIRE (`#/fire`) | ✅ | `5da9b05`+`c385baf` |
 | Auditoría estratégica 9 iniciativas | ✅ 2026-06-08 | `d2be879` |
 
-**Orden recomendado (sprints nuevos):**
-1. **Sprint 10** ← siguiente — FIRE enriquecido + Insights analítica (~1 día, solo `fire.js`+`selectors.js`+`analytics.js`, sin deploy)
-2. **Sprint 11** — Snooze pagos + Snapshot enriquecido (~1 día + deploy `Config.gs`+`NetWorth.gs`)
-3. **Sprint 12** — Cuentas remuneradas + Alertas portafolio (~1.5 días + deploy)
-4. **Sprint 13** — IA narrativa portafolio + Import/Export mejorado (~1.5 días + deploy)
+**Orden recomendado (plan revisado Opus R0–R8):**
+1. **R0 — Pre-flight (BLOQUEANTE)** ← siguiente — verificar/desplegar backend pendiente (TD-41/45/50/51/02) · fix FE↔BE pasivos CC (`Reports.gs:50` ← FIN-014) + test paridad · exponer `ccDebt`/`liabilitiesDebt` · marcar TD-01 ✅
+2. **R1** — FIRE enriquecido + insights corregidos (cobertura con promedio, streak sin mes en curso) — sin deploy
+3. **R2** — Dismiss de pagos (semántica dismiss, no snooze) — sin deploy
+4. **R3** — Snapshots enriquecidos (requiere R0; 6 campos sin `liquidity`) — deploy
+5. **R4** — Alertas portafolio I7a (construir `positionValue`/`totalPortfolioValue`) — sin deploy
+6. **R5** — Cuentas remuneradas I8 (rediseñar `calcYield`, NO balance actual) — deploy
+7. **R6** — Import/Export (fixtures antes de `dupKey`, export por período) — sin deploy
+8. **R7** (opcional) — Narrativa Groq (sin lock, datos minimizados, anti-inyección, caché) — deploy
+9. **R8** (opcional) — App-lock local + limpiar `allowedEmails`
 
 **Verificaciones pendientes en vivo:**
 - Flujo venta parcial/total en UI Inversiones (verificación Playwright con auth real)
@@ -676,7 +682,11 @@ commit: e6b3c77 · rama: main · SW: v0.2.43 · config.version: 0.2.43 · tests:
 
 > Leer esto antes que cualquier otra sección. Máximo 100 líneas. Fuente de verdad para retomar de inmediato.
 
-**HEAD:** `d2be879` · **SW/config.version:** `v0.2.77` · **Tests:** 97/97 (20 suites) · **Rama:** main · **Sync:** origin/main al día
+**HEAD:** `590cfd1` · **SW/config.version:** `v0.2.77` · **Tests:** 97/97 (20 suites) · **Rama:** main · **Sync:** origin/main al día
+
+> **Sesión 2026-06-08 (noche):** revisión arquitectónica independiente (Opus) de la auditoría de Sonnet.
+> Entregables: `docs/Auditoria-Estrategica-Revisada-Opus.md` + `docs/Roadmap-Revisado-Opus.md`.
+> El roadmap oficial adopta el **plan revisado Opus (R0–R8)**; los Sprints 10–13 de Sonnet quedan SUPERSEDED.
 
 > **MCP:** `.mcp.json` versionado con **playwright** + **context7** (scope de proyecto).
 > Tras `git pull`: **aprobar** ambos y **reiniciar Claude Code** (las tools MCP se fijan al arrancar).
@@ -686,7 +696,7 @@ commit: e6b3c77 · rama: main · SW: v0.2.43 · config.version: 0.2.43 · tests:
 - **Backend Apps Script:** ✅ **Todo desplegado** — Sprints 1–5 + Sprint 8 (XIRR/CAGR) desplegados
 - **Tests:** **97/97** en `tests/selectors.test.js` — 20 suites
 - **Roadmap original (1–9):** ✅ Completado · QA Playwright 15/15 PASS
-- **Roadmap nuevo (10–13):** Generado en auditoría estratégica 2026-06-08 — **Sprint 10 es el siguiente**
+- **Plan activo (R0–R8):** revisión Opus 2026-06-08 (`docs/Roadmap-Revisado-Opus.md`) — **R0 (pre-flight) es el siguiente**. Sprints 10–13 de Sonnet SUPERSEDED.
 - **Sesión 2026-06-08 (tarde):** Auditoría estratégica 9 iniciativas → `docs/Audit-Estrategica-2026-06-08.md` + Sprints 10–13 en Roadmap
 
 ### Deploy — todo desplegado ✅
@@ -708,20 +718,31 @@ Flujo: `Views → Services → Store → Views` (never direct to net/IndexedDB f
 - Exportaciones · Command Palette (⌘K) · Validación inline · Import con Groq
 - **Simulador FIRE** (`#/fire`) — años hasta independencia financiera, tabla de sensibilidad
 
-### Bugs abiertos
-Sin bugs abiertos conocidos. Todos los P0/P1/P2/QA resueltos.
+### Bugs abiertos / hallazgos de la revisión Opus (2026-06-08)
+- 🔴 **Posible drift de deploy:** TechnicalDebt marca 5 `.gs` "⚠ pendiente deploy" (TD-41/45/50/51/02) vs handoff "todo desplegado". **Verificar antes de tocar patrimonio.** Si `Reports.gs` (TD-41) o `Utils.gs` (TD-45) corren versión vieja → patrimonio inflado / soft-deletes resucitados.
+- 🔴 **Divergencia FE↔BE en pasivos CC:** `computeNetWorth_` (`Reports.gs:50`) no replica el filtro FIN-014 que sí tiene `selectors.js:131` → doble conteo de tarjeta registrada como cuenta + liability. Corregir en R0.
+- 🟡 **TD-01** efectivamente resuelto en código (modelo híbrido), pero `TechnicalDebt.md:42` sin ✅ — marcar.
 
-### Pendientes en orden
-1–7. ✅ Todos completados (fix precios, Alpaca, desplegables, KPIs, deploy CC, dead-letter, FIRE)
-8. **Sprint 10** (siguiente) — FIRE enriquecido (fecha estimada, ProgressBar, tooltips, variantes) + 3 insights analítica
-9. **Sprint 11** — Snooze de pagos + Snapshot enriquecido (deploy backend)
-10. **Sprint 12** — Cuentas remuneradas + Alertas portafolio (deploy backend)
-11. **Sprint 13** — IA narrativa portafolio + Import/Export mejorado (deploy backend)
-12. **Reportes automáticos Groq** — Apps Script time trigger mensual (puede ir en Sprint 13)
+### Pendientes en orden — PLAN REVISADO OPUS (R0–R8)
+> Reemplaza Sprints 10–13 de Sonnet. Detalle: `docs/Roadmap-Revisado-Opus.md`.
+1. **R0 — Pre-flight (BLOQUEANTE)** ← SIGUIENTE: verificar/desplegar backend pendiente · fix FE↔BE pasivos CC + test paridad · exponer `ccDebt`/`liabilitiesDebt` en `computeNetWorth_` · marcar TD-01 ✅.
+2. **R1 — FIRE + insights corregidos**: cobertura con promedio (NO mes actual) · streak excluyendo mes en curso · concentración gastos.
+3. **R2 — Dismiss de pagos**: semántica dismiss (no snooze que reaparece), filtro en vista.
+4. **R3 — Snapshots enriquecidos** (requiere R0): 6 campos, sin `liquidity` (≡accountsValue). Deploy.
+5. **R4 — Alertas portafolio (I7a)**: construir `positionValue`/`totalPortfolioValue` (NO existen) + `portfolioAlerts`.
+6. **R5 — Cuentas remuneradas (I8)**: rediseñar `calcYield` (NO balance actual) + idempotencia. Deploy.
+7. **R6 — Import/Export**: fixtures antes de `dupKey` · export por período.
+8. **R7 — Narrativa Groq (OPCIONAL)**: sin script lock · datos minimizados · anti-inyección · caché.
+9. **R8 — Endurecimientos P2 (OPCIONAL)**: app-lock local · limpiar `allowedEmails`.
 
 ### Riesgos abiertos
-- `getBootstrap_` limita transactions a ventana 24 meses (intencional — confirmar impacto en datos históricos reales)
-- Alertas portafolio (Sprint 12): narrativa Groq debe ser estrictamente descriptiva (riesgo regulatorio AMV)
+- **R0 es precondición dura de R3 y R5** — snapshots/remuneradas sobre backend no verificado = corrupción permanente.
+- `calcYield` propuesto por Sonnet sobreestima patrimonio hasta ~7× (usa balance actual) — rediseño obligatorio antes de I8.
+- `analyzePortfolio` (R7) tomaría el LockService → congela la cola de sync mientras Groq responde. Rutear sin lock.
+- IA portafolio: enviar a Groq solo agregados (no montos/símbolos); `Investments.name` es vector de prompt-injection.
+- Sesión de facto perpetua sin app-lock (`auth.js`); 2º email en `allowedEmails` con acceso total a la BD.
+- `getBootstrap_` limita transactions a ventana 24 meses (intencional — confirmar impacto en datos históricos).
+- `ensureHeaders_` NO es append-only idempotente: solo appendear al final del schema (regla dura).
 
 ### Decisiones arquitectónicas importantes
 - `totalLiabilities` excluye `type=credit_card` (FIN-014) · `reconcileAndHydrate` mergea update (TD-47)
@@ -733,8 +754,10 @@ Sin bugs abiertos conocidos. Todos los P0/P1/P2/QA resueltos.
 ### Archivos críticos
 ```
 CLAUDE.md                          — Invariantes absolutos (leer SIEMPRE primero)
-docs/Audit-Estrategica-2026-06-08.md — Análisis de 9 iniciativas + sprints 10-13
-docs/Roadmap-Implementacion-2026-06-02.md — Roadmap completo (sprints 1-13)
+docs/Roadmap-Revisado-Opus.md      — ★ Roadmap ACTIVO (plan R0–R8, reemplaza 10-13)
+docs/Auditoria-Estrategica-Revisada-Opus.md — ★ Auditoría crítica vigente (correcciones + riesgos)
+docs/Audit-Estrategica-2026-06-08.md — Auditoría Sonnet (SUPERSEDED, referencia histórica)
+docs/Roadmap-Implementacion-2026-06-02.md — Roadmap base (sprints 1-9 ✅ + plan revisado R0-R8)
 src/core/app.js:109-128            — backgroundRefreshPrices() — corregido (700ba60)
 src/store/selectors.js             — Lógica financiera + XIRR/CAGR + categoryTrends + FX
 src/services/priceService.js       — Registro global precios (TTL 15min, localStorage)
@@ -775,6 +798,46 @@ tests/selectors.test.js            — 97/97 tests (20 suites)
 
 **Commits:**
 - `d2be879` docs: auditoría estratégica 2026-06-08 — 9 iniciativas, sprints 10-13
+
+---
+
+## Cambios realizados en sesión 2026-06-08 (noche)
+
+### Revisión arquitectónica independiente (Opus) de la auditoría de Sonnet
+
+**Auditorías realizadas:** segunda opinión crítica de `docs/Audit-Estrategica-2026-06-08.md`, verificada contra el código real (3 sub-agentes: financial-analyst, backend-reviewer, security-reviewer).
+
+**Afirmaciones FALSAS de Sonnet detectadas (code-verified):**
+- `portfolioCAGR` / `portfolioVsBenchmark` "ya existen" → **NO existen** (solo per-position). Infla esfuerzo I7.
+- `calcYield` (I8) sobre balance actual → **financieramente incorrecto**, sobreestima hasta ~7×.
+- `liquidityCoverageMonths` con `monthlyExpense` (mes actual) → "60 meses" absurdo a inicio de mes.
+- `ensureHeaders_` "append-only idempotente" → **falso** (`setValues` ciego; seguro solo por disciplina).
+- `accountsValue` ≡ `liquidity` → campo redundante; `totalLiquidity` no existe en backend.
+
+**Riesgos omitidos por Sonnet (hallazgos propios):**
+- 🔴 Divergencia FE↔BE pasivos CC (`Reports.gs:50` sin filtro FIN-014).
+- 🔴 5 `.gs` "⚠ pendiente deploy" vs handoff "todo desplegado" → I9 sobre backend viejo = snapshots corruptos.
+- 🟠 `analyzePortfolio` tomaría LockService → congela cola de sync mientras Groq responde.
+- 🟡 I1: sesión de facto perpetua sin app-lock (Sonnet rechazó WebAuthn pero ignoró app-lock local).
+- 🟡 I3: aislamiento ya roto — 2 emails comparten BD completa.
+- TD-01 efectivamente resuelto en código; `TechnicalDebt.md:42` sin ✅ (drift documental).
+
+**Decisiones arquitectónicas:**
+- Roadmap oficial adopta el **plan revisado Opus (R0–R8)**; Sprints 10–13 de Sonnet → SUPERSEDED.
+- **R0 (pre-flight)** es el siguiente y es BLOQUEANTE de R3/R5: deploy verificado + fix FE↔BE + rediseño `calcYield`.
+- I2 reframeado: dismiss (no snooze que reaparece). I7 bifurcado: alertas (alto valor) vs Groq (opcional).
+- I1/I3 no descartados del todo: app-lock local opcional + limpieza `allowedEmails` añadidos en R8.
+
+**Implementaciones:** Ninguna (sesión de solo análisis + docs).
+
+**Archivos modificados:**
+- `docs/Auditoria-Estrategica-Revisada-Opus.md` (nuevo)
+- `docs/Roadmap-Revisado-Opus.md` (nuevo)
+- `docs/Roadmap-Implementacion-2026-06-02.md` (Sprints 10–13 → plan revisado R0–R8)
+- `PROJECT_HANDOFF.md` (CONTEXTO MÍNIMO, §18, §19, este registro)
+
+**Commits:**
+- `590cfd1` docs: revisión arquitectónica independiente (Opus) de la auditoría de Sonnet
 
 ---
 
@@ -1224,7 +1287,7 @@ Tras git pull deben APROBARSE y REINICIARSE Claude Code: las tools MCP se fijan 
 PROYECTO: FinanceOS — PWA financiera personal y privada de Alejo.
 Repo: https://github.com/alejandror1367/FinanceOS (rama main).
 Prod: https://alejandror1367.github.io/FinanceOS/
-HEAD: d2be879 · SW v0.2.77 · config.version 0.2.77 · Tests 97/97 (20 suites)
+HEAD: 590cfd1 · SW v0.2.77 · config.version 0.2.77 · Tests 97/97 (20 suites)
 
 INVARIANTES (ver CLAUDE.md): JS ES Modules sin build step · sin frameworks/bundlers ·
 cero deps npm en runtime · frontend abstraído tras src/services/ · Apps Script +
@@ -1236,44 +1299,63 @@ HECHO Y DESPLEGADO:
 - Fix backend CC balance negativo (f0d8ff1) · Re-encolar dead-letter ✅
 - Simulador FIRE #/fire (5da9b05+c385baf) · QA-001/QA-002/QA-003 cerrados
 
-AUDITORÍA ESTRATÉGICA 2026-06-08 (solo análisis, nada implementado):
-- docs/Audit-Estrategica-2026-06-08.md: 9 iniciativas evaluadas
-- Roadmap-Implementacion-2026-06-02.md: Sprints 10-13 añadidos
-- I1 (biométrica) e I3 (multiusuario) descartados definitivamente
-- I7 (IA inversiones): solo versión reducida — alertas determinísticas + narrativa Groq descriptiva opt-in
+PLAN ACTIVO: revisión Opus R0–R8 (docs/Roadmap-Revisado-Opus.md).
+Auditoría vigente: docs/Auditoria-Estrategica-Revisada-Opus.md.
+Sprints 10–13 de Sonnet (docs/Audit-Estrategica-2026-06-08.md) → SUPERSEDED.
+Hallazgos clave de la revisión (verificados contra código):
+- Sonnet afirmó falsamente que portfolioCAGR/portfolioVsBenchmark "ya existen" (NO existen).
+- calcYield (I8) de Sonnet es financieramente incorrecto (usa balance actual → sobreestima ~7×).
+- Divergencia FE↔BE pasivos CC: Reports.gs:50 no replica filtro FIN-014 (selectors.js:131).
+- 5 .gs marcados "⚠ pendiente deploy" en TechnicalDebt vs handoff "todo desplegado" → VERIFICAR.
+- ensureHeaders_ NO es append-only idempotente (setValues ciego): solo appendear al final.
 
-PENDIENTES EN ORDEN:
+PENDIENTES EN ORDEN (plan R0–R8):
 
-1. SPRINT 10 ← SIGUIENTE (sin deploy, ~1 día):
-   Archivos: src/views/fire.js · src/store/selectors.js · src/views/analytics.js
-   - FIRE: fecha estimada ("Alcanzarías en [Mes Año]") · ProgressBar avance · tooltips conceptos
-   - FIRE: variantes LeanFIRE/FatFIRE/BaristaFIRE (radio selector, ajusta SWR)
-   - FIRE: EmptyState explicativo si no hay datos
-   - Analytics: liquidityCoverageMonths(s) + insight "X meses de cobertura"
-   - Analytics: savingsStreak(s) + insight "N meses seguidos ahorrando"
-   - Analytics: insight concentración gastos (categoría top como % del total)
+0. R0 — PRE-FLIGHT ← SIGUIENTE (BLOQUEANTE de R3/R5, requiere deploy):
+   - Verificar versión real desplegada (getDashboard/getNetWorth vs FE) y desplegar pendientes
+     (Reports.gs TD-41, Utils.gs TD-45, Code.gs TD-50, Auth.gs TD-51, Quotes.gs TD-02).
+   - FIX FE↔BE pasivos CC: excluir type==='credit_card' en computeNetWorth_ (Reports.gs:50) + test paridad.
+   - Exponer ccDebt y liabilitiesDebt en el return de computeNetWorth_ (prep R3).
+   - Marcar TD-01 ✅ en TechnicalDebt; documentar invariante "schema solo append al final".
 
-2. SPRINT 11 (~1 día + deploy Config.gs+NetWorth.gs):
-   - snoozeService.js (nuevo): snooze(id,days), isActive(id), clearExpired() — localStorage
-   - Botón "Visto ✓" en upcomingPayments de today.js + dashboard.js (filtro en VISTA, no en selector)
-   - Schema NetWorthSnapshots: 7 campos append-only (liquidity, investmentsValue, etc.)
-   - saveNetWorthSnapshot_: capturar 7 campos enriquecidos
+1. R1 — FIRE + insights (sin deploy): FIRE fecha/ProgressBar/tooltips/variantes/EmptyState ·
+   liquidityCoverageMonths CON PROMEDIO (no mes actual) · savingsStreak EXCLUYENDO mes en curso ·
+   concentración gastos. Archivos: fire.js · selectors.js · analytics.js. Test por selector.
 
-3. SPRINT 12 (~1.5 días + deploy Config.gs+Accounts.gs):
-   - Cuentas remuneradas: badge EA%, calcYield(), modal "Registrar rendimiento"
-   - selectors.portfolioAlerts(s): 4 alertas determinísticas (concentración, CDT, PnL, diversif.)
-   - Sección "Análisis" colapsable en investments.js
+2. R2 — Dismiss de pagos (sin deploy): dismissService.js semántica DISMISS hasta próxima
+   ocurrencia (NO snooze que reaparece) · botón "Visto ✓" · filtro en VISTA (selector intacto).
 
-4. SPRINT 13 (~1.5 días + deploy Analysis.gs+Code.gs):
-   - backend/Analysis.gs: endpoint analyzePortfolio → Groq narrativa DESCRIPTIVA (no prescriptiva)
-   - Import: calidad del parsing + validación montos + dupKey mejorado + perfil RappiCuenta
-   - Export: selector de período
+3. R3 — Snapshots enriquecidos (requiere R0; deploy): 6 campos append (SIN liquidity ≡ accountsValue) ·
+   saveNetWorthSnapshot_ captura desglose · networth.js muestra detalle sin duplicar liquidez.
 
-BUGS ABIERTOS: ninguno conocido.
+4. R4 — Alertas portafolio I7a (sin deploy): construir positionValue/totalPortfolioValue (NO existen) ·
+   portfolioAlerts (concentración>30%, CDT<30d, P&L<-20% con costBasis+comisión, sin diversif.) ·
+   degradar con precios stale (etiquetar aproximada).
+
+5. R5 — Cuentas remuneradas I8 (deploy): REDISEÑAR calcYield (saldo promedio o acumulación diaria,
+   NO balance actual) · lastYieldDate · interestRate EA · idempotencia (accountId,periodo) · fuente única.
+
+6. R6 — Import/Export (sin deploy): fixtures de regresión ANTES de dupKey → date|amount|descNorm ·
+   resumen calidad · validación montos · perfil RappiCuenta · export por período.
+
+7. R7 (OPCIONAL, deploy) — Narrativa Groq: analyzePortfolio SIN script lock (evita congelar sync) ·
+   datos minimizados (agregados, no montos/símbolos) · anti prompt-injection (Investments.name) ·
+   caché CacheService · disclaimer "no es asesoría financiera".
+
+8. R8 (OPCIONAL) — Endurecimientos P2: app-lock local opcional (PIN+auto-lock; auth.js sesión perpetua) ·
+   confirmar/documentar/eliminar 2º email de allowedEmails (aislamiento ya roto).
+
+BUGS / HALLAZGOS ABIERTOS:
+- 🔴 Drift de deploy: 5 .gs posiblemente sin desplegar (verificar en R0).
+- 🔴 Divergencia FE↔BE pasivos CC (Reports.gs:50 sin filtro FIN-014).
+- 🟡 TD-01 resuelto en código pero sin ✅ en TechnicalDebt.md:42.
 
 RIESGOS ABIERTOS:
-- Bootstrap limita a 24m de transacciones (intencional, confirmar impacto en datos históricos)
-- Sprint 13 narrativa IA: prompt debe ser estrictamente descriptivo (riesgo AMV)
+- R0 es precondición dura de R3/R5: snapshots/remuneradas sobre backend no verificado = corrupción permanente.
+- calcYield de Sonnet infla patrimonio hasta ~7× → rediseño obligatorio antes de I8.
+- analyzePortfolio tomaría LockService → head-of-line blocking del sync.
+- Bootstrap limita a 24m de transacciones (intencional, confirmar impacto histórico).
+- Sesión de facto perpetua sin app-lock; 2º email con acceso total a la BD.
 
 VERIFICACIONES PENDIENTES EN VIVO:
 - Flujo venta parcial/total en UI Inversiones

@@ -185,11 +185,8 @@ Los ítems avanzados (XIRR, Sharpe) son opcionales y complejos.
 | **Sprint 7** | Performance | ~1.5d | 🟢 Bajo |
 | **Sprint 8** | Analítica avanzada | ~2d | 🟢 Medio |
 | **Sprint 9** | Pulido + P3 | ~2d | 🟢 Bajo |
-| **Sprint 10** | FIRE enriquecido + Insights analítica | ~1d | 🟢 Alto |
-| **Sprint 11** | Snooze pagos + Snapshot enriquecido | ~1d + deploy | 🟡 Alto |
-| **Sprint 12** | Cuentas remuneradas + Alertas portafolio | ~1.5d + deploy | 🟡 Alto |
-| **Sprint 13** | IA narrativa + Import/Export mejorado | ~1.5d + deploy | 🟢 Medio-Alto |
-| **Total** | | **~17 días** | |
+| ~~Sprint 10–13~~ | **SUPERSEDED** por el plan revisado Opus (ver abajo) | — | — |
+| **Total Sprints 1–9** | | **~14 días** | (completados) |
 
 ---
 
@@ -205,90 +202,48 @@ Los ítems avanzados (XIRR, Sharpe) son opcionales y complejos.
 
 ---
 
-## Sprints 10–13 — Evolución post-v1.0
-> Añadidos por auditoría estratégica 2026-06-08. Ver detalle completo en `docs/Audit-Estrategica-2026-06-08.md`.
+## Plan revisado (Opus 2026-06-08) — reemplaza los Sprints 10–13 de Sonnet
 
-### Sprint 10 — FIRE enriquecido + Insights adicionales (~1 día)
-**Objetivo:** Completar la experiencia FIRE recién implementada y añadir 3 insights de alto impacto.  
-**Dependencias:** Ninguna. **Riesgo:** Ninguno. **ROI:** Alto.
+> Los Sprints 10–13 generados por la auditoría estratégica de Sonnet
+> (`docs/Audit-Estrategica-2026-06-08.md`) quedan **SUPERSEDED** por este plan,
+> producto de la revisión arquitectónica independiente de Opus. Razón: la auditoría
+> de Sonnet contenía afirmaciones falsas verificadas contra código (`portfolioCAGR`
+> no existe, `calcYield` financieramente incorrecto, `ensureHeaders_` no es
+> append-only idempotente) y omitía riesgos reales (divergencia FE↔BE en pasivos CC,
+> backend pendiente de deploy, head-of-line blocking de la IA en el sync).
+>
+> **Detalle completo, tablas de tareas y justificación:**
+> `docs/Roadmap-Revisado-Opus.md` · auditoría: `docs/Auditoria-Estrategica-Revisada-Opus.md`.
+>
+> Numeración del plan revisado (R0–R8); **no confundir** con los Sprints 1–9 ya
+> completados. El orden refleja dependencias de seguridad, no de features.
 
-| # | Tarea | Archivo | Esfuerzo |
-|---|---|---|---|
-| 10.1 | FIRE: fecha estimada de independencia ("Alcanzarías en [Mes Año]") | `src/views/fire.js` | S |
-| 10.2 | FIRE: ProgressBar de avance (patrimonio/objetivo %) | `src/views/fire.js` | S |
-| 10.3 | FIRE: tooltips de conceptos (SWR, regla del 4%, CAGR) | `src/views/fire.js` | S |
-| 10.4 | FIRE: variantes LeanFIRE / FatFIRE / BaristaFIRE (radio selector) | `src/views/fire.js` | S |
-| 10.5 | FIRE: EmptyState explicativo si no hay datos financieros | `src/views/fire.js` | S |
-| 10.6 | Analytics: `liquidityCoverageMonths(s)` + insight "X meses de cobertura" | `src/store/selectors.js` + `analytics.js` | S |
-| 10.7 | Analytics: `savingsStreak(s)` + insight "N meses seguidos ahorrando" | `src/store/selectors.js` + `analytics.js` | S |
-| 10.8 | Analytics: insight concentración gastos (categoría top como % del total) | `src/views/analytics.js` | S |
+| Sprint (rev.) | Objetivo | Esfuerzo | Riesgo | Deploy | ROI |
+|---|---|---|---|---|---|
+| **R0** — Pre-flight | Verificar/desplegar backend pendiente (TD-41/45/50/51/02) · **fix FE↔BE pasivos CC** (`Reports.gs:50` ← FIN-014) + test paridad · exponer `ccDebt`/`liabilitiesDebt` · marcar TD-01 ✅ | ~0.5–1d | Alto si se omite | **Sí** | 🔴 Máximo |
+| **R1** — FIRE + insights | FIRE enriquecido (fecha, ProgressBar, tooltips, variantes, EmptyState) · `liquidityCoverageMonths` **con promedio** · `savingsStreak` **excluyendo mes en curso** · concentración gastos | ~1d | Ninguno | No | 🟢 Alto |
+| **R2** — Dismiss de pagos | `dismissService` con semántica **dismiss hasta próxima ocurrencia** (no snooze que reaparece) · filtro en vista (selector intacto) | ~0.5d | Ninguno | No | 🟡 Alto |
+| **R3** — Snapshots enriquecidos | 6 campos append (**sin `liquidity`** ≡ accountsValue) · **requiere R0 (deploy + fix)** | ~1d | P0 sin R0 | **Sí** | 🟡 Alto |
+| **R4** — Alertas portafolio (I7a) | `portfolioAlerts` determinísticas · **construir `positionValue`/`totalPortfolioValue` (NO existen)** · degradar con precios stale | ~1d | Bajo | No | 🟡 Alto |
+| **R5** — Cuentas remuneradas (I8) | **Rediseñar `calcYield`** (saldo promedio / acumulación diaria; NO balance actual) · `lastYieldDate` · `interestRate` EA · idempotencia `(accountId, periodo)` | ~1.5d | P1 sin rediseño | **Sí** | 🟡 Medio |
+| **R6** — Import/Export | Fixtures de regresión ANTES de `dupKey` · resumen calidad · validación montos · perfil RappiCuenta · export por período | ~1.5d | Medio | No | 🟢 Alto |
+| **R7** — Narrativa Groq (I7b) — **OPCIONAL** | `analyzePortfolio` **sin script lock** · datos minimizados · anti prompt-injection · caché · disclaimer | ~1.5d | Medio | **Sí** | 🟢 Bajo-Medio |
+| **R8** — Endurecimientos P2 — **OPCIONAL** | App-lock local opcional (PIN + auto-lock) · confirmar/documentar/eliminar 2º email de `allowedEmails` | ~1d | Ninguno | Parcial | 🟢 Medio |
 
----
+**Camino crítico:** R0 → (R1 ∥ R2 ∥ R4) → R3 → R5 → R6 → (R7, R8 opcionales). Total ~9–10 días + 4 deploys.
 
-### Sprint 11 — Snooze de pagos + Snapshots enriquecidos (~1 día + deploy)
-**Objetivo:** Eliminar ruido de recordatorios revisados y capturar desglose en snapshots desde ahora.  
-**Dependencias:** Sprint 10. **Riesgo:** Bajo. **ROI:** Alto.
-
-| # | Tarea | Archivo | Esfuerzo |
-|---|---|---|---|
-| 11.1 | `snoozeService.js`: `snooze(id, days)`, `isActive(id)`, `clearExpired()` — localStorage | `src/services/snoozeService.js` (nuevo) | S |
-| 11.2 | Botón "Visto ✓" en filas de `upcomingPayments` (today.js + dashboard.js) | `src/views/today.js`, `dashboard.js` | S |
-| 11.3 | Tests para `snoozeService` | `tests/` | S |
-| 11.4 | Schema `NetWorthSnapshots`: 7 campos append-only (liquidity, investmentsValue, investmentsCost, accountsValue, otherAssets, ccDebt, liabilitiesDebt) | `backend/Config.gs` | S |
-| 11.5 | `saveNetWorthSnapshot_`: capturar y guardar los 7 campos | `backend/NetWorth.gs` | S |
-| 11.6 | Deploy `Config.gs` + `NetWorth.gs` + re-ejecutar `setupDatabase()` | backend | M |
-| 11.7 | `networth.js`: mostrar desglose en detalle del snapshot | `src/views/networth.js` | S |
-
-> Nota: El selector `upcomingPayments` NO se modifica. El filtro snooze se aplica en la vista (preserva pureza del selector).
+**Precondición dura:** R3 y R5 NO arrancan sin R0 completo (deploy verificado + fix FE↔BE + rediseño de fórmula).
 
 ---
 
-### Sprint 12 — Cuentas remuneradas + Alertas de portafolio (~1.5 días + deploy)
-**Objetivo:** Soportar Global66/RappiCuenta y añadir análisis automático del portafolio de inversiones.  
-**Dependencias:** Sprint 11. **Riesgo:** Bajo. **ROI:** Alto.
-
-| # | Tarea | Archivo | Esfuerzo |
-|---|---|---|---|
-| 12.1 | Schema `Accounts`: añadir `lastYieldDate` (append-only) | `backend/Config.gs` | S |
-| 12.2 | `accounts.js`: badge "X% EA" en cuentas con `interestRate > 0` | `src/views/accounts.js` | S |
-| 12.3 | `calcYield(account, today)`: interés compuesto diario | `src/views/accounts.js` | S |
-| 12.4 | Modal "Registrar rendimiento": preview → confirmación → tx ingreso + update cuenta | `src/views/accounts.js` | M |
-| 12.5 | Preset `RappiCuenta` (type:savings, interestRate:9, currency:COP) | `src/views/accounts.js` | S |
-| 12.6 | Deploy `Config.gs` + `Accounts.gs` | backend | M |
-| 12.7 | `selectors.portfolioAlerts(s)`: concentración >30%, CDT <30d, P&L <-20%, sin diversificación | `src/store/selectors.js` | M |
-| 12.8 | Sección "Análisis" colapsable en `investments.js` con alertas | `src/views/investments.js` | M |
-| 12.9 | Tests: `portfolioAlerts` (4 escenarios) | `tests/selectors.test.js` | S |
-
----
-
-### Sprint 13 — IA narrativa de portafolio + Import/Export mejorado (~1.5 días + deploy)
-**Objetivo:** Narrativa descriptiva del portafolio con Groq (opt-in) y mejoras de calidad al import/export.  
-**Dependencias:** Sprint 12. **Riesgo:** Medio (IA) / Bajo (Import/Export). **ROI:** Medio-Alto.
-
-| # | Tarea | Archivo | Esfuerzo |
-|---|---|---|---|
-| 13.1 | `backend/Analysis.gs` (nuevo): endpoint `analyzePortfolio` → Groq narrativa descriptiva | `backend/Analysis.gs` (nuevo) | M |
-| 13.2 | `backend/Code.gs`: registrar acción `analyzePortfolio` | `backend/Code.gs` | S |
-| 13.3 | Deploy `Analysis.gs` + `Code.gs` | backend | S |
-| 13.4 | `investments.js`: botón "Analizar con IA" + narrativa + timestamp (opt-in, fallback graceful) | `src/views/investments.js` | S |
-| 13.5 | Import: resumen de calidad (N/M sin categoría asignada) | `src/views/import.js` | S |
-| 13.6 | Import: validar montos cero/negativos antes del preview | `src/services/importService.js` | S |
-| 13.7 | Import: `dupKey` mejorado → `date|amount|descNorm` | `src/views/import.js` | S |
-| 13.8 | Import: perfil `RappiCuenta` en `bankProfiles.js` | `src/services/parsers/bankProfiles.js` | S |
-| 13.9 | Export: selector de período (fecha desde/hasta) | `src/views/exports.js` + `src/utils/export.js` | M |
-
-> Nota regulatoria: prompt de `Analysis.gs` estrictamente descriptivo. Disclaimer "Esto no es asesoría financiera" visible en UI.
-
----
-
-## Iniciativas evaluadas y descartadas (2026-06-08)
+## Iniciativas evaluadas y descartadas
 
 | Iniciativa | Decisión | Motivo |
 |---|---|---|
-| Autenticación Biométrica (WebAuthn/Passkeys) | No implementar | OAuth+FedCM es suficiente. Complejidad desproporcionada para 1 usuario. Violación del principio de simplicidad. |
-| Multicuenta / Multiusuario | No implementar | Viola el concepto central del producto (app personal). Solución para familiares: clonar repo + instancia separada en GitHub Pages. |
+| Autenticación Biométrica (WebAuthn/Passkeys) **como reemplazo de OAuth** | No implementar | OAuth+FedCM suficiente. Complejidad desproporcionada para 1 usuario. (Opus conserva el **app-lock local opcional** en R8 — Sonnet lo descartó de más.) |
+| Multicuenta / Multiusuario | No implementar | Viola el concepto monousuario. Familiares: clonar repo + instancia separada. (Opus añade en R8 la **limpieza de `allowedEmails`** — el aislamiento ya está roto con 2 emails sobre 1 BD.) |
 
 ---
 
-*Sprints 1–9 generados por auditoría global 2026-06-02*  
-*Sprints 10–13 generados por auditoría estratégica 2026-06-08*
+*Sprints 1–9 generados por auditoría global 2026-06-02*
+*Sprints 10–13 (Sonnet, 2026-06-08) **SUPERSEDED** por el plan revisado Opus (R0–R8, 2026-06-08)*
