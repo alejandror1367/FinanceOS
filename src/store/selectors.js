@@ -66,7 +66,8 @@ export const selectors = {
       const lp    = priceService.priceFor(i.symbol);
       const price = lp?.price || i.currentPrice || 0;
       // Fondos FIC almacenan el valor total de la posición en currentValue (no qty×price).
-      const native = i.currentValue || ((i.quantity || 0) * price);
+      // Fallback a costBasis cuando no hay precio vivo ni currentValue (p. ej. FIC sin Yahoo).
+      const native = i.currentValue || ((i.quantity || 0) * price) || i.costBasis || 0;
       if (!native) return acc;
       const cur = i.currency || base;
       if (cur === base) return acc + native;
