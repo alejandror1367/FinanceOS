@@ -10,6 +10,7 @@ import {
   Card, KpiCard, Trend, Badge, BarChart, ProgressBar, EmptyState, Button,
 } from '../components/ui.js';
 import { openTxModal } from './transactions.js';
+import { dismiss, isDismissed, clearStale } from '../services/dismissService.js';
 
 const SCORE_META = [
   { min: 80, label: 'Excelente', variant: 'positive' },
@@ -25,6 +26,7 @@ export function renderDashboard() {
   const root = el('div');
 
   function repaint() {
+    clearStale();
     const s   = store.get();
     const cur = s.baseCurrency;
 
@@ -270,29 +272,44 @@ export function renderDashboard() {
     });
 
     // ── Próximos pagos ────────────────────────────────────────────────────────
-    const upcoming     = selectors.upcomingPayments(s, 5);
-    const upcomingCard = Card({
-      title: 'Próximos pagos',
-      action: urgentPayments.length
-        ? Badge(`${urgentPayments.length} urgente${urgentPayments.length > 1 ? 's' : ''}`, 'warning')
-        : el('span', { class: 'row-flex', html: icon('calendar') }),
-      body: upcoming.length
-        ? el('div', { class: 'row-list' }, upcoming.map((r) => {
-            const cat = selectors.categoryById(s, r.categoryId);
-            const isUrgent = urgentPayments.some((i) => i.id === r.id);
-            return el('div', { class: 'row' }, [
-              el('div', { class: 'row__avatar', html: icon(cat?.icon || 'calendar') }),
-              el('div', { class: 'row__main' }, [
-                el('div', { class: 'row__title', text: r.description }),
-                el('div', { class: 'row__sub' }, [
-                  isUrgent ? Badge(relativeDay(r.nextRunDate), 'warning') : relativeDay(r.nextRunDate),
+    const upcoming = selectors.upcomingPayments(s, 5);
+
+    // Contenedor para upcoming — permite re-render parcial sin repintar toda la vista.
+    const upcomingArea = el('div');
+
+    function renderUpcomingCard() {
+      const visible = upcoming.filter((r) => !isDismissed(r.id));
+      mount(upcomingArea, Card({
+        title: 'Próximos pagos',
+        action: urgentPayments.length
+          ? Badge(`${urgentPayments.length} urgente${urgentPayments.length > 1 ? 's' : ''}`, 'warning')
+          : el('span', { class: 'row-flex', html: icon('calendar') }),
+        body: visible.length
+          ? el('div', { class: 'row-list' }, visible.map((r) => {
+              const cat      = selectors.categoryById(s, r.categoryId);
+              const isUrgent = urgentPayments.some((i) => i.id === r.id);
+              return el('div', { class: 'row' }, [
+                el('div', { class: 'row__avatar', html: icon(cat?.icon || 'calendar') }),
+                el('div', { class: 'row__main' }, [
+                  el('div', { class: 'row__title', text: r.description }),
+                  el('div', { class: 'row__sub' }, [
+                    isUrgent ? Badge(relativeDay(r.nextRunDate), 'warning') : relativeDay(r.nextRunDate),
+                  ]),
                 ]),
-              ]),
-              el('div', { class: 'row__amount', text: formatMoney(r.amount, cur) }),
-            ]);
-          }))
-        : EmptyState({ title: 'Sin pagos próximos', iconName: 'calendar' }),
-    });
+                el('div', { class: 'row__amount', text: formatMoney(r.amount, cur) }),
+                el('button', {
+                  class: 'btn btn--ghost btn--sm',
+                  text: 'Visto ✓',
+                  'aria-label': `Marcar como visto: ${r.description}`,
+                  on: { click: () => { dismiss(r.id, r.nextRunDate); renderUpcomingCard(); } },
+                }),
+              ]);
+            }))
+          : EmptyState({ title: 'Sin pagos próximos', iconName: 'calendar' }),
+      }));
+    }
+
+    renderUpcomingCard();
 
     // ── Composición ──────────────────────────────────────────────────────────
     mount(root,
@@ -308,7 +325,7 @@ export function renderDashboard() {
         ]),
         kpis,
         el('div', { class: 'grid grid--2 section' }, [netWorthCard, categoryCard]),
-        el('div', { class: 'grid grid--2 section' }, [recentCard, el('div', { class: 'stack' }, [goalsCard, upcomingCard])]),
+        el('div', { class: 'grid grid--2 section' }, [recentCard, el('div', { class: 'stack' }, [goalsCard, upcomingArea])]),
       ])
     );
   }
