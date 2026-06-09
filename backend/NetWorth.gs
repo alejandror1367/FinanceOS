@@ -34,6 +34,13 @@ function saveNetWorthSnapshot_(d) {
     totalLiabilities: nw.totalLiabilities,
     netWorth: nw.netWorth,
     currency: getBaseCurrency_(),
+    // R3: desglose enriquecido
+    investmentsValue: nw.investmentsValue || 0,
+    investmentsCost:  nw.investmentsCost  || 0,
+    accountsValue:    nw.accountsValue    || 0,
+    otherAssets:      nw.otherAssets      || 0,
+    ccDebt:           nw.ccDebt           || 0,
+    liabilitiesDebt:  nw.liabilitiesDebt  || 0,
   };
 
   var rec;
@@ -44,5 +51,9 @@ function saveNetWorthSnapshot_(d) {
     rec = repoCreate_('NetWorthSnapshots', payload);
     logAudit_('create', 'NetWorthSnapshots', rec.id, 'Snapshot ' + date);
   }
+  // ⚠ requiere deploy — R3
+  // Pasos tras deploy: 1) desplegar Config.gs + NetWorth.gs  2) ejecutar setupDatabase()
+  // desde el editor Apps Script (añade columnas al sheet, idempotente).
+  // Los snapshots anteriores quedarán con campos vacíos — el frontend los muestra con '—'.
   return rec;
 }
