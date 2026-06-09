@@ -23,7 +23,7 @@ Centraliza: patrimonio neto, presupuestos, flujo de caja, inversiones, metas, de
 | PWA instalada en celular | ✅ Funcionando |
 | Google OAuth | ✅ Activo (`patitosalmir@gmail.com` + `alejandrorr1367@gmail.com`) |
 | Backend Apps Script | ✅ Desplegado y verificado en producción |
-| Tests financieros | ✅ **97/97** pasando (20 suites) |
+| Tests financieros | ✅ **104/104** pasando (22 suites) |
 | Módulo Import | ✅ Completamente funcional (BUG-P0-1/P1-1/P1-2/P1-3 corregidos) |
 | Backend patrimonio neto | ✅ CC incluida como pasivo en `computeNetWorth_` (BUG-P0-2, desplegado) |
 | Snapshots de patrimonio | ✅ Crear · eliminar (soft delete) · masivo · outliers — **eliminar arreglado** (sesión 06-03) |
@@ -43,6 +43,8 @@ Centraliza: patrimonio neto, presupuestos, flujo de caja, inversiones, metas, de
 | Fix backend CC balance negativo | ✅ Desplegado y verificado — `f0d8ff1` |
 | Re-encolar dead-letter (BUG-CC-1) | ✅ Ejecutado — ops sincronizadas |
 | Simulador FIRE (`#/fire`) | ✅ Implementado — `5da9b05` + `c385baf` |
+| R0 — Pre-flight | ✅ Fix FE↔BE pasivos CC · `ccDebt`/`liabilitiesDebt` expuestos · TD-01 marcado · 5 `.gs` desplegados (2026-06-09) |
+| R1 — FIRE + insights | ✅ Fecha estimada · ProgressBar · variantes Lean/Fat/Barista · EmptyState · `liquidityCoverageMonths` · `savingsStreak` · 3 insights nuevos |
 | Pendiente | Reportes automáticos Groq |
 
 ---
@@ -493,20 +495,20 @@ HEAD pasó de `75eacca` a **`b870d6c`**. SW `v0.2.10 → v0.2.13`. Tests `33 →
 ```
 Rama:    main
 Remote:  https://github.com/alejandror1367/FinanceOS.git
-HEAD:    d2be879  docs: auditoría estratégica 2026-06-08 — 9 iniciativas, sprints 10-13
-SW:      v0.2.77  (sincronizado con config.version)
-Status:  limpio · sincronizado con origin/main (push 0 0) — por confirmar tras push
+HEAD:    ac570e8  feat(analytics): insights cobertura de liquidez, racha de ahorro y concentración (R1)
+SW:      v0.2.80  (sincronizado con config.version)
+Status:  limpio · 3 commits pendientes de push (R0+R1) — empujar con git push origin main
 ```
 
 ### Commits recientes
 ```
-d2be879 docs: auditoría estratégica 2026-06-08 — 9 iniciativas, sprints 10-13
-2445be7 docs: cerrar QA-001/QA-002/QA-003 en handoff (sesion 2026-06-08)
-a27de76 fix(selectors): costBasis fallback en investmentsValue para FIC sin precio vivo (QA-001)
-13c2e2b docs: actualizar roadmap 2026-06-08 — FIRE + CC fix + dead-letter resueltos
-54aa310 docs: agregar prompt de auditoría estratégica 2026-06-08
-80319df docs: handoff 2026-06-07 tarde — KPI desplegables + actualización estado
-57f144e feat(dashboard): desplegable de detalle en cada KPI card
+ac570e8 feat(analytics): insights cobertura de liquidez, racha de ahorro y concentración (R1)
+9762873 feat(fire): fecha estimada, ProgressBar, variantes FIRE y EmptyState (R1)
+83782be feat(selectors): liquidityCoverageMonths y savingsStreak con promedio 3m (R1)
+68177c7 docs(debt): marcar TD-01 resuelto + regla ensureHeaders_ append-only (R0-C)
+f3390c5 test(selectors): paridad FIN-014 totalLiabilities excluye credit_card (R0-B)
+9657ea3 fix(backend): excluir CC de totalLiabilities en computeNetWorth_ + exponer ccDebt/liabilitiesDebt (R0)
+51cd376 docs: adoptar plan revisado Opus (R0-R8) en roadmap oficial + handoff
 f0d8ff1 fix(backend): permitir balance negativo en cuentas CC (toSignedAmount_)
 ```
 
@@ -558,7 +560,7 @@ La app ya tiene `config.js` con las URLs reales commiteadas. Solo necesitas:
 ### En el nuevo equipo (una sola vez — bootstrap)
 - [ ] `git clone https://github.com/alejandror1367/FinanceOS.git`
 - [ ] `cd FinanceOS && git config core.hooksPath .githooks` (activa auto-bump del SW **y** config.version)
-- [ ] `node --test tests/selectors.test.js` → debe dar **97/97** ✅
+- [ ] `node --test tests/selectors.test.js` → debe dar **104/104** ✅
 - [ ] `npx serve .` → verificar que carga en `localhost:3000`
 - [ ] Leer `CLAUDE.md` (invariantes absolutos) + `docs/NEXT_SESSION.md` (estado actual)
 
@@ -574,9 +576,9 @@ Todos los backends han sido desplegados. El estado del backend en producción es
 
 ### Verificación rápida del estado
 ```bash
-git log --oneline -5          # HEAD debe ser 57f144e
-node --test tests/selectors.test.js  # 97/97
-grep "version" src/core/config.js   # debe coincidir con sw.js VERSION (v0.2.76)
+git log --oneline -5          # HEAD debe ser ac570e8 (o el docs-handoff después)
+node --test tests/selectors.test.js  # 104/104
+grep "version" src/core/config.js   # debe coincidir con sw.js VERSION (v0.2.80)
 ```
 
 ---
@@ -600,10 +602,10 @@ Sprints 10–13 de Sonnet (`docs/Audit-Estrategica-2026-06-08.md`) **SUPERSEDED*
 | Auditoría estratégica 9 iniciativas | ✅ 2026-06-08 | `d2be879` |
 
 **Orden recomendado (plan revisado Opus R0–R8):**
-1. **R0 — Pre-flight (BLOQUEANTE)** ← siguiente — verificar/desplegar backend pendiente (TD-41/45/50/51/02) · fix FE↔BE pasivos CC (`Reports.gs:50` ← FIN-014) + test paridad · exponer `ccDebt`/`liabilitiesDebt` · marcar TD-01 ✅
-2. **R1** — FIRE enriquecido + insights corregidos (cobertura con promedio, streak sin mes en curso) — sin deploy
-3. **R2** — Dismiss de pagos (semántica dismiss, no snooze) — sin deploy
-4. **R3** — Snapshots enriquecidos (requiere R0; 6 campos sin `liquidity`) — deploy
+1. **R0** ✅ completado 2026-06-09 — fix FE↔BE CC · ccDebt/liabilitiesDebt · TD-01 · deploy 5 .gs
+2. **R1** ✅ completado 2026-06-09 — FIRE enriquecido · liquidityCoverageMonths · savingsStreak · 3 insights
+3. **R2 — Dismiss de pagos** ← SIGUIENTE — `dismissService.js` dismiss hasta próxima ocurrencia · botón "Visto ✓" · filtro en vista (selector intacto) — sin deploy
+4. **R3** — Snapshots enriquecidos (requiere R0 ✅; 6 campos sin `liquidity`) — deploy
 5. **R4** — Alertas portafolio I7a (construir `positionValue`/`totalPortfolioValue`) — sin deploy
 6. **R5** — Cuentas remuneradas I8 (rediseñar `calcYield`, NO balance actual) — deploy
 7. **R6** — Import/Export (fixtures antes de `dupKey`, export por período) — sin deploy
@@ -611,9 +613,8 @@ Sprints 10–13 de Sonnet (`docs/Audit-Estrategica-2026-06-08.md`) **SUPERSEDED*
 9. **R8** (opcional) — App-lock local + limpiar `allowedEmails`
 
 **Verificaciones pendientes en vivo:**
-- Flujo venta parcial/total en UI Inversiones (verificación Playwright con auth real)
-- `getBootstrap` ventana 24m no rompe historial más antiguo
-- Analítica: tabla tendencias y selector de período funcionan en producción
+- R1: fire.js (variantes, ProgressBar, fecha estimada) y analytics.js (3 insights nuevos) — Playwright
+- Flujo venta parcial/total en UI Inversiones
 
 **Hecho (ya no son pendientes):** backend de saldos + `getBootstrap` desplegados y verificados;
 bypass de auditoría eliminado; auditoría funcional 2026-06-02 (`docs/Audit-Funcional-2026-06-02.md`).
@@ -682,25 +683,22 @@ commit: e6b3c77 · rama: main · SW: v0.2.43 · config.version: 0.2.43 · tests:
 
 > Leer esto antes que cualquier otra sección. Máximo 100 líneas. Fuente de verdad para retomar de inmediato.
 
-**HEAD:** `590cfd1` · **SW/config.version:** `v0.2.77` · **Tests:** 97/97 (20 suites) · **Rama:** main · **Sync:** origin/main al día
+**HEAD:** `ac570e8` · **SW/config.version:** `v0.2.80` · **Tests:** 104/104 (22 suites) · **Rama:** main · **Sync:** 3 commits pendientes de push (docs-handoff + R0 + R1)
 
-> **Sesión 2026-06-08 (noche):** revisión arquitectónica independiente (Opus) de la auditoría de Sonnet.
-> Entregables: `docs/Auditoria-Estrategica-Revisada-Opus.md` + `docs/Roadmap-Revisado-Opus.md`.
-> El roadmap oficial adopta el **plan revisado Opus (R0–R8)**; los Sprints 10–13 de Sonnet quedan SUPERSEDED.
+> **Sesión 2026-06-09:** R0 completado (deploy 5 .gs + fix FE↔BE CC + test paridad) · R1 completado (FIRE enriquecido + selectores + 3 insights).
 
 > **MCP:** `.mcp.json` versionado con **playwright** + **context7** (scope de proyecto).
 > Tras `git pull`: **aprobar** ambos y **reiniciar Claude Code** (las tools MCP se fijan al arrancar).
 
 ### Estado actual real
 - **App en producción:** https://alejandror1367.github.io/FinanceOS/ (PWA instalada, OAuth activo)
-- **Backend Apps Script:** ✅ **Todo desplegado** — Sprints 1–5 + Sprint 8 (XIRR/CAGR) desplegados
-- **Tests:** **97/97** en `tests/selectors.test.js` — 20 suites
+- **Backend Apps Script:** ✅ **Todo desplegado** — 5 `.gs` actualizados 2026-06-09 (Auth, Code, Utils, Quotes, Reports)
+- **Tests:** **104/104** en `tests/selectors.test.js` — 22 suites
 - **Roadmap original (1–9):** ✅ Completado · QA Playwright 15/15 PASS
-- **Plan activo (R0–R8):** revisión Opus 2026-06-08 (`docs/Roadmap-Revisado-Opus.md`) — **R0 (pre-flight) es el siguiente**. Sprints 10–13 de Sonnet SUPERSEDED.
-- **Sesión 2026-06-08 (tarde):** Auditoría estratégica 9 iniciativas → `docs/Audit-Estrategica-2026-06-08.md` + Sprints 10–13 en Roadmap
+- **Plan activo (R0–R8):** R0 ✅ y R1 ✅ — **R2 (dismiss de pagos) es el siguiente**.
 
 ### Deploy — todo desplegado ✅
-`Accounts.gs` + `Utils.gs` (CC fix) · `Quotes.gs` (Alpaca) · `Reports.gs` (CC en patrimonio). Backend al día. Próximo deploy: Sprint 11 (`NetWorth.gs` snapshot enriquecido) o Sprint 12 (`Accounts.gs` `lastYieldDate`).
+Backend al día. Próximo deploy: R3 (`Config.gs`+`NetWorth.gs` snapshots enriquecidos) o R5 (`Accounts.gs` `calcYield`).
 
 ### Arquitectura actual
 ```
@@ -711,62 +709,56 @@ Flujo: `Views → Services → Store → Views` (never direct to net/IndexedDB f
 
 ### Funcionalidades implementadas (completas)
 - Dashboard (KPIs desplegables) · Hoy · Transacciones · Cuentas · Presupuestos · Recurrentes
-- Patrimonio (CC como filas reales en Pasivos, sin doble conteo, snapshots)
+- Patrimonio (CC como filas reales en Pasivos, sin doble conteo FE↔BE, snapshots)
 - Inversiones (ventas parciales/totales, CDT capitalizado, XIRR/CAGR, comisión/retención, secciones desplegables, Alpaca API)
 - Metas · Deudas (Snowball/Avalanche, amortización) · Diario · Ajustes
-- Analítica: flujo de caja 3 series + selector 3/6/12m · tendencias top5 · insights históricos
+- Analítica: flujo de caja 3 series + selector 3/6/12m · tendencias top5 · 7 insights (incl. cobertura, racha, concentración)
 - Exportaciones · Command Palette (⌘K) · Validación inline · Import con Groq
-- **Simulador FIRE** (`#/fire`) — años hasta independencia financiera, tabla de sensibilidad
+- **Simulador FIRE** (`#/fire`) — años, fecha estimada, ProgressBar, variantes Lean/Fat/Barista, tabla sensibilidad
 
-### Bugs abiertos / hallazgos de la revisión Opus (2026-06-08)
-- 🔴 **Posible drift de deploy:** TechnicalDebt marca 5 `.gs` "⚠ pendiente deploy" (TD-41/45/50/51/02) vs handoff "todo desplegado". **Verificar antes de tocar patrimonio.** Si `Reports.gs` (TD-41) o `Utils.gs` (TD-45) corren versión vieja → patrimonio inflado / soft-deletes resucitados.
-- 🔴 **Divergencia FE↔BE en pasivos CC:** `computeNetWorth_` (`Reports.gs:50`) no replica el filtro FIN-014 que sí tiene `selectors.js:131` → doble conteo de tarjeta registrada como cuenta + liability. Corregir en R0.
-- 🟡 **TD-01** efectivamente resuelto en código (modelo híbrido), pero `TechnicalDebt.md:42` sin ✅ — marcar.
+### Bugs abiertos
+- 🟡 Verificación en vivo de R1 (fire.js/analytics.js) pendiente con Playwright
+- 🟡 Flujo venta parcial/total en UI Inversiones — por confirmar en vivo
 
 ### Pendientes en orden — PLAN REVISADO OPUS (R0–R8)
-> Reemplaza Sprints 10–13 de Sonnet. Detalle: `docs/Roadmap-Revisado-Opus.md`.
-1. **R0 — Pre-flight (BLOQUEANTE)** ← SIGUIENTE: verificar/desplegar backend pendiente · fix FE↔BE pasivos CC + test paridad · exponer `ccDebt`/`liabilitiesDebt` en `computeNetWorth_` · marcar TD-01 ✅.
-2. **R1 — FIRE + insights corregidos**: cobertura con promedio (NO mes actual) · streak excluyendo mes en curso · concentración gastos.
-3. **R2 — Dismiss de pagos**: semántica dismiss (no snooze que reaparece), filtro en vista.
-4. **R3 — Snapshots enriquecidos** (requiere R0): 6 campos, sin `liquidity` (≡accountsValue). Deploy.
-5. **R4 — Alertas portafolio (I7a)**: construir `positionValue`/`totalPortfolioValue` (NO existen) + `portfolioAlerts`.
-6. **R5 — Cuentas remuneradas (I8)**: rediseñar `calcYield` (NO balance actual) + idempotencia. Deploy.
-7. **R6 — Import/Export**: fixtures antes de `dupKey` · export por período.
-8. **R7 — Narrativa Groq (OPCIONAL)**: sin script lock · datos minimizados · anti-inyección · caché.
-9. **R8 — Endurecimientos P2 (OPCIONAL)**: app-lock local · limpiar `allowedEmails`.
+> Detalle: `docs/Roadmap-Revisado-Opus.md`.
+1. **R0** ✅ **R1** ✅
+2. **R2 — Dismiss de pagos** ← SIGUIENTE: `dismissService.js` semántica dismiss hasta próxima ocurrencia · botón "Visto ✓" · filtro en vista (selector intacto). Sin deploy.
+3. **R3 — Snapshots enriquecidos** (deploy): 6 campos append en `NetWorthSnapshots` · `saveNetWorthSnapshot_` captura desglose · `networth.js` muestra detalle.
+4. **R4 — Alertas portafolio (I7a)**: `positionValue`/`totalPortfolioValue` (NO existen) + `portfolioAlerts`. Sin deploy.
+5. **R5 — Cuentas remuneradas (I8)** (deploy): rediseñar `calcYield` (NO balance actual) + idempotencia.
+6. **R6 — Import/Export**: fixtures antes de `dupKey` · export por período. Sin deploy.
+7. **R7 — Narrativa Groq (OPCIONAL)** (deploy): sin script lock · datos minimizados · caché.
+8. **R8 — Endurecimientos P2 (OPCIONAL)**: app-lock local · limpiar `allowedEmails`.
 
 ### Riesgos abiertos
-- **R0 es precondición dura de R3 y R5** — snapshots/remuneradas sobre backend no verificado = corrupción permanente.
-- `calcYield` propuesto por Sonnet sobreestima patrimonio hasta ~7× (usa balance actual) — rediseño obligatorio antes de I8.
-- `analyzePortfolio` (R7) tomaría el LockService → congela la cola de sync mientras Groq responde. Rutear sin lock.
-- IA portafolio: enviar a Groq solo agregados (no montos/símbolos); `Investments.name` es vector de prompt-injection.
-- Sesión de facto perpetua sin app-lock (`auth.js`); 2º email en `allowedEmails` con acceso total a la BD.
-- `getBootstrap_` limita transactions a ventana 24 meses (intencional — confirmar impacto en datos históricos).
-- `ensureHeaders_` NO es append-only idempotente: solo appendear al final del schema (regla dura).
+- `calcYield` propuesto por Sonnet sobreestima patrimonio hasta ~7× (usa balance actual) — rediseño obligatorio antes de R5.
+- `analyzePortfolio` (R7) tomaría el LockService → congela la cola de sync mientras Groq responde.
+- IA portafolio: enviar a Groq solo agregados; `Investments.name` es vector de prompt-injection.
+- Sesión de facto perpetua sin app-lock (`auth.js`); 2º email en `allowedEmails` con acceso total.
+- `getBootstrap_` limita transactions a ventana 24 meses (confirmar impacto histórico).
+- `ensureHeaders_` NO es append-only idempotente — regla dura: solo append al final del schema.
 
 ### Decisiones arquitectónicas importantes
-- `totalLiabilities` excluye `type=credit_card` (FIN-014) · `reconcileAndHydrate` mergea update (TD-47)
+- `totalLiabilities` excluye `type=credit_card` (FIN-014) — también en `computeNetWorth_` (R0-A)
+- `computeNetWorth_` expone `ccDebt` + `liabilitiesDebt` para snapshots (R0-A, `9657ea3`)
+- `liquidityCoverageMonths` usa promedio 3m completos (no mes actual parcial) — `selectors.js`
+- `savingsStreak` excluye mes en curso — `selectors.js`
 - `flushBatch` empareja por entityId (TD-26) · `isTransient`: 401 → dead-letter (TD-10)
-- `apiClient.js` siempre POST, idToken en body (SEC-001/TD-50) · `verifyGoogleToken_` valida iss+exp (SEC-002/TD-51)
+- `apiClient.js` siempre POST, idToken en body (SEC-001/TD-50) · `verifyGoogleToken_` valida iss+exp
 - Precios en vivo: `priceService.js` (registro global) · `investments.js` escribe · `selectors.js` lee
-- Snooze de pagos (Sprint 11): filtro en VISTA, NO en `selectors.upcomingPayments` (preserva pureza del selector)
 
 ### Archivos críticos
 ```
 CLAUDE.md                          — Invariantes absolutos (leer SIEMPRE primero)
-docs/Roadmap-Revisado-Opus.md      — ★ Roadmap ACTIVO (plan R0–R8, reemplaza 10-13)
-docs/Auditoria-Estrategica-Revisada-Opus.md — ★ Auditoría crítica vigente (correcciones + riesgos)
-docs/Audit-Estrategica-2026-06-08.md — Auditoría Sonnet (SUPERSEDED, referencia histórica)
-docs/Roadmap-Implementacion-2026-06-02.md — Roadmap base (sprints 1-9 ✅ + plan revisado R0-R8)
-src/core/app.js:109-128            — backgroundRefreshPrices() — corregido (700ba60)
-src/store/selectors.js             — Lógica financiera + XIRR/CAGR + categoryTrends + FX
-src/services/priceService.js       — Registro global precios (TTL 15min, localStorage)
-src/services/dataService.js        — reconcileAndHydrate, _recalcAccountBalance
-src/services/syncEngine.js         — isTransient, flushBatch
+docs/Roadmap-Revisado-Opus.md      — ★ Roadmap ACTIVO (plan R0–R8)
+docs/Auditoria-Estrategica-Revisada-Opus.md — ★ Auditoría crítica vigente
+src/store/selectors.js             — Lógica financiera + XIRR/CAGR + liquidityCoverageMonths + savingsStreak
+src/views/fire.js                  — FIRE enriquecido (fecha, ProgressBar, variantes, EmptyState)
+src/views/analytics.js             — buildInsights: 7 insights (incl. 3 nuevos R1)
+backend/Reports.gs                 — computeNetWorth_ (ccDebt/liabilitiesDebt, FIN-014) — desplegado
 backend/Quotes.gs                  — Alpaca (primario) + Yahoo (FX/BVC/fallback) — desplegado
-src/views/investments.js           — secciones desplegables (_collapsed módulo-level)
-src/views/fire.js                  — Simulador FIRE (yearsToFire, tabla sensibilidad)
-tests/selectors.test.js            — 97/97 tests (20 suites)
+tests/selectors.test.js            — 104/104 tests (22 suites)
 ```
 
 ---
@@ -1272,6 +1264,92 @@ PROJECT_HANDOFF.md           — actualizado
 
 ---
 
+## Cambios realizados en sesión 2026-06-09
+
+### R0 — Pre-flight (completado)
+
+**Bugs corregidos:**
+- `computeNetWorth_` (`Reports.gs`) ahora excluye `type=credit_card` de `totalLiabilities` (FIN-014 paridad FE↔BE) — commit `9657ea3`
+- `computeNetWorth_` expone `ccDebt` y `liabilitiesDebt` en el return (prep R3) — mismo commit
+
+**Deploy realizado (manual por Alejo):**
+- `Auth.gs` (TD-51 — validaciones iss+exp) · `Code.gs` (TD-50 — idToken en body POST)
+- `Utils.gs` (TD-45 — guard isDeleted) · `Quotes.gs` (TD-02 — Alpaca primario)
+- `Reports.gs` (TD-41 + R0-A — filtros + ccDebt/liabilitiesDebt)
+
+**Tests añadidos:**
+- FIN-014 paridad FE↔BE: `totalLiabilities` excluye `type=credit_card` — `f3390c5`
+
+**Docs:**
+- TD-01 marcado ✅ en TechnicalDebt.md con regla `ensureHeaders_` append-only — `68177c7`
+
+### R1 — FIRE enriquecido + insights corregidos (completado)
+
+**Nuevos selectores (`src/store/selectors.js`):**
+- `liquidityCoverageMonths(s)` — promedio gasto 3 meses completos (no mes parcial actual)
+- `savingsStreak(s)` — meses consecutivos con ahorro, excluyendo mes en curso
+
+**Mejoras `src/views/fire.js`:**
+- Fecha estimada de independencia financiera (`≈ YYYY`) en KpiCard "Años hasta FIRE"
+- ProgressBar de avance (patrimonio / objetivo FIRE, clamped 0–100%)
+- Variantes Lean (5%) · Standard (4%) · Fat (3.5%) · Barista (5.5%) — radio buttons que ajustan SWR
+- EmptyState cuando no hay datos financieros registrados
+- Tooltips en campos SWR y rendimiento
+
+**Nuevos insights (`src/views/analytics.js` → `buildInsights`):**
+- Cobertura de liquidez (meses cubiertos, variante positive/info/warning)
+- Racha de ahorro (meses consecutivos, excluyendo mes en curso)
+- Concentración de gastos (top categoría ≥40% del total)
+
+**Tests:** 104/104 (22 suites) — +6 tests nuevos (liquidityCoverageMonths, savingsStreak)
+
+**Commits:**
+- `9657ea3` fix(backend): excluir CC de totalLiabilities en computeNetWorth_ + exponer ccDebt/liabilitiesDebt (R0)
+- `f3390c5` test(selectors): paridad FIN-014 totalLiabilities excluye credit_card (R0-B)
+- `68177c7` docs(debt): marcar TD-01 resuelto + regla ensureHeaders_ append-only (R0-C)
+- `83782be` feat(selectors): liquidityCoverageMonths y savingsStreak con promedio 3m (R1)
+- `9762873` feat(fire): fecha estimada, ProgressBar, variantes FIRE y EmptyState (R1)
+- `ac570e8` feat(analytics): insights cobertura de liquidez, racha de ahorro y concentración (R1)
+
+### Archivos modificados
+- `backend/Reports.gs` — fix FE↔BE CC + ccDebt/liabilitiesDebt (requirió deploy)
+- `src/store/selectors.js` — liquidityCoverageMonths + savingsStreak
+- `src/views/fire.js` — FIRE enriquecido
+- `src/views/analytics.js` — 3 insights nuevos
+- `tests/selectors.test.js` — +7 tests (FIN-014 + 6 nuevos)
+- `docs/TechnicalDebt.md` — TD-01 ✅, TD-41/45/50/51/02 deploy marcado
+
+### Riesgos mitigados
+- Drift de deploy: 5 `.gs` pendientes → desplegados ✅
+- Divergencia FE↔BE pasivos CC → corregida ✅
+- Insights sobreestimados (mes parcial) → corrección en selectores ✅
+
+### Verificaciones pendientes en vivo
+- fire.js variantes / ProgressBar / fecha estimada — Playwright
+- analytics.js 3 insights nuevos — Playwright
+- Flujo venta parcial/total en UI Inversiones
+
+---
+
+## Estado posterior a la sesión 2026-06-09
+
+### Completado ✅
+- R0: fix FE↔BE CC · ccDebt/liabilitiesDebt · TD-01 · deploy 5 .gs
+- R1: FIRE enriquecido · liquidityCoverageMonths · savingsStreak · 3 insights
+
+### Parcialmente completado 🟡
+- R1 verificación en vivo pendiente (Playwright con auth real)
+
+### Pendiente 🔴
+- R2: dismiss de pagos
+- R3: snapshots enriquecidos (deploy)
+- R4: alertas portafolio
+- R5: cuentas remuneradas (deploy)
+- R6: import/export mejorado
+- R7/R8: opcionales
+
+---
+
 ## 19. Prompt de nueva sesión
 
 Copia este prompt al iniciar la nueva sesión:
@@ -1287,81 +1365,63 @@ Tras git pull deben APROBARSE y REINICIARSE Claude Code: las tools MCP se fijan 
 PROYECTO: FinanceOS — PWA financiera personal y privada de Alejo.
 Repo: https://github.com/alejandror1367/FinanceOS (rama main).
 Prod: https://alejandror1367.github.io/FinanceOS/
-HEAD: 590cfd1 · SW v0.2.77 · config.version 0.2.77 · Tests 97/97 (20 suites)
+HEAD: ac570e8 (+ docs-handoff) · SW v0.2.80 · config.version 0.2.80 · Tests 104/104 (22 suites)
 
 INVARIANTES (ver CLAUDE.md): JS ES Modules sin build step · sin frameworks/bundlers ·
 cero deps npm en runtime · frontend abstraído tras src/services/ · Apps Script +
 Google Sheets (13 hojas) + GitHub Pages + OAuth de Google · offline-first.
 
-HECHO Y DESPLEGADO:
-- Sprints 1–9 completados · QA Playwright 15/15 PASS · 97/97 tests
-- Fix auto-refresh precios (700ba60) · Alpaca API (527492b) · KPIs desplegables (57f144e)
-- Fix backend CC balance negativo (f0d8ff1) · Re-encolar dead-letter ✅
-- Simulador FIRE #/fire (5da9b05+c385baf) · QA-001/QA-002/QA-003 cerrados
+HECHO Y DESPLEGADO (sesión 2026-06-09):
+- R0 ✅: fix FE↔BE pasivos CC (FIN-014 en Reports.gs) · ccDebt/liabilitiesDebt expuestos ·
+  TD-01 ✅ marcado · 5 .gs desplegados (Auth, Code, Utils, Quotes, Reports)
+- R1 ✅: liquidityCoverageMonths + savingsStreak (selectores con promedio 3m) · 6 tests nuevos ·
+  fire.js: fecha estimada, ProgressBar, variantes Lean/Fat/Barista, EmptyState ·
+  analytics.js: 3 insights (cobertura liquidez, racha ahorro, concentración gastos)
 
-PLAN ACTIVO: revisión Opus R0–R8 (docs/Roadmap-Revisado-Opus.md).
-Auditoría vigente: docs/Auditoria-Estrategica-Revisada-Opus.md.
-Sprints 10–13 de Sonnet (docs/Audit-Estrategica-2026-06-08.md) → SUPERSEDED.
-Hallazgos clave de la revisión (verificados contra código):
-- Sonnet afirmó falsamente que portfolioCAGR/portfolioVsBenchmark "ya existen" (NO existen).
-- calcYield (I8) de Sonnet es financieramente incorrecto (usa balance actual → sobreestima ~7×).
-- Divergencia FE↔BE pasivos CC: Reports.gs:50 no replica filtro FIN-014 (selectors.js:131).
-- 5 .gs marcados "⚠ pendiente deploy" en TechnicalDebt vs handoff "todo desplegado" → VERIFICAR.
+PLAN ACTIVO: R0+R1 ✅ · docs/Roadmap-Revisado-Opus.md
+Hallazgos clave que siguen vigentes:
+- portfolioCAGR/portfolioVsBenchmark NO existen (necesario para R4).
+- calcYield (R5) debe usar saldo promedio/acumulación diaria, NO balance actual (sobreestima ~7×).
 - ensureHeaders_ NO es append-only idempotente (setValues ciego): solo appendear al final.
 
 PENDIENTES EN ORDEN (plan R0–R8):
 
-0. R0 — PRE-FLIGHT ← SIGUIENTE (BLOQUEANTE de R3/R5, requiere deploy):
-   - Verificar versión real desplegada (getDashboard/getNetWorth vs FE) y desplegar pendientes
-     (Reports.gs TD-41, Utils.gs TD-45, Code.gs TD-50, Auth.gs TD-51, Quotes.gs TD-02).
-   - FIX FE↔BE pasivos CC: excluir type==='credit_card' en computeNetWorth_ (Reports.gs:50) + test paridad.
-   - Exponer ccDebt y liabilitiesDebt en el return de computeNetWorth_ (prep R3).
-   - Marcar TD-01 ✅ en TechnicalDebt; documentar invariante "schema solo append al final".
+1. R2 — Dismiss de pagos ← SIGUIENTE (sin deploy):
+   - dismissService.js: dismiss(id, untilDate), isDismissed(id), clearStale() — localStorage.
+   - Recurrentes → dismissedUntil = nextRunDate; CC → fin del ciclo actual.
+   - Botón "Visto ✓" en upcomingPayments; FILTRO EN VISTA (selector intacto — pureza).
+   - Tests: dismiss, expiry por ocurrencia, clear.
 
-1. R1 — FIRE + insights (sin deploy): FIRE fecha/ProgressBar/tooltips/variantes/EmptyState ·
-   liquidityCoverageMonths CON PROMEDIO (no mes actual) · savingsStreak EXCLUYENDO mes en curso ·
-   concentración gastos. Archivos: fire.js · selectors.js · analytics.js. Test por selector.
+2. R3 — Snapshots enriquecidos (deploy): 6 campos append en NetWorthSnapshots (investmentsValue,
+   investmentsCost, accountsValue, otherAssets, ccDebt, liabilitiesDebt) — SIN liquidity redundante.
+   saveNetWorthSnapshot_ captura desglose · networth.js muestra detalle.
 
-2. R2 — Dismiss de pagos (sin deploy): dismissService.js semántica DISMISS hasta próxima
-   ocurrencia (NO snooze que reaparece) · botón "Visto ✓" · filtro en VISTA (selector intacto).
-
-3. R3 — Snapshots enriquecidos (requiere R0; deploy): 6 campos append (SIN liquidity ≡ accountsValue) ·
-   saveNetWorthSnapshot_ captura desglose · networth.js muestra detalle sin duplicar liquidez.
-
-4. R4 — Alertas portafolio I7a (sin deploy): construir positionValue/totalPortfolioValue (NO existen) ·
+3. R4 — Alertas portafolio I7a (sin deploy): construir positionValue/totalPortfolioValue (NO existen) ·
    portfolioAlerts (concentración>30%, CDT<30d, P&L<-20% con costBasis+comisión, sin diversif.) ·
-   degradar con precios stale (etiquetar aproximada).
+   degradar con precios stale.
 
-5. R5 — Cuentas remuneradas I8 (deploy): REDISEÑAR calcYield (saldo promedio o acumulación diaria,
-   NO balance actual) · lastYieldDate · interestRate EA · idempotencia (accountId,periodo) · fuente única.
+4. R5 — Cuentas remuneradas I8 (deploy): REDISEÑAR calcYield (saldo promedio o acumulación diaria,
+   NO balance actual) · lastYieldDate · interestRate EA · idempotencia (accountId, periodo).
 
-6. R6 — Import/Export (sin deploy): fixtures de regresión ANTES de dupKey → date|amount|descNorm ·
-   resumen calidad · validación montos · perfil RappiCuenta · export por período.
+5. R6 — Import/Export (sin deploy): fixtures antes de dupKey · export por período.
 
-7. R7 (OPCIONAL, deploy) — Narrativa Groq: analyzePortfolio SIN script lock (evita congelar sync) ·
-   datos minimizados (agregados, no montos/símbolos) · anti prompt-injection (Investments.name) ·
-   caché CacheService · disclaimer "no es asesoría financiera".
+6. R7 (OPCIONAL, deploy) — Narrativa Groq: SIN script lock · datos minimizados ·
+   anti prompt-injection (Investments.name) · caché CacheService.
 
-8. R8 (OPCIONAL) — Endurecimientos P2: app-lock local opcional (PIN+auto-lock; auth.js sesión perpetua) ·
-   confirmar/documentar/eliminar 2º email de allowedEmails (aislamiento ya roto).
+7. R8 (OPCIONAL) — App-lock local (PIN+auto-lock) · limpiar allowedEmails.
 
 BUGS / HALLAZGOS ABIERTOS:
-- 🔴 Drift de deploy: 5 .gs posiblemente sin desplegar (verificar en R0).
-- 🔴 Divergencia FE↔BE pasivos CC (Reports.gs:50 sin filtro FIN-014).
-- 🟡 TD-01 resuelto en código pero sin ✅ en TechnicalDebt.md:42.
+- 🟡 Verificación en vivo R1 (fire.js variantes + analytics insights) pendiente con Playwright.
+- 🟡 Flujo venta parcial/total en UI Inversiones — por confirmar en vivo.
 
 RIESGOS ABIERTOS:
-- R0 es precondición dura de R3/R5: snapshots/remuneradas sobre backend no verificado = corrupción permanente.
-- calcYield de Sonnet infla patrimonio hasta ~7× → rediseño obligatorio antes de I8.
-- analyzePortfolio tomaría LockService → head-of-line blocking del sync.
-- Bootstrap limita a 24m de transacciones (intencional, confirmar impacto histórico).
+- calcYield sobreestima patrimonio hasta ~7× → rediseño obligatorio antes de R5.
+- analyzePortfolio (R7) tomaría LockService → head-of-line blocking del sync.
 - Sesión de facto perpetua sin app-lock; 2º email con acceso total a la BD.
-
-VERIFICACIONES PENDIENTES EN VIVO:
-- Flujo venta parcial/total en UI Inversiones
+- getBootstrap_ limita a 24m de transacciones (confirmar impacto histórico).
 
 FORMA DE TRABAJO: fases pequeñas y verificables · explicar qué/por qué ·
-correr node --test tests/selectors.test.js tras cada cambio de selector (97/97 base) ·
+correr node --test tests/selectors.test.js tras cada cambio de selector (104/104 base) ·
 commits atómicos por feature · hook auto-bumpa SW + config.version al commitear src/.
 Para mensajes de commit multilínea: git commit -F _commitmsg.txt (archivo temporal).
 Empezar con: git log --oneline -5 · git status · node --test tests/selectors.test.js.
