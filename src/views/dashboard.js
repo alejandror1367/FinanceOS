@@ -37,8 +37,9 @@ export function renderDashboard() {
     const savings     = selectors.monthlySavings(s);
     const savingsRate = selectors.savingsRate(s);
     const liquidity   = selectors.totalLiquidity(s);
-    const invValue    = selectors.investmentsValue(s);
-    const invReturn   = selectors.investmentsReturnPct(s);
+    const invSummary  = selectors.investmentsSummary(s);
+    const invValue    = invSummary.value;
+    const invReturn   = invSummary.returnPct;
     const score       = selectors.financialScore(s);
     const sm          = scoreMeta(score);
 
@@ -112,11 +113,11 @@ export function renderDashboard() {
     })();
 
     const detailsInvestments = (() => {
-      const cost = selectors.investmentsCost(s);
+      const { cost, gain } = invSummary;
       return [
         { label: 'Valor de mercado', value: formatMoney(invValue, cur) },
         { label: 'Costo base', value: formatMoney(cost, cur) },
-        { label: 'P&L no realizado', value: formatMoney(invValue - cost, cur) },
+        { label: 'P&L no realizado', value: formatMoney(gain, cur) },
         { label: 'Rentabilidad', value: formatPercent(invReturn) },
       ];
     })();

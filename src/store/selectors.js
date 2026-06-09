@@ -829,6 +829,69 @@ export const selectors = {
     return streak;
   },
 
+  // Paridad Dashboard↔Inversiones: replica la lógica de groupByTicker + groupValue + toCOP
+  // de investments.js para que el KPI del dashboard use exactamente los mismos valores
+  // que muestra la sección de Inversiones (mismo tratamiento de CDT, FIC, FX y fallbacks).
+  investmentsSummary(s) {
+    const fx   = priceService.fxRates;
+    const base = s.baseCurrency || 'COP';
+    const toBase = (amount, cur) => {
+      if (amount === null || amount === undefined) return null;
+      if (!cur || cur === base) return amount;
+      const r = fx[cur];
+      return r ? amount * r : null;
+    };
+
+    // Agrupar por ticker (igual que groupByTicker en investments.js)
+    const map = {};
+    for (const inv of (s.investments || [])) {
+      if (inv.isDeleted) continue;
+      const trivial = inv.assetType === 'cdt' || inv.assetType === 'fund';
+      const key = trivial && !inv.symbol ? inv.id : ((inv.symbol || inv.name) || inv.id || '').toUpperCase();
+      if (!map[key]) map[key] = { key, symbol: inv.symbol, name: inv.name, assetType: inv.assetType, currency: inv.currency || base, purchases: [], sold: [] };
+      if (inv.soldDate) map[key].sold.push(inv);
+      else              map[key].purchases.push(inv);
+      if (inv.name)      map[key].name     = inv.name;
+      if (inv.assetType) map[key].assetType = inv.assetType;
+      if (inv.currency)  map[key].currency  = inv.currency;
+    }
+
+    let totalValue = 0, totalCost = 0;
+    for (const g of Object.values(map)) {
+      if (!g.purchases.length) continue;
+      const sorted   = [...g.purchases].sort((a, b) => (b.purchaseDate || '').localeCompare(a.purchaseDate || ''));
+      const totalQty = g.purchases.reduce((acc, p) => acc + (Number(p.quantity) || 0), 0);
+      const totalComm = g.purchases.reduce((acc, p) => acc + (Number(p.commission) || 0), 0);
+      const gc = g.purchases.reduce((acc, p) => acc + (Number(p.quantity) || 0) * (Number(p.purchasePrice || p.avgCost) || 0), 0) + totalComm;
+      const storedPrice = Number(sorted[0]?.currentPrice) || 0;
+
+      // groupValue equivalente (igual prioridad de campos que investments.js)
+      let value, hasPrice;
+      if (g.assetType === 'cdt') {
+        value = sorted[0] ? selectors.cdtCurrentValue(sorted[0]) : gc;
+        hasPrice = true;
+      } else if (g.assetType === 'fund') {
+        const cv = sorted[0]?.currentValue || 0;
+        value = cv || null;
+        hasPrice = !!cv;
+      } else {
+        const lp    = priceService.priceFor((g.symbol || '').toUpperCase());
+        const price = lp?.price || storedPrice || 0;
+        value    = price ? totalQty * price : null;
+        hasPrice = !!price;
+      }
+
+      const rawVal = hasPrice && value !== null ? value : gc;
+      totalValue += toBase(rawVal, g.currency) ?? rawVal;
+      totalCost  += toBase(gc,     g.currency) ?? gc;
+    }
+
+    const pTotal = roundMoney(totalValue, base);
+    const cTotal = roundMoney(totalCost,  base);
+    const gTotal = roundMoney(pTotal - cTotal, base);
+    return { value: pTotal, cost: cTotal, gain: gTotal, returnPct: cTotal ? gTotal / cTotal * 100 : 0 };
+  },
+
   // R4 helper: value in base currency of a single active investment position.
   // Mirrors investmentsValue logic (FIN-005/TD-02): returns null if the position's
   // foreign currency has no FX rate (cannot be valued without risking silent ×~4000 error).
