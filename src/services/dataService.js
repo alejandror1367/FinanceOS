@@ -333,11 +333,12 @@ export const dataService = {
     return { refreshed: true };
   },
 
-  // Guarda un snapshot de patrimonio (calculado en el backend). Requiere conexión.
-  async saveSnapshot() {
+  // Guarda un snapshot de patrimonio. Requiere conexión.
+  // frontendValues: desglose calculado en el FE (tiene precios en vivo vía priceService).
+  async saveSnapshot(frontendValues = {}) {
     if (!apiClient.isConfigured()) throw new Error('Sin backend configurado.');
     if (!navigator.onLine) throw new Error('Sin conexión.');
-    const rec = await apiClient.post('saveNetWorthSnapshot', {});
+    const rec = await apiClient.post('saveNetWorthSnapshot', frontendValues);
     await db.put('netWorthSnapshots', rec);
     const items = await db.getAll('netWorthSnapshots');
     store.set({ netWorthSnapshots: items });

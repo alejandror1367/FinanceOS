@@ -128,7 +128,21 @@ function simpleRow(iconName, title, sub, amount, cls, actions) {
 
 async function doSaveSnapshot() {
   toast('Guardando snapshot…', { type: 'info' });
-  await guardedOp(() => dataService.saveSnapshot(), 'Snapshot guardado', 'No se pudo guardar');
+  // Pass live-price values to the backend — priceService runs in the frontend,
+  // not in Apps Script, so the backend can't compute investmentsValue accurately.
+  const s = store.get();
+  const payload = {
+    investmentsValue: selectors.investmentsValue(s),
+    accountsValue: s.accounts
+      .filter((a) => !a.isArchived && a.type !== 'investment' && a.type !== 'credit_card')
+      .reduce((sum, a) => sum + (a.balance || 0), 0),
+    otherAssets: (s.assets || []).reduce((sum, a) => sum + (a.value || 0), 0),
+    ccDebt: selectors.creditCardAccounts(s).reduce((sum, a) => sum + Math.abs(a.balance || 0), 0),
+    liabilitiesDebt: (s.liabilities || [])
+      .filter((l) => l.type !== 'credit_card')
+      .reduce((sum, l) => sum + (l.balance || 0), 0),
+  };
+  await guardedOp(() => dataService.saveSnapshot(payload), 'Snapshot guardado', 'No se pudo guardar');
 }
 
 function outlierIds(snaps) {

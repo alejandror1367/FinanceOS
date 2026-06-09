@@ -22,25 +22,37 @@ function deleteNetWorthSnapshot_(d) {
 
 // Calcula el patrimonio actual y lo guarda como snapshot.
 // Idempotente por fecha: si ya existe un snapshot de esa fecha, lo actualiza.
+// d puede incluir valores del frontend (que tiene precios en vivo vía priceService);
+// se usan si vienen, y se cae en la computación del backend como fallback.
 function saveNetWorthSnapshot_(d) {
   var ctx = loadContext_();
   var nw = computeNetWorth_(ctx);
   var date = (d && d.date) ? String(d.date).slice(0, 10) : new Date().toISOString().slice(0, 10);
 
+  // Frontend values take precedence: Apps Script no puede consultar Yahoo Finance,
+  // así que currentPrice en Sheets es stale y lleva a investmentsValue ≈ 0.
+  var investmentsValue = (d && d.investmentsValue != null) ? Number(d.investmentsValue) : nw.investmentsValue;
+  var accountsValue    = (d && d.accountsValue    != null) ? Number(d.accountsValue)    : nw.accountsValue;
+  var otherAssets      = (d && d.otherAssets      != null) ? Number(d.otherAssets)      : nw.otherAssets;
+  var ccDebt           = (d && d.ccDebt           != null) ? Number(d.ccDebt)           : nw.ccDebt;
+  var liabilitiesDebt  = (d && d.liabilitiesDebt  != null) ? Number(d.liabilitiesDebt)  : nw.liabilitiesDebt;
+  var totalAssets      = accountsValue + investmentsValue + otherAssets;
+  var totalLiabilities = ccDebt + liabilitiesDebt;
+  var netWorth         = totalAssets - totalLiabilities;
+
   var existing = repoReadAll_('NetWorthSnapshots').filter(function (s) { return s.date === date; })[0];
   var payload = {
-    date: date,
-    totalAssets: nw.totalAssets,
-    totalLiabilities: nw.totalLiabilities,
-    netWorth: nw.netWorth,
-    currency: getBaseCurrency_(),
-    // R3: desglose enriquecido
-    investmentsValue: nw.investmentsValue || 0,
-    investmentsCost:  nw.investmentsCost  || 0,
-    accountsValue:    nw.accountsValue    || 0,
-    otherAssets:      nw.otherAssets      || 0,
-    ccDebt:           nw.ccDebt           || 0,
-    liabilitiesDebt:  nw.liabilitiesDebt  || 0,
+    date:             date,
+    totalAssets:      totalAssets,
+    totalLiabilities: totalLiabilities,
+    netWorth:         netWorth,
+    currency:         getBaseCurrency_(),
+    investmentsValue: investmentsValue,
+    investmentsCost:  nw.investmentsCost || 0,
+    accountsValue:    accountsValue,
+    otherAssets:      otherAssets,
+    ccDebt:           ccDebt,
+    liabilitiesDebt:  liabilitiesDebt,
   };
 
   var rec;
