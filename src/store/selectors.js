@@ -787,6 +787,45 @@ export const selectors = {
     return flows.length >= 2 ? selectors.xirr(flows) : null;
   },
 
+  // Cuántos meses de gastos cubre la liquidez actual.
+  // Usa el promedio de gastos de los últimos 3 meses completos (excluye el mes en curso,
+  // que puede ser parcial y sobreestimaría la cobertura).
+  // Solo promedia meses con actividad (mismo criterio que monthlySavingsAvg / FIN-012).
+  // Retorna null si no hay datos de gasto.
+  liquidityCoverageMonths(s) {
+    // cashflow(s, 4) → [mes_actual, mes-1, mes-2, mes-3]; slice(0,3) = 3 completos
+    // Nota: cashflow devuelve meses en orden cronológico (más antiguo primero),
+    // por lo que el mes actual es el ÚLTIMO elemento (índice n-1), no el primero.
+    const cf = selectors.cashflow(s, 4);
+    // Los 3 primeros son los meses completos (cf[0]=más antiguo, cf[3]=actual).
+    const completos = cf.slice(0, 3);
+    const activos = completos.filter((m) => m.income > 0 || m.expense > 0);
+    if (!activos.length) return null;
+    const avgExpense = activos.reduce((sum, m) => sum + m.expense, 0) / activos.length;
+    if (avgExpense === 0) return null;
+    return selectors.totalLiquidity(s) / avgExpense;
+  },
+
+  // Cuántos meses consecutivos recientes el usuario ahorró (savings > 0),
+  // EXCLUYENDO el mes en curso (puede no estar completo).
+  // Retorna 0 si no hay racha o no hay datos.
+  savingsStreak(s) {
+    // cashflow(s, 13) → 12 meses completos + el actual (el último en el array).
+    const cf = selectors.cashflow(s, 13);
+    // Excluir el último elemento (mes en curso).
+    const completos = cf.slice(0, cf.length - 1); // 12 meses completos
+    // Contar desde el más reciente hacia el más antiguo.
+    let streak = 0;
+    for (let i = completos.length - 1; i >= 0; i--) {
+      if (completos[i].savings > 0) {
+        streak++;
+      } else {
+        break;
+      }
+    }
+    return streak;
+  },
+
   // Detecta si hay entidades con divisas distintas a baseCurrency (TD-02).
   // Úsalo para mostrar un aviso en la UI antes de implementar conversión FX.
   hasMixedCurrencies(s) {

@@ -1043,3 +1043,109 @@ describe('xirr (FIN-013)', () => {
     assert.ok(r !== null && r < 0, `XIRR debe ser negativo, recibí ${r}`);
   });
 });
+
+// ── liquidityCoverageMonths (R1) ──────────────────────────────────────────────
+
+describe('liquidityCoverageMonths', () => {
+  // Genera una fecha ISO en el día 15 de hace `n` meses.
+  function monthAgo(n) {
+    const d = new Date();
+    d.setDate(1);
+    d.setMonth(d.getMonth() - n);
+    return d.toISOString().slice(0, 7) + '-15';
+  }
+
+  test('liquidez 6M, gastos promedio 2M en 3 meses completos → coverage = 3.0', () => {
+    // Los 3 meses completos son hace 1, 2, 3 meses (el mes actual está excluido).
+    // cashflow(s,4) → [hace3, hace2, hace1, actual]; slice(0,3) = [hace3, hace2, hace1].
+    // Cada mes tiene expense=2M → avgExpense=2M. Liquidez=6M → coverage=3.0.
+    const s = mkState({
+      accounts: [acc('a1', 6_000_000, 'bank')],
+      transactions: [
+        tx('t1', 'income',  3_000_000, monthAgo(3)),
+        tx('t2', 'expense', 2_000_000, monthAgo(3)),
+        tx('t3', 'income',  3_000_000, monthAgo(2)),
+        tx('t4', 'expense', 2_000_000, monthAgo(2)),
+        tx('t5', 'income',  3_000_000, monthAgo(1)),
+        tx('t6', 'expense', 2_000_000, monthAgo(1)),
+      ],
+    });
+    const cov = selectors.liquidityCoverageMonths(s);
+    assert.ok(cov !== null, 'debe retornar un valor');
+    assert.ok(Math.abs(cov - 3.0) < 0.01, `esperaba 3.0, recibí ${cov}`);
+  });
+
+  test('gastos todos 0 en los 3 meses completos → null', () => {
+    // Meses sin ingreso ni gasto → activos.length=0 → null.
+    const s = mkState({
+      accounts: [acc('a1', 6_000_000, 'bank')],
+      transactions: [],
+    });
+    assert.equal(selectors.liquidityCoverageMonths(s), null);
+  });
+
+  test('solo 1 mes activo con expense=3M, liquidez=6M → coverage ≈ 2.0', () => {
+    // Solo hace 1 mes tiene actividad: expense=3M. Los otros 2 meses no tienen transacciones.
+    // activos=[{expense:3M}] → avgExpense=3M. Liquidez=6M → coverage=2.0.
+    const s = mkState({
+      accounts: [acc('a1', 6_000_000, 'bank')],
+      transactions: [
+        tx('t1', 'income',  5_000_000, monthAgo(1)),
+        tx('t2', 'expense', 3_000_000, monthAgo(1)),
+      ],
+    });
+    const cov = selectors.liquidityCoverageMonths(s);
+    assert.ok(cov !== null, 'debe retornar un valor');
+    assert.ok(Math.abs(cov - 2.0) < 0.01, `esperaba 2.0, recibí ${cov}`);
+  });
+});
+
+// ── savingsStreak (R1) ────────────────────────────────────────────────────────
+
+describe('savingsStreak', () => {
+  function monthAgo(n) {
+    const d = new Date();
+    d.setDate(1);
+    d.setMonth(d.getMonth() - n);
+    return d.toISOString().slice(0, 7) + '-15';
+  }
+
+  test('3 meses completos con savings > 0, mes actual ignorado → streak = 3', () => {
+    // cashflow(s,13) → [hace12...hace1, actual]; slice(0,-1) = completos.
+    // Los últimos 3 (hace3, hace2, hace1) tienen savings>0 → streak=3.
+    const s = mkState({
+      transactions: [
+        tx('t1', 'income',  500_000, monthAgo(3)),
+        tx('t2', 'expense', 200_000, monthAgo(3)), // savings=300k
+        tx('t3', 'income',  500_000, monthAgo(2)),
+        tx('t4', 'expense', 200_000, monthAgo(2)), // savings=300k
+        tx('t5', 'income',  500_000, monthAgo(1)),
+        tx('t6', 'expense', 200_000, monthAgo(1)), // savings=300k
+        // Mes actual — debe ignorarse
+        tx('t7', 'income', 1_000_000, monthAgo(0)),
+      ],
+    });
+    assert.equal(selectors.savingsStreak(s), 3);
+  });
+
+  test('2 meses con savings > 0, luego 1 mes negativo más antiguo → streak = 2', () => {
+    // hace3: expense>income → savings<0 → rompe la racha.
+    // hace2 y hace1: savings>0 → streak=2 (contando desde más reciente).
+    const s = mkState({
+      transactions: [
+        tx('t1', 'income',  100_000, monthAgo(3)),
+        tx('t2', 'expense', 400_000, monthAgo(3)), // savings=-300k (rompe)
+        tx('t3', 'income',  500_000, monthAgo(2)),
+        tx('t4', 'expense', 200_000, monthAgo(2)), // savings=300k
+        tx('t5', 'income',  500_000, monthAgo(1)),
+        tx('t6', 'expense', 200_000, monthAgo(1)), // savings=300k
+      ],
+    });
+    assert.equal(selectors.savingsStreak(s), 2);
+  });
+
+  test('ningún mes con savings > 0 → 0', () => {
+    const s = mkState({ transactions: [] });
+    assert.equal(selectors.savingsStreak(s), 0);
+  });
+});
