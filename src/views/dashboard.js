@@ -301,7 +301,12 @@ export function renderDashboard() {
                   class: 'btn btn--ghost btn--sm',
                   text: 'Visto ✓',
                   'aria-label': `Marcar como visto: ${r.description}`,
-                  on: { click: () => { dismiss(r.id, r.nextRunDate); renderUpcomingCard(); } },
+                  on: { click: () => {
+                    const tod = new Date().toISOString().slice(0, 10);
+                    const tom = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+                    dismiss(r.id, r.nextRunDate > tod ? r.nextRunDate : tom);
+                    renderUpcomingCard();
+                  } },
                 }),
               ]);
             }))
