@@ -101,6 +101,38 @@ function buildInsights(s, cur) {
     ));
   }
 
+  // Cobertura de liquidez (R1).
+  const coverage = selectors.liquidityCoverageMonths(s);
+  if (coverage !== null) {
+    const variant = coverage >= 6 ? 'positive' : coverage >= 3 ? 'info' : 'warning';
+    out.push(insightRow(
+      'wallet', variant,
+      `Tu liquidez cubre <b>${coverage.toFixed(1)} meses</b> de gastos${coverage < 3 ? ' — considera aumentar tu fondo de emergencia' : ''}.`,
+    ));
+  }
+
+  // Racha de ahorro consecutivo (R1).
+  const streak = selectors.savingsStreak(s);
+  if (streak > 0) {
+    out.push(insightRow(
+      'goals', streak >= 6 ? 'positive' : 'info',
+      `Llevas <b>${streak} mes${streak !== 1 ? 'es' : ''} consecutivo${streak !== 1 ? 's' : ''}</b> ahorrando${streak >= 3 ? ' — ¡excelente consistencia!' : ''}.`,
+    ));
+  }
+
+  // Concentración de gastos: si una categoría domina >40% del gasto total (R1).
+  const totalSpend = byCat.reduce((a, c) => a + c.amount, 0);
+  if (byCat.length >= 2 && totalSpend > 0) {
+    const top = byCat[0];
+    const pct = (top.amount / totalSpend) * 100;
+    if (pct >= 40 && top.category) {
+      out.push(insightRow(
+        'shopping', pct >= 60 ? 'warning' : 'info',
+        `<b>${top.category.name}</b> representa el <b>${pct.toFixed(0)}%</b> de tus gastos del mes.`,
+      ));
+    }
+  }
+
   return out;
 }
 
