@@ -7,7 +7,7 @@ import { el, mount } from '../utils/dom.js';
 import { store } from '../store/store.js'; // solo store.get() en el montaje inicial
 import { selectors } from '../store/selectors.js';
 import { formatMoney, formatNumber } from '../utils/format.js';
-import { Card, KpiCard } from '../components/ui.js';
+import { Card, KpiCard, EmptyState, ProgressBar } from '../components/ui.js';
 
 // ---------- Matemáticas FIRE ----------
 
@@ -139,6 +139,43 @@ function buildSensTable(baseAhorro, baseRendimiento, patrimonioActual, objetivo,
   ]);
 }
 
+// ---------- Selector de variantes FIRE ----------
+
+/**
+ * Crea un grupo de botones para seleccionar la variante FIRE (SWR preset).
+ * @param {HTMLInputElement} tasaInput  Input numérico de la tasa SWR.
+ * @param {Function}         onSelect   Callback a llamar tras seleccionar.
+ * @returns {HTMLElement}
+ */
+function buildVariantSelector(tasaInput, onSelect) {
+  const variants = [
+    { label: 'Lean (5%)',      swr: 5   },
+    { label: 'Standard (4%)', swr: 4   },
+    { label: 'Fat (3.5%)',     swr: 3.5 },
+    { label: 'Barista (5.5%)', swr: 5.5 },
+  ];
+
+  const buttons = variants.map(({ label, swr }) => {
+    const isDefault = swr === 4;
+    const btn = el('button', {
+      type: 'button',
+      class: `btn btn--sm btn--ghost${isDefault ? ' btn--primary' : ''}`,
+      text: label,
+      title: `Establecer SWR al ${swr}%`,
+    });
+    btn.addEventListener('click', () => {
+      tasaInput.value = String(swr);
+      // Marcar activo
+      for (const b of buttons) b.classList.remove('btn--primary');
+      btn.classList.add('btn--primary');
+      onSelect();
+    });
+    return btn;
+  });
+
+  return el('div', { class: 'fire-variants' }, buttons);
+}
+
 // ---------- Vista principal ----------
 
 export function renderFire() {
@@ -147,17 +184,24 @@ export function renderFire() {
   const s = store.get();
   const cur = s.baseCurrency || 'COP';
 
-  const defaultGastos    = Math.round(selectors.monthlyExpense(s) * 12);
-  const defaultAhorro    = Math.round(Math.max(0, selectors.monthlySavingsAvg(s, 3)));
+  const defaultGastos     = Math.round(selectors.monthlyExpense(s) * 12);
+  const defaultAhorro     = Math.round(Math.max(0, selectors.monthlySavingsAvg(s, 3)));
   const defaultPatrimonio = Math.round(selectors.netWorth(s));
   const hasData = defaultGastos > 0 || defaultAhorro > 0;
 
   // Inputs — creados una sola vez
-  const { wrapper: gastosW,     input: gastosI     } = numField({ id: 'fire-gastos',      label: 'Gastos anuales',         value: defaultGastos,     min: 0,   step: 100000, note: 'Base = gasto mensual × 12', suffix: cur });
-  const { wrapper: ahorroW,     input: ahorroI     } = numField({ id: 'fire-ahorro',      label: 'Ahorro mensual',         value: defaultAhorro,     min: 0,   step: 100000, note: 'Prom. 3 meses',             suffix: `${cur}/mes` });
-  const { wrapper: patrimonioW, input: patrimonioI } = numField({ id: 'fire-patrimonio',  label: 'Patrimonio actual',      value: defaultPatrimonio, step: 1000000,            note: 'Activos − Pasivos',         suffix: cur });
-  const { wrapper: rendimientoW,input: rendimientoI} = numField({ id: 'fire-rendimiento', label: 'Rendimiento esperado',   value: 7,   min: 0, max: 30, step: 0.5, note: 'Real (post-inflación)',     suffix: '% anual' });
-  const { wrapper: tasaW,       input: tasaI       } = numField({ id: 'fire-tasa',        label: 'Tasa de retiro (SWR)',   value: 4,   min: 0.1, max: 10, step: 0.1, note: 'Regla del 4%',            suffix: '%' });
+  const { wrapper: gastosW,      input: gastosI      } = numField({ id: 'fire-gastos',      label: 'Gastos anuales',       value: defaultGastos,     min: 0,    step: 100000, note: 'Base = gasto mensual × 12', suffix: cur });
+  const { wrapper: ahorroW,      input: ahorroI      } = numField({ id: 'fire-ahorro',      label: 'Ahorro mensual',       value: defaultAhorro,     min: 0,    step: 100000, note: 'Prom. 3 meses',             suffix: `${cur}/mes` });
+  const { wrapper: patrimonioW,  input: patrimonioI  } = numField({ id: 'fire-patrimonio',  label: 'Patrimonio actual',    value: defaultPatrimonio, step: 1000000,             note: 'Activos − Pasivos',         suffix: cur });
+  const { wrapper: rendimientoW, input: rendimientoI } = numField({ id: 'fire-rendimiento', label: 'Rendimiento esperado', value: 7,   min: 0, max: 30,  step: 0.5, note: 'Real (post-inflación)',     suffix: '% anual' });
+  const { wrapper: tasaW,        input: tasaI        } = numField({ id: 'fire-tasa',        label: 'Tasa de retiro (SWR)', value: 4,   min: 0.1, max: 10, step: 0.1, note: 'Regla del 4%',            suffix: '%' });
+
+  // Tooltips informativos en los campos técnicos
+  tasaW.title        = 'Safe Withdrawal Rate (SWR): % del patrimonio retirable anualmente sin agotarlo. 4% = Estudio Trinity. Barista FIRE = retiro parcial + trabajo part-time.';
+  rendimientoW.title = 'Rendimiento real anual ajustado por inflación. Histórico acciones diversificadas: ~7%.';
+
+  // Selector de variantes (encima de los inputs)
+  const variantSelector = buildVariantSelector(tasaI, () => updateResults());
 
   // Áreas de salida — se actualizan en cada cambio de input, nunca se reemplaza el input
   const resultsArea = el('div', { class: 'fire-results' });
@@ -170,18 +214,55 @@ export function renderFire() {
     const rend       = Math.max(0, (Number(rendimientoI.value) || 7)) / 100;
     const swr        = Math.max(0.001, (Number(tasaI.value) || 4)) / 100;
 
+    // EmptyState mejorado: cuando no hay datos de store y los inputs están vacíos
+    if (!hasData && gastos === 0 && ahorro === 0) {
+      mount(resultsArea, EmptyState({
+        iconName: 'fire',
+        title: 'Sin datos financieros',
+        message: 'Registra transacciones para que el simulador se precargue, o ajusta los valores manualmente.',
+      }));
+      mount(sensArea);
+      return;
+    }
+
     const objetivo = gastos / swr;
     const falta    = Math.max(0, objetivo - patrimonio);
     const years    = yearsToFire(patrimonio, objetivo, ahorro, rend);
     const sr       = savingsRateFromInputs(ahorro, gastos);
-    const reached  = patrimonio >= objetivo;
+    const reached  = patrimonio >= objetivo && objetivo > 0;
 
-    mount(resultsArea, el('div', { class: 'grid grid--kpi' }, [
-      KpiCard({ label: 'Patrimonio objetivo FIRE',   value: formatMoney(objetivo, cur, { compact: true }),                                                iconName: 'fire',      variant: 'accent' }),
-      KpiCard({ label: reached ? 'Superávit' : 'Falta acumular', value: formatMoney(reached ? patrimonio - objetivo : falta, cur, { compact: true }),   iconName: reached ? 'goals' : 'networth', variant: reached ? 'positive' : '' }),
-      KpiCard({ label: reached ? '¡Ya alcanzaste FIRE!' : 'Años hasta FIRE', value: reached ? '0' : fmtYearsShort(years),                               iconName: 'today',     variant: reached ? 'positive' : !isFinite(years) ? 'negative' : '', foot: reached ? null : [el('span', { class: 't-micro text-secondary', text: fmtYears(years) })] }),
-      KpiCard({ label: 'Tasa de ahorro implícita',   value: `${sr.toFixed(1)}%`,                                                                        iconName: 'analytics', variant: sr >= 50 ? 'positive' : sr >= 25 ? 'info' : sr > 0 ? 'warning' : 'negative' }),
-    ]));
+    // KPI: año estimado de alcanzar FIRE
+    const targetYear = new Date().getFullYear() + Math.ceil(years);
+
+    mount(resultsArea, el('div', { class: 'stack' }, [
+      el('div', { class: 'grid grid--kpi' }, [
+        KpiCard({ label: 'Patrimonio objetivo FIRE',  value: formatMoney(objetivo, cur, { compact: true }),                                                iconName: 'fire',      variant: 'accent' }),
+        KpiCard({ label: reached ? 'Superávit' : 'Falta acumular', value: formatMoney(reached ? patrimonio - objetivo : falta, cur, { compact: true }), iconName: reached ? 'goals' : 'networth', variant: reached ? 'positive' : '' }),
+        KpiCard({
+          label: reached ? '¡Ya alcanzaste FIRE!' : 'Años hasta FIRE',
+          value: reached ? '0' : fmtYearsShort(years),
+          iconName: 'today',
+          variant: reached ? 'positive' : !isFinite(years) ? 'negative' : '',
+          foot: reached ? null : [
+            el('span', { class: 't-micro text-secondary', text: fmtYears(years) }),
+            isFinite(years) ? el('span', { class: 't-micro text-tertiary', text: `≈ ${targetYear}` }) : null,
+          ].filter(Boolean),
+        }),
+        KpiCard({ label: 'Tasa de ahorro implícita', value: `${sr.toFixed(1)}%`,                                                                        iconName: 'analytics', variant: sr >= 50 ? 'positive' : sr >= 25 ? 'info' : sr > 0 ? 'warning' : 'negative' }),
+      ]),
+      // ProgressBar de avance hacia el objetivo
+      objetivo > 0 ? el('div', { class: 'fire-progress' }, reached
+        ? [el('p', { class: 't-caption text-secondary', text: '¡Objetivo FIRE alcanzado!' })]
+        : [
+          el('p', { class: 't-caption text-secondary', text: `Avance hacia el objetivo: ${Math.min(100, (patrimonio / objetivo * 100)).toFixed(1)}%` }),
+          ProgressBar(
+            Math.min(100, Math.max(0, (patrimonio / objetivo) * 100)),
+            '',
+            { ariaLabel: `Avance hacia el objetivo FIRE: ${Math.min(100, (patrimonio / objetivo * 100)).toFixed(1)}%` },
+          ),
+        ]
+      ) : null,
+    ].filter(Boolean)));
 
     if (ahorro > 0 && gastos > 0) {
       mount(sensArea, Card({
@@ -213,6 +294,7 @@ export function renderFire() {
       Card({
         title: 'Parámetros',
         body: el('div', { class: 'fire-inputs' }, [
+          variantSelector,
           el('div', { class: 'fire-inputs__grid' }, [gastosW, ahorroW, patrimonioW, rendimientoW, tasaW]),
           !hasData ? el('p', { class: 't-caption text-secondary fire-inputs__hint', text: 'No hay transacciones registradas. Ajusta los valores manualmente para simular tu camino a la independencia financiera.' }) : null,
         ].filter(Boolean)),
