@@ -6,7 +6,7 @@
 
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { selectors } from '../src/store/selectors.js';
+import { selectors, convertToBase } from '../src/store/selectors.js';
 import { priceService } from '../src/services/priceService.js';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -1272,5 +1272,234 @@ describe('portfolioAlerts', () => {
     // curVal=0 → condición (curVal>0) no se cumple → no se calcula P&L
     const s = mkState({ investments: [mkInv('NP', { qty: 1, buyPx: 100, curPx: 0 })] });
     assert.ok(!selectors.portfolioAlerts(s).some((a) => a.type === 'loss'));
+  });
+});
+
+// ── A.7 (Sprint A): FX en patrimonio, liquidez y deudas — sin suma 1:1 ────────
+
+describe('convertToBase (A.3 / FIN-005)', () => {
+  test('divisa base pasa sin conversión (con y sin tasas)', () => {
+    assert.equal(convertToBase(1000, 'COP', 'COP', {}), 1000);
+    assert.equal(convertToBase(1000, 'COP', 'COP', { USD: 4000 }), 1000);
+  });
+
+  test('currency vacío/null se trata como base', () => {
+    assert.equal(convertToBase(500, null, 'COP', {}), 500);
+    assert.equal(convertToBase(500, undefined, 'COP', {}), 500);
+  });
+
+  test('divisa extranjera con tasa → monto × tasa', () => {
+    assert.equal(convertToBase(100, 'USD', 'COP', { USD: 4000 }), 400_000);
+    assert.equal(convertToBase(10, 'EUR', 'COP', { EUR: 4500 }), 45_000);
+  });
+
+  test('divisa extranjera SIN tasa → null (caller excluye, nunca 1:1)', () => {
+    assert.equal(convertToBase(100, 'USD', 'COP', {}), null);
+    assert.equal(convertToBase(100, 'USD', 'COP', { EUR: 4500 }), null);
+  });
+
+  test('monto no numérico se normaliza a 0', () => {
+    assert.equal(convertToBase(undefined, 'COP', 'COP', {}), 0);
+  });
+});
+
+describe('liquidez y patrimonio multi-moneda (A.3 / FIN-005)', () => {
+  before(() => { priceService.update({}, {}); });
+  after(() => { priceService.update({}, {}); });
+
+  test('totalLiquidity convierte cuenta USD con tasa FX', () => {
+    priceService.update({}, { USD: 4000 });
+    const s = mkState({
+      accounts: [acc('1', 1_000_000, 'bank'), acc('2', 100, 'bank', { currency: 'USD' })],
+    });
+    // 1.000.000 COP + 100 USD × 4000 = 1.400.000
+    assert.equal(selectors.totalLiquidity(s), 1_400_000);
+  });
+
+  test('totalLiquidity EXCLUYE cuenta USD sin tasa (no suma 1:1)', () => {
+    priceService.update({}, {});
+    const s = mkState({
+      accounts: [acc('1', 1_000_000, 'bank'), acc('2', 100, 'bank', { currency: 'USD' })],
+    });
+    assert.equal(selectors.totalLiquidity(s), 1_000_000);
+  });
+
+  test('totalAssets convierte asset en USD con tasa y lo excluye sin tasa', () => {
+    const s = mkState({
+      assets: [{ id: 'a1', value: 10_000_000, currency: 'COP' }, { id: 'a2', value: 5_000, currency: 'USD' }],
+    });
+    priceService.update({}, { USD: 4000 });
+    assert.equal(selectors.totalAssets(s), 10_000_000 + 5_000 * 4000);
+    priceService.update({}, {});
+    assert.equal(selectors.totalAssets(s), 10_000_000);
+  });
+
+  test('totalLiabilities convierte pasivo USD con tasa y lo excluye sin tasa', () => {
+    const s = mkState({
+      liabilities: [
+        { id: 'l1', balance: 2_000_000, type: 'loan', currency: 'COP' },
+        { id: 'l2', balance: 1_000, type: 'loan', currency: 'USD' },
+      ],
+    });
+    priceService.update({}, { USD: 4000 });
+    assert.equal(selectors.totalLiabilities(s), 2_000_000 + 1_000 * 4000);
+    priceService.update({}, {});
+    assert.equal(selectors.totalLiabilities(s), 2_000_000);
+  });
+
+  test('netWorth multi-moneda con tasa: activos y pasivos convertidos', () => {
+    priceService.update({}, { USD: 4000 });
+    const s = mkState({
+      accounts: [acc('1', 1_000_000, 'bank'), acc('2', 100, 'bank', { currency: 'USD' })],
+      liabilities: [{ id: 'l1', balance: 500, type: 'loan', currency: 'USD' }],
+    });
+    // (1.000.000 + 400.000) − 500 × 4000 = −600.000
+    assert.equal(selectors.netWorth(s), 1_400_000 - 2_000_000);
+  });
+
+  test('creditCardDebt convierte CC en USD y la excluye sin tasa', () => {
+    const s = mkState({
+      accounts: [
+        acc('cc1', -1_000_000, 'credit_card'),
+        acc('cc2', -200, 'credit_card', { currency: 'USD' }),
+      ],
+    });
+    priceService.update({}, { USD: 4000 });
+    assert.equal(selectors.creditCardDebt(s), 1_000_000 + 200 * 4000);
+    priceService.update({}, {});
+    assert.equal(selectors.creditCardDebt(s), 1_000_000);
+  });
+});
+
+describe('debtStats multi-moneda (A.3 / FIN-005)', () => {
+  before(() => { priceService.update({}, {}); });
+  after(() => { priceService.update({}, {}); });
+
+  test('deuda USD con tasa se convierte y pondera en base', () => {
+    priceService.update({}, { USD: 4000 });
+    const s = mkState({
+      liabilities: [
+        { id: 'l1', balance: 4_000_000, type: 'loan', interestRate: 10, minimumPayment: 100_000, currency: 'COP' },
+        { id: 'l2', balance: 1_000, type: 'loan', interestRate: 20, minimumPayment: 50, currency: 'USD' },
+      ],
+    });
+    const st = selectors.debtStats(s);
+    assert.equal(st.total, 4_000_000 + 4_000_000);     // 1.000 USD × 4000
+    assert.equal(st.minPayment, 100_000 + 200_000);    // 50 USD × 4000
+    assert.equal(st.avgRate, 15);                      // ponderado 50/50
+    assert.equal(st.unconvertedCount, 0);
+  });
+
+  test('deuda USD sin tasa se EXCLUYE de los KPIs y se flaggea (no 1:1)', () => {
+    priceService.update({}, {});
+    const s = mkState({
+      liabilities: [
+        { id: 'l1', balance: 4_000_000, type: 'loan', interestRate: 10, minimumPayment: 100_000, currency: 'COP' },
+        { id: 'l2', balance: 1_000, type: 'loan', interestRate: 20, minimumPayment: 50, currency: 'USD' },
+      ],
+    });
+    const st = selectors.debtStats(s);
+    assert.equal(st.total, 4_000_000);        // solo la deuda COP
+    assert.equal(st.minPayment, 100_000);
+    assert.equal(st.avgRate, 10);             // sin contaminar por la USD
+    assert.equal(st.unconvertedCount, 1);
+    assert.equal(st.count, 2);                // la lista completa sigue reportándose
+  });
+});
+
+describe('investmentsSummary multi-moneda (A.3 / FIN-005)', () => {
+  before(() => { priceService.update({}, {}); });
+  after(() => { priceService.update({}, {}); });
+
+  function usdInv(id, qty, price) {
+    return { id, symbol: 'VOO', name: 'VOO', assetType: 'etf', quantity: qty, currentPrice: price, purchasePrice: price, currency: 'USD', purchaseDate: '2025-01-01' };
+  }
+
+  test('grupo USD con tasa se convierte al total', () => {
+    priceService.update({}, { USD: 4000 });
+    const s = mkState({ investments: [usdInv('i1', 10, 100)] });
+    const sum = selectors.investmentsSummary(s);
+    assert.equal(sum.value, 10 * 100 * 4000); // 4.000.000
+    assert.equal(sum.incompleteCount, 0);
+  });
+
+  test('grupo USD sin tasa se EXCLUYE y se flaggea en incompleteCount', () => {
+    priceService.update({}, {});
+    const s = mkState({
+      investments: [
+        usdInv('i1', 10, 100),
+        { id: 'i2', symbol: 'LOCAL', assetType: 'stock', quantity: 5, currentPrice: 10_000, purchasePrice: 10_000, currency: 'COP', purchaseDate: '2025-01-01' },
+      ],
+    });
+    const sum = selectors.investmentsSummary(s);
+    assert.equal(sum.value, 50_000);          // solo el grupo COP
+    assert.equal(sum.incompleteCount, 1);
+  });
+});
+
+describe('portfolioXIRR multi-moneda (A.3 / FIN-005)', () => {
+  before(() => { priceService.update({}, {}); });
+  after(() => { priceService.update({}, {}); });
+
+  const T = new Date('2026-01-01').getTime();
+
+  test('posición USD sin tasa se omite completa → sin flujos → null', () => {
+    priceService.update({}, {});
+    const s = mkState({
+      investments: [{ id: 'i1', symbol: 'VOO', quantity: 10, currentPrice: 110, purchasePrice: 100, currency: 'USD', purchaseDate: '2025-01-01' }],
+    });
+    assert.equal(selectors.portfolioXIRR(s, T), null);
+  });
+
+  test('posición USD con tasa produce XIRR ≈ 10% (la tasa no altera el retorno)', () => {
+    priceService.update({}, { USD: 4000 });
+    const s = mkState({
+      investments: [{ id: 'i1', symbol: 'VOO', quantity: 10, currentPrice: 110, purchasePrice: 100, currency: 'USD', purchaseDate: '2025-01-01' }],
+    });
+    const r = selectors.portfolioXIRR(s, T);
+    assert.ok(r !== null, 'debe calcular XIRR');
+    assert.ok(Math.abs(r - 0.10) < 0.005, `esperaba ≈0.10, recibí ${r}`);
+  });
+});
+
+describe('fxGaps (A.3 / FIN-005)', () => {
+  before(() => { priceService.update({}, {}); });
+  after(() => { priceService.update({}, {}); });
+
+  test('sin divisas extranjeras → count 0', () => {
+    const s = mkState({ accounts: [acc('1', 1_000_000)] });
+    assert.deepEqual(selectors.fxGaps(s), { count: 0, currencies: [] });
+  });
+
+  test('entidades en USD/EUR sin tasas → count y currencies poblados', () => {
+    priceService.update({}, {});
+    const s = mkState({
+      accounts: [acc('1', 100, 'bank', { currency: 'USD' })],
+      assets: [{ id: 'a1', value: 50, currency: 'EUR' }],
+      investments: [{ id: 'i1', quantity: 1, currentPrice: 10, currency: 'USD' }],
+    });
+    const gaps = selectors.fxGaps(s);
+    assert.equal(gaps.count, 3);
+    assert.deepEqual([...gaps.currencies].sort(), ['EUR', 'USD']);
+  });
+
+  test('con tasas disponibles no hay gaps', () => {
+    priceService.update({}, { USD: 4000, EUR: 4500 });
+    const s = mkState({
+      accounts: [acc('1', 100, 'bank', { currency: 'USD' })],
+      assets: [{ id: 'a1', value: 50, currency: 'EUR' }],
+    });
+    assert.equal(selectors.fxGaps(s).count, 0);
+  });
+
+  test('inversiones vendidas o borradas no generan gap', () => {
+    priceService.update({}, {});
+    const s = mkState({
+      investments: [
+        { id: 'i1', quantity: 1, currentPrice: 10, currency: 'USD', soldDate: '2026-01-01' },
+        { id: 'i2', quantity: 1, currentPrice: 10, currency: 'USD', isDeleted: true },
+      ],
+    });
+    assert.equal(selectors.fxGaps(s).count, 0);
   });
 });
