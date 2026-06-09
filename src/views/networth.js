@@ -203,6 +203,18 @@ export function renderNetWorth() {
         if (chk.checked) selectedSnapIds.add(sn.id); else selectedSnapIds.delete(sn.id);
         repaint();
       });
+      // R3: desglose enriquecido cuando el snapshot tiene los nuevos campos.
+      // Snapshots anteriores al deploy no tendrán estos campos → graceful degradation.
+      const hasBreakdown = sn.investmentsValue != null || sn.accountsValue != null;
+      const breakdownEl = hasBreakdown
+        ? el('div', { class: 'row__sub t-micro text-secondary', text:
+            `Cuentas ${formatMoney(sn.accountsValue || 0, sn.currency || cur, { compact: true })} · ` +
+            `Inv ${formatMoney(sn.investmentsValue || 0, sn.currency || cur, { compact: true })} · ` +
+            `Otros ${formatMoney(sn.otherAssets || 0, sn.currency || cur, { compact: true })} · ` +
+            `CC ${formatMoney(sn.ccDebt || 0, sn.currency || cur, { compact: true })} · ` +
+            `Pasivos ${formatMoney(sn.liabilitiesDebt || 0, sn.currency || cur, { compact: true })}`
+          })
+        : null;
       return el('div', { class: 'row row--compact' }, [
         el('label', { style: 'display:flex;align-items:center;padding:0 var(--space-2)' }, [chk]),
         el('div', { class: 'row__main' }, [
@@ -210,7 +222,8 @@ export function renderNetWorth() {
             formatDate(sn.date, 'short'),
             isOutlier ? el('span', { style: 'margin-left:var(--space-2)' }, [Badge('Dato atípico', 'warning')]) : null,
           ].filter(Boolean)),
-        ]),
+          breakdownEl,
+        ].filter(Boolean)),
         el('div', { class: `row__amount tabular ${sn.netWorth >= 0 ? '' : 'text-negative'}`, text: formatMoney(sn.netWorth, sn.currency || cur) }),
         el('button', {
           class: 'icon-btn icon-btn--danger', 'aria-label': 'Eliminar snapshot', title: 'Eliminar snapshot',
