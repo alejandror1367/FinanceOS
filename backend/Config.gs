@@ -157,7 +157,17 @@ var SCHEMAS = {
     // Append al final (tras los timestamps) por compatibilidad posicional con datos
     // ya escritos. Permite soft-delete rápido (setValues) en vez de deleteRow lento.
     { key: 'isDeleted', type: 'b' },
+    // R3: desglose patrimonial enriquecido — append al final para compatibilidad posicional.
+    // Snapshots anteriores no tienen estos campos (undefined → leer como 0 en frontend).
+    // setupDatabase() idempotente: ensureHeaders_ solo añade si faltan.
+    { key: 'investmentsValue', type: 'n' },
+    { key: 'investmentsCost',  type: 'n' },
+    { key: 'accountsValue',    type: 'n' },
+    { key: 'otherAssets',      type: 'n' },
+    { key: 'ccDebt',           type: 'n' },
+    { key: 'liabilitiesDebt',  type: 'n' },
   ],
+  // ⚠ requiere deploy — R3 snapshots enriquecidos
   RecurringTransactions: [
     { key: 'id', type: 's' },
     { key: 'type', type: 's' },
