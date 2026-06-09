@@ -22,6 +22,11 @@
 
 var QUOTE_CACHE_TTL_ = 900; // 15 minutos
 
+// A.2 (BE-003/TD-02): caché del mapa de tasas FX (~1h). Las tasas FX cambian poco
+// intradía; 1h reduce llamadas a Yahoo desde computeNetWorth_/getDashboard.
+var FX_RATES_CACHE_KEY_ = 'fxRates_v1';
+var FX_RATES_CACHE_TTL_ = 3600; // 1 hora
+
 // Tickers de pares FX que siempre se incluyen al llamar a getQuotes_.
 // Yahoo Finance los expresa como USDCOP=X, EURCOP=X, etc.
 var FX_TICKERS_ = ['USDCOP=X', 'EURCOP=X'];
@@ -292,6 +297,40 @@ function getQuotes_(params) {
   });
 
   return { quotes: quotes, fxRates: fxRates };
+}
+
+/**
+ * getFxRates_ — A.2 (BE-003/TD-02): devuelve el mapa de tasas FX → COP.
+ * Formato: { USD: 4123.5, EUR: 4456.2 } (factor de conversión divisa→COP).
+ *
+ * - Acción pública: getFxRates (GET, solo lectura).
+ * - Consumida internamente por computeNetWorth_ (Reports.gs) para convertir
+ *   posiciones/cuentas en divisa extranjera en lugar de sumarlas 1:1.
+ * - Caché: mapa completo ~1h en CacheService (FX_RATES_CACHE_TTL_). Las quotes
+ *   individuales que alimenta fetchYahoo_ mantienen su TTL de 15 min.
+ * - Degradación: si Yahoo falla para un par, ese par simplemente no aparece en
+ *   el mapa; el caller decide excluir (nunca sumar 1:1 silencioso).
+ */
+function getFxRates_() {
+  var cache = CacheService.getScriptCache();
+  var hit = cache.get(FX_RATES_CACHE_KEY_);
+  if (hit) {
+    try { return JSON.parse(hit); } catch (e) { /* caché corrupta → refetch */ }
+  }
+
+  var rates = {};
+  FX_TICKERS_.forEach(function (fxTicker) {
+    var q = fetchYahoo_(fxTicker, cache);
+    if (!q || q.error || !q.price) return;
+    // USDCOP=X → clave "USD", price = tasa USD→COP
+    var currencyKey = fxTicker.replace(FX_BASE_CURRENCY_ + '=X', '');
+    if (currencyKey) rates[currencyKey] = q.price;
+  });
+
+  if (Object.keys(rates).length) {
+    cache.put(FX_RATES_CACHE_KEY_, JSON.stringify(rates), FX_RATES_CACHE_TTL_);
+  }
+  return rates;
 }
 
 function fetchYahoo_(ticker, cache) {

@@ -18,46 +18,90 @@ function sum_(arr, fn) {
   return arr.reduce(function (acc, x) { return acc + (fn(x) || 0); }, 0);
 }
 
+// A.2 (BE-003/TD-02): convierte un monto a moneda base usando el mapa de tasas FX.
+// Devuelve null si la divisa es extranjera y no hay tasa — el caller debe EXCLUIR
+// el monto y contarlo, nunca sumarlo 1:1 (error silencioso ×~4000 con USD→COP).
+function toBaseOrNull_(amount, currency, base, fx) {
+  var amt = Number(amount) || 0;
+  var cur = String(currency || base).toUpperCase();
+  if (cur === base) return amt;
+  var rate = fx && fx[cur];
+  return rate ? amt * rate : null;
+}
+
+// true si alguna entidad del contexto tiene divisa distinta a la base.
+function hasForeignCurrency_(ctx, base) {
+  var all = [].concat(ctx.accounts, ctx.investments, ctx.assets, ctx.liabilities);
+  for (var i = 0; i < all.length; i++) {
+    var cur = String(all[i].currency || base).toUpperCase();
+    if (cur !== base) return true;
+  }
+  return false;
+}
+
 function computeNetWorth_(ctx) {
+  // A.2 (BE-003/TD-02): tasas FX → COP desde Quotes.gs (caché ~1h en CacheService).
+  // Solo se consultan si hay alguna entidad en divisa extranjera (evita latencia
+  // de UrlFetchApp en el caso común todo-COP). Si falta la tasa de una divisa,
+  // la entidad se EXCLUYE del total y se cuenta en fxExcludedCount — misma
+  // política que el frontend (FIN-005: nunca sumar 1:1 silencioso).
+  var base = String(getBaseCurrency_() || 'COP').toUpperCase();
+  var fx = {};
+  if (hasForeignCurrency_(ctx, base)) {
+    try { fx = getFxRates_() || {}; } catch (e) { fx = {}; }
+  }
+  var fxExcludedCount = 0;
+  // Suma montos convertidos a base; los que no tienen tasa se excluyen y cuentan.
+  function sumBase_(arr, amountFn, currencyFn) {
+    return arr.reduce(function (acc, x) {
+      var v = toBaseOrNull_(amountFn(x), currencyFn(x), base, fx);
+      if (v === null) { fxExcludedCount++; return acc; }
+      return acc + v;
+    }, 0);
+  }
+
   // Excluye cuentas de inversión (TD-03) y tarjetas de crédito (son pasivos, no activos).
-  var accountsValue = sum_(ctx.accounts.filter(function (a) { return a.type !== 'investment' && a.type !== 'credit_card'; }), function (a) { return a.balance; });
+  var accountsValue = sumBase_(
+    ctx.accounts.filter(function (a) { return a.type !== 'investment' && a.type !== 'credit_card'; }),
+    function (a) { return a.balance; },
+    function (a) { return a.currency; });
 
   // FIN-001 (TD-41): solo incluir lotes ACTIVOS (sin soldDate y sin isDeleted).
   // Antes sumaba quantity × currentPrice de todas las filas, incluyendo lotes vendidos
   // → patrimonio inflado vs. la vista de Inversiones del frontend.
-  // FX: el backend no tiene acceso a las tasas en tiempo real (vienen de Yahoo Finance
-  // vía el frontend). Se suma el valor en la divisa nativa del lote como mejor esfuerzo;
-  // la fuente de verdad de FX es getQuotes_ + priceService (frontend). A largo plazo
-  // (F-17) debe existir una única fuente de verdad para computeNetWorth.
   var activeInvestments = ctx.investments.filter(function (i) {
     return !i.soldDate && !i.isDeleted;
   });
-  var investmentsValue = sum_(activeInvestments, function (i) {
-    return (i.quantity || 0) * (i.currentPrice || 0);
-  });
+  var investmentsValue = sumBase_(activeInvestments,
+    function (i) { return (i.quantity || 0) * (i.currentPrice || 0); },
+    function (i) { return i.currency; });
 
   // FIN-001: sumar comisión al cost de inversiones activas para paridad con
   // investmentsCost del frontend (que incluye commission desde Sprint 5).
-  var investmentsCost = sum_(activeInvestments, function (i) {
-    return (i.quantity || 0) * (i.avgCost || i.purchasePrice || 0) + (Number(i.commission) || 0);
-  });
+  var investmentsCost = sumBase_(activeInvestments,
+    function (i) { return (i.quantity || 0) * (i.avgCost || i.purchasePrice || 0) + (Number(i.commission) || 0); },
+    function (i) { return i.currency; });
 
-  var otherAssets = sum_(ctx.assets, function (a) { return a.value; });
+  var otherAssets = sumBase_(ctx.assets,
+    function (a) { return a.value; },
+    function (a) { return a.currency; });
   var totalAssets = accountsValue + investmentsValue + otherAssets;
 
   // FIN-014 (R0-A): paridad con selectors.js:131 — excluir liabilities de tipo
   // 'credit_card' para evitar doble conteo: las cuentas CC ya se capturan en ccDebt.
-  var liabilitiesDebt = sum_(ctx.liabilities.filter(function (l) {
-    return l.type !== 'credit_card';
-  }), function (l) { return l.balance; });
+  var liabilitiesDebt = sumBase_(
+    ctx.liabilities.filter(function (l) { return l.type !== 'credit_card'; }),
+    function (l) { return l.balance; },
+    function (l) { return l.currency; });
 
-  var ccDebt = ctx.accounts.filter(function (a) {
-    return a.type === 'credit_card' && !a.isArchived;
-  }).reduce(function (sum, a) { return sum + Math.abs(a.balance || 0); }, 0);
+  var ccDebt = sumBase_(
+    ctx.accounts.filter(function (a) { return a.type === 'credit_card' && !a.isArchived; }),
+    function (a) { return Math.abs(a.balance || 0); },
+    function (a) { return a.currency; });
 
   var totalLiabilities = liabilitiesDebt + ccDebt;
 
-  // ⚠ requiere deploy — cambios en computeNetWorth_ (R0-A sprint pre-flight).
+  // ⚠ requiere deploy — cambios en computeNetWorth_ (Sprint A.2: conversión FX).
   return {
     totalAssets: totalAssets,
     totalLiabilities: totalLiabilities,
@@ -68,6 +112,10 @@ function computeNetWorth_(ctx) {
     otherAssets: otherAssets,
     ccDebt: ccDebt,             // suma de tarjetas de crédito (cuentas CC activas)
     liabilitiesDebt: liabilitiesDebt, // suma de pasivos normales (excluye type=credit_card)
+    fxRates: fx,                // tasas aplicadas (vacío si todo está en base)
+    // Eventos de exclusión por falta de tasa FX (una inversión sin tasa cuenta 2:
+    // valor y costo). Es un flag de integridad: >0 → la cifra está incompleta.
+    fxExcludedCount: fxExcludedCount,
   };
 }
 

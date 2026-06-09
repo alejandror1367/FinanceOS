@@ -109,6 +109,9 @@ var ROUTES = {
   // Cotizaciones en tiempo real (Yahoo Finance)
   getQuotes: function (p) { return getQuotes_(p); },
 
+  // A.2 (BE-003/TD-02): tasas FX → COP (USD, EUR), caché ~1h en CacheService.
+  getFxRates: function (p) { return getFxRates_(); },
+
   // Import (proxy Gemini API)
   parseStatement: function (d) { return parseStatement_(d); },
 
@@ -150,7 +153,7 @@ var READ_ACTIONS = {
   getBootstrap: 1,
   getAccounts: 1, getTransactions: 1, getCategories: 1, getBudgets: 1,
   getGoals: 1, getInvestments: 1, getAssets: 1, getLiabilities: 1,
-  getRecurring: 1, getJournal: 1, getSettings: 1, getQuotes: 1, ping: 1,
+  getRecurring: 1, getJournal: 1, getSettings: 1, getQuotes: 1, getFxRates: 1, ping: 1,
 };
 
 function doGet(e) {
