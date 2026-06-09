@@ -2,6 +2,11 @@
 // Todas las peticiones usan POST con body text/plain para evitar el preflight
 // CORS que Apps Script no maneja (docs Fase 3) y para mantener idToken
 // fuera de la URL (SEC-001/TD-50). Respuesta: { success, data|error }.
+//
+// SEC-001: el idToken viaja SIEMPRE en el POST body (campo "idToken"), nunca
+// en la URL. apiClient.get() es un alias semántico para acciones de lectura
+// pero sigue usando method:'POST'. El backend doGet solo se expone como
+// fallback de diagnóstico manual — ver comentario SEC-001 en Code.gs.
 
 import { CONFIG } from '../core/config.js';
 import { auth } from '../core/auth.js';
