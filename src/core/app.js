@@ -6,6 +6,7 @@
 import { CONFIG } from './config.js';
 import { auth } from './auth.js';
 import { store } from '../store/store.js';
+import { selectors } from '../store/selectors.js';
 import { theme } from '../services/theme.js';
 import { dataService } from '../services/dataService.js';
 import { createRouter } from './router.js';
@@ -110,12 +111,16 @@ function renderView(route, opts = {}) {
 // Evita que el Dashboard muestre $0 en Inversiones en cold-start.
 async function backgroundRefreshPrices() {
   if (!CONFIG.api.baseUrl) return;
-  const invs = store.get().investments || [];
+  const state = store.get();
+  const invs = state.investments || [];
   const syms = [...new Set(
     invs.filter((i) => !i.isDeleted && i.symbol && !['cdt', 'fund'].includes(i.assetType))
       .map((i) => i.symbol.toUpperCase()),
   )];
-  if (!syms.length) return;
+  // A.3 (FIN-005/TD-02): aunque no haya símbolos con precio vivo, si existen
+  // entidades en divisa extranjera (cuentas/assets/deudas) hay que traer las
+  // tasas FX igualmente — los selectores excluyen lo que no puedan convertir.
+  if (!syms.length && !selectors.hasMixedCurrencies(state)) return;
   try {
     const tickers = [...syms, 'USDCOP=X', 'EURCOP=X'].join(',');
     const resp = await apiClient.get('getQuotes', { tickers });
@@ -123,7 +128,9 @@ async function backgroundRefreshPrices() {
     const fxFromBack = (resp && typeof resp.fxRates === 'object') ? resp.fxRates : {};
     const prices = {};
     Object.entries(quotesMap).forEach(([k, q]) => { if (q && !q.error) prices[k] = q; });
-    const fx = {};
+    // A.3: partir de las últimas tasas conocidas (offline-first) — un refresh que
+    // no traiga FX no debe borrar las tasas previas (priceService.update reemplaza).
+    const fx = { ...priceService.fxRates };
     Object.entries(fxFromBack).forEach(([cur, rate]) => { if (rate) fx[cur] = rate; });
     if (!Object.keys(fxFromBack).length) {
       ['USD', 'EUR', 'GBP', 'BRL'].forEach((c) => { if (prices[`${c}COP=X`]?.price) fx[c] = prices[`${c}COP=X`].price; });

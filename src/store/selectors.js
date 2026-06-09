@@ -36,6 +36,25 @@ export function isExpenseLike(t, debtIds) {
   return t.type === 'transfer' && !!t.toAccountId && debtIds.has(t.toAccountId);
 }
 
+// A.3 (FIN-005/TD-02): convierte un monto a moneda base usando el mapa de tasas FX.
+// Devuelve null si la divisa es extranjera y no hay tasa disponible — el caller debe
+// EXCLUIR el monto del total y flaggearlo, nunca sumarlo 1:1 (error silencioso ×~4000).
+export function convertToBase(amount, currency, base, fx) {
+  const amt = Number(amount) || 0;
+  if (!currency || currency === base) return amt;
+  const rate = fx?.[currency];
+  return rate ? amt * rate : null;
+}
+
+// Suma montos convertidos a base excluyendo (sin sumar 1:1) los que no tienen tasa FX.
+// amountFn/currencyFn extraen monto y divisa de cada item.
+function sumInBase(items, amountFn, currencyFn, base, fx) {
+  return items.reduce((acc, x) => {
+    const v = convertToBase(amountFn(x), currencyFn(x), base, fx);
+    return v === null ? acc : acc + v;
+  }, 0);
+}
+
 const MONTH_ABBR = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 function ymKey(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; }
 function lastMonths(n) {
@@ -54,7 +73,10 @@ export const selectors = {
   },
 
   totalLiquidity(s) {
-    return selectors.liquidAccounts(s).reduce((sum, a) => sum + (a.balance || 0), 0);
+    // A.3 (FIN-005/TD-02): cuentas en divisa extranjera se convierten con tasa FX;
+    // sin tasa se EXCLUYEN del total (flag en fxGaps), nunca se suman 1:1.
+    const base = s.baseCurrency || 'COP';
+    return sumInBase(selectors.liquidAccounts(s), (a) => a.balance, (a) => a.currency, base, priceService.fxRates);
   },
 
   investmentsValue(s) {
@@ -119,22 +141,29 @@ export const selectors = {
   },
 
   totalAssets(s) {
+    // A.3 (FIN-005/TD-02): cuentas y assets en divisa extranjera se convierten con
+    // tasa FX; sin tasa se EXCLUYEN (nunca 1:1). Inversiones ya aplican esta política.
+    const base = s.baseCurrency || 'COP';
+    const fx   = priceService.fxRates;
     // Excluye cuentas investment (doble conteo con posiciones, TD-03) y credit_card (son pasivos).
-    const accountsValue = s.accounts
-      .filter((a) => !a.isArchived && a.type !== 'investment' && a.type !== 'credit_card')
-      .reduce((sum, a) => sum + (a.balance || 0), 0);
-    const otherAssets = s.assets.reduce((sum, a) => sum + (a.value || 0), 0);
+    const accountsValue = sumInBase(
+      s.accounts.filter((a) => !a.isArchived && a.type !== 'investment' && a.type !== 'credit_card'),
+      (a) => a.balance, (a) => a.currency, base, fx);
+    const otherAssets = sumInBase(s.assets, (a) => a.value, (a) => a.currency, base, fx);
     return accountsValue + selectors.investmentsValue(s) + otherAssets;
   },
 
   totalLiabilities(s) {
+    // A.3 (FIN-005/TD-02): misma política FX que totalAssets — convertir o excluir.
+    const base = s.baseCurrency || 'COP';
+    const fx   = priceService.fxRates;
     // Excluye liabilities de tipo credit_card: las cuentas CC ya las cubren vía fromCC.
     // Sin este filtro, registrar la misma CC como cuenta Y como liability la contaría doble.
-    const fromLiabilities = s.liabilities
-      .filter((l) => l.type !== 'credit_card')
-      .reduce((sum, l) => sum + (l.balance || 0), 0);
-    const fromCC = selectors.creditCardAccounts(s)
-      .reduce((sum, a) => sum + Math.abs(a.balance || 0), 0);
+    const fromLiabilities = sumInBase(
+      s.liabilities.filter((l) => l.type !== 'credit_card'),
+      (l) => l.balance, (l) => l.currency, base, fx);
+    const fromCC = sumInBase(selectors.creditCardAccounts(s),
+      (a) => Math.abs(a.balance || 0), (a) => a.currency, base, fx);
     return fromLiabilities + fromCC;
   },
 
@@ -265,22 +294,28 @@ export const selectors = {
     const list = selectors.debtList(s);
     const fx   = priceService.fxRates;
     const base = s.baseCurrency || 'COP';
-    const toBase = (amount, cur) => {
-      if (!cur || cur === base) return amount;
-      const rate = fx[cur];
-      return rate ? amount * rate : amount; // fallback 1:1 si no hay tasa
-    };
-    const total      = list.reduce((sum, d) => sum + toBase(d.balance, d.currency), 0);
-    const minPayment = list.reduce((sum, d) => sum + toBase(d.minPayment, d.currency), 0);
-    const weighted   = list.reduce((sum, d) => sum + d.interestRate * toBase(d.balance, d.currency), 0);
+    // A.3 (FIN-005/TD-02): deudas en divisa sin tasa FX se EXCLUYEN de los KPIs
+    // (antes caían a 1:1 silencioso). unconvertedCount > 0 → cifras incompletas.
+    const convertible = [];
+    let unconvertedCount = 0;
+    for (const d of list) {
+      const bal = convertToBase(d.balance, d.currency, base, fx);
+      if (bal === null) { unconvertedCount++; continue; }
+      convertible.push({ ...d, _balBase: bal, _minBase: convertToBase(d.minPayment, d.currency, base, fx) ?? 0 });
+    }
+    const total      = convertible.reduce((sum, d) => sum + d._balBase, 0);
+    const minPayment = convertible.reduce((sum, d) => sum + d._minBase, 0);
+    const weighted   = convertible.reduce((sum, d) => sum + d.interestRate * d._balBase, 0);
     const avgRate    = total ? weighted / total : 0;
-    return { total, minPayment, avgRate, count: list.length, list };
+    return { total, minPayment, avgRate, count: list.length, list, unconvertedCount };
   },
 
   // Total adeudado en tarjetas (solo cuentas credit_card — liabilities tipo credit_card excluidas).
+  // A.3: tarjetas en divisa extranjera se convierten con tasa FX o se excluyen.
   creditCardDebt(s) {
-    return selectors.creditCardAccounts(s)
-      .reduce((sum, a) => sum + Math.abs(a.balance || 0), 0);
+    const base = s.baseCurrency || 'COP';
+    return sumInBase(selectors.creditCardAccounts(s),
+      (a) => Math.abs(a.balance || 0), (a) => a.currency, base, priceService.fxRates);
   },
 
   // ---- Presupuestos (valores derivados, no persistidos) ----
@@ -767,10 +802,6 @@ export const selectors = {
     const base = s.baseCurrency || 'COP';
     const now  = todayMs !== undefined ? todayMs : Date.now();
     const today = new Date(now).toISOString().slice(0, 10);
-    const toBase = (v, cur) => {
-      if (!cur || cur === base) return v;
-      const rate = fx[cur]; return rate ? v * rate : v;
-    };
     const flows = [];
     for (const inv of (s.investments || [])) {
       if (inv.isDeleted || !inv.purchaseDate) continue;
@@ -784,8 +815,13 @@ export const selectors = {
       const curVal = inv.soldDate
         ? qty * (Number(inv.soldPrice) || 0) - (Number(inv.soldCommission) || 0)
         : qty * px;
-      flows.push({ amount: -toBase(cost, cur),   date: inv.purchaseDate });
-      flows.push({ amount:  toBase(curVal, cur),  date: inv.soldDate || today });
+      // A.3 (FIN-005/TD-02): sin tasa FX se omite la posición COMPLETA (ambos flujos);
+      // mezclar escalas 1:1 distorsionaba la tasa del portafolio.
+      const costBase = convertToBase(cost, cur, base, fx);
+      const valBase  = convertToBase(curVal, cur, base, fx);
+      if (costBase === null || valBase === null) continue;
+      flows.push({ amount: -costBase, date: inv.purchaseDate });
+      flows.push({ amount:  valBase,  date: inv.soldDate || today });
     }
     return flows.length >= 2 ? selectors.xirr(flows) : null;
   },
@@ -856,7 +892,7 @@ export const selectors = {
       if (inv.currency)  map[key].currency  = inv.currency;
     }
 
-    let totalValue = 0, totalCost = 0;
+    let totalValue = 0, totalCost = 0, incompleteCount = 0;
     for (const g of Object.values(map)) {
       if (!g.purchases.length) continue;
       const sorted   = [...g.purchases].sort((a, b) => (b.purchaseDate || '').localeCompare(a.purchaseDate || ''));
@@ -882,14 +918,19 @@ export const selectors = {
       }
 
       const rawVal = hasPrice && value !== null ? value : gc;
-      totalValue += toBase(rawVal, g.currency) ?? rawVal;
-      totalCost  += toBase(gc,     g.currency) ?? gc;
+      // A.3 (FIN-005/TD-02): grupo en divisa sin tasa FX → EXCLUIR del total y
+      // flaggear (incompleteCount), nunca sumar el valor nativo 1:1.
+      const vBase = toBase(rawVal, g.currency);
+      const cBase = toBase(gc,     g.currency);
+      if (vBase === null || cBase === null) { incompleteCount++; continue; }
+      totalValue += vBase;
+      totalCost  += cBase;
     }
 
     const pTotal = roundMoney(totalValue, base);
     const cTotal = roundMoney(totalCost,  base);
     const gTotal = roundMoney(pTotal - cTotal, base);
-    return { value: pTotal, cost: cTotal, gain: gTotal, returnPct: cTotal ? gTotal / cTotal * 100 : 0 };
+    return { value: pTotal, cost: cTotal, gain: gTotal, returnPct: cTotal ? gTotal / cTotal * 100 : 0, incompleteCount };
   },
 
   // R4 helper: value in base currency of a single active investment position.
@@ -979,6 +1020,26 @@ export const selectors = {
     }
 
     return alerts;
+  },
+
+  // A.3 (FIN-005/TD-02): entidades en divisa extranjera SIN tasa FX disponible —
+  // están excluidas de los totales (patrimonio, liquidez, deudas, inversiones).
+  // Devuelve { count, currencies } para que la UI muestre un aviso de cifra incompleta.
+  fxGaps(s) {
+    const fx   = priceService.fxRates;
+    const base = s.baseCurrency || 'COP';
+    const missing = new Set();
+    let count = 0;
+    const check = (cur) => {
+      if (!cur || cur === base || fx[cur]) return;
+      missing.add(cur);
+      count++;
+    };
+    s.accounts.filter((a) => !a.isArchived).forEach((a) => check(a.currency));
+    s.assets.forEach((a) => check(a.currency));
+    s.liabilities.forEach((l) => check(l.currency));
+    s.investments.filter((i) => !i.isDeleted && !i.soldDate).forEach((i) => check(i.currency));
+    return { count, currencies: [...missing] };
   },
 
   // Detecta si hay entidades con divisas distintas a baseCurrency (TD-02).

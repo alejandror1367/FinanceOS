@@ -613,6 +613,10 @@ export function renderInvestments() {
       return;
     }
 
+    // A.3 (FIN-005/TD-02): grupos en divisa sin tasa FX se EXCLUYEN de los totales
+    // (antes caían a suma 1:1 silenciosa → cifras infladas ×~4000 con USD).
+    // fxExcludedCount alimenta el aviso de cifras incompletas bajo el resumen.
+    let fxExcludedCount = 0;
     const secStats = SECTIONS.map((sec) => {
       const groups = activeGroups.filter((g) => sec.types.includes(g.assetType));
       let totalValue = 0, totalCost = 0;
@@ -621,8 +625,9 @@ export function renderInvestments() {
         const { value, cost, hasPrice } = groupValue(g, { [(g.symbol || '').toUpperCase()]: lp });
         // Si no hay precio, usamos el costo como valor (P&L = 0 para esa posición)
         const rawVal = hasPrice && value !== null ? value : cost;
-        const v = toCOP(rawVal, g.currency, fxRates) ?? rawVal;
-        const c = toCOP(cost,   g.currency, fxRates) ?? cost;
+        const v = toCOP(rawVal, g.currency, fxRates);
+        const c = toCOP(cost,   g.currency, fxRates);
+        if (v === null || c === null) { fxExcludedCount++; return; }
         totalValue += v; totalCost += c;
       });
       return { ...sec, groups, totalValue, totalCost, gain: totalValue - totalCost, ret: totalCost ? (totalValue - totalCost) / totalCost * 100 : 0 };
@@ -634,8 +639,13 @@ export function renderInvestments() {
     const cTotal = roundMoney(secStats.reduce((s, x) => s + x.totalCost, 0), baseCur);
     const gTotal = roundMoney(pTotal - cTotal, baseCur);
     const rTotal = cTotal ? gTotal / cTotal * 100 : 0;
-    // P&L realizado acumulado de todas las posiciones cerradas (en moneda base)
-    const realizedTotal = roundMoney(closedGroups.reduce((sum, g) => sum + (toCOP(g.realizedPnL, g.currency, fxRates) ?? g.realizedPnL), 0), baseCur);
+    // P&L realizado acumulado de todas las posiciones cerradas (en moneda base).
+    // A.3: cerradas en divisa sin tasa FX se excluyen del acumulado (no 1:1).
+    const realizedTotal = roundMoney(closedGroups.reduce((sum, g) => {
+      const v = toCOP(g.realizedPnL, g.currency, fxRates);
+      if (v === null) { fxExcludedCount++; return sum; }
+      return sum + v;
+    }, 0), baseCur);
 
     const wrap = el('div', { class: 'stack' });
 
@@ -751,6 +761,12 @@ export function renderInvestments() {
     } else {
       summaryCard.appendChild(el('p', { class: 't-caption text-tertiary', style: 'margin:var(--space-3) 0 0' }, [loading ? 'Obteniendo tasas de cambio…' : 'Pulsa "Actualizar precios" para obtener precios y tasas de cambio reales.']));
     }
+    // A.3 (FIN-005/TD-02): aviso de cifras incompletas cuando hubo exclusiones por falta de tasa FX.
+    if (fxExcludedCount > 0) {
+      summaryCard.appendChild(el('p', { class: 't-caption text-negative', style: 'margin:var(--space-2) 0 0' }, [
+        `⚠ ${fxExcludedCount} posición${fxExcludedCount > 1 ? 'es' : ''} en divisa extranjera excluida${fxExcludedCount > 1 ? 's' : ''} de los totales por falta de tasa de cambio. Pulsa "Actualizar precios".`,
+      ]));
+    }
     wrap.appendChild(summaryCard);
 
     // ── Sección Análisis — alertas determinísticas de portafolio (R4 / I7a) ──
@@ -843,7 +859,11 @@ export function renderInvestments() {
         const closedList = el('div', { class: 'card card--pad-sm' });
         closedList.appendChild(el('div', { class: 'row-list' }, closedGroups.map((g) => {
           const soldDate = g.sold.map((p) => p.soldDate).sort().at(-1) || '';
-          const soldPnLCOP = toCOP(g.realizedPnL, g.currency, fxRates) ?? g.realizedPnL;
+          // A.3 (FIN-005/TD-02): sin tasa FX, mostrar el P&L en su divisa nativa
+          // (etiqueta correcta) en lugar de fingir que el monto nativo es COP.
+          const soldPnLBase = toCOP(g.realizedPnL, g.currency, fxRates);
+          const soldPnL    = soldPnLBase !== null ? soldPnLBase : g.realizedPnL;
+          const soldPnLCur = soldPnLBase !== null ? baseCur : (g.currency || baseCur);
           const pnlPct = g.sold.reduce((s, p) => s + (Number(p.quantity)||0) * (Number(p.purchasePrice||p.avgCost)||0), 0);
           const pnlPctVal = pnlPct ? g.realizedPnL / pnlPct * 100 : 0;
           const isPos = g.realizedPnL >= 0;
@@ -854,7 +874,7 @@ export function renderInvestments() {
               el('div', { class: 'row__sub', text: `Vendido ${soldDate ? soldDate.slice(0, 10) : ''} · ${g.sold.length} compra${g.sold.length > 1 ? 's' : ''}` }),
             ]),
             el('div', { class: `row__amount tabular ${isPos ? 'text-positive' : 'text-negative'}` }, [
-              `${isPos ? '+' : ''}${formatMoney(soldPnLCOP, baseCur)}  ${pctFmt(pnlPctVal)}`,
+              `${isPos ? '+' : ''}${formatMoney(soldPnL, soldPnLCur)}  ${pctFmt(pnlPctVal)}`,
             ]),
             el('div', { class: 'row__actions' }, [
               el('button', { class: 'icon-btn icon-btn--danger', 'aria-label': 'Eliminar registros', title: 'Eliminar registros de venta',
