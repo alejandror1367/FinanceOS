@@ -40,7 +40,9 @@ function saveNetWorthSnapshot_(d) {
   var totalLiabilities = ccDebt + liabilitiesDebt;
   var netWorth         = totalAssets - totalLiabilities;
 
-  var existing = repoReadAll_('NetWorthSnapshots').filter(function (s) { return s.date === date; })[0];
+  // Sheets auto-convierte 'YYYY-MM-DD' a Date object; coerce_ lo devuelve como ISO completo.
+  // Comparar solo los primeros 10 chars para que la idempotencia por fecha funcione.
+  var existing = repoReadAll_('NetWorthSnapshots').filter(function (s) { return String(s.date).slice(0, 10) === date; })[0];
   var payload = {
     date:             date,
     totalAssets:      totalAssets,
