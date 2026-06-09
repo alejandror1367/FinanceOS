@@ -40,7 +40,7 @@ La deuda se concentra en **tres temas de fondo**: (1) **modelo contable** (el le
 | ID | Problema | Origen | Impacto | Esfuerzo | Recomendación |
 |----|----------|--------|---------|----------|---------------|
 | TD-01 ✅ | **Ledger desconectado de los saldos** (transacciones no mueven `account.balance`; transferencias no mueven dinero) | F-1 | Patrimonio/liquidez y movimientos/ahorro **nunca reconcilian**; cifras maestras incoherentes | L | **HECHO** (`b90163b`): modelo híbrido — `adjustBalance_()` y `applyTxBalanceDelta_()` en `Accounts.gs`; create/update/delete en `Transactions.gs` aplican/revierten efecto en saldos; `_adjustAccountBalances()` en `dataService.js` (Optimistic UI); `recalculateAccountBalances_()` para recálculo desde cero. **Regla de esquema**: `ensureHeaders_` NO es idempotente con `setValues` ciego — al cambiar el schema, agregar columnas solo al final (append-only); renombrar o reordenar descuadra la hoja. |
-| TD-02 🟡 | **Multi-moneda sin conversión** (sumas mezclan divisas) | C-2 / F-3 | Patrimonio neto **incorrecto** en cuanto exista una 2ª divisa (latente) | S (bloqueo) / L (FX) | **PARCIALMENTE HECHO** (`bc4f1fe`): selectores excluyen posiciones sin tasa (no suman 1:1); `getQuotes` devuelve `fxRates{USD,EUR}`; `priceService` las consume. `Quotes.gs` **desplegado** (2026-06-09). Backend `Reports.gs` aplica FX best-effort. Queda: UI de aviso de "valor incompleto" y fuente única FE/BE (F-17). |
+| TD-02 ✅ | **Multi-moneda sin conversión** (sumas mezclan divisas) | C-2 / F-3 | Patrimonio neto **incorrecto** en cuanto exista una 2ª divisa (latente) | S (bloqueo) / L (FX) | **HECHO** (Sprint A: `f7e1330`+`34383ff`+`d77e1f5`): `getFxRates` en backend (caché 1h); `computeNetWorth_` convierte o excluye (`fxExcludedCount`), nunca 1:1; FE: `convertToBase()`/`sumInBase()` en todos los selectores (liquidez, activos, pasivos, CC, deudas, XIRR, investmentsSummary), selector `fxGaps()`, aviso de exclusión en vista Inversiones. 136/136 tests. ⚠ **Requiere deploy:** `Quotes.gs`, `Code.gs`, `Reports.gs`. Residual: TD-54 (tx en divisa extranjera con tasa histórica). |
 | TD-03 | **Doble conteo de cuentas de inversión** en `totalAssets` (incluye `balance` de cuenta *investment* + posiciones) | F-2 | Patrimonio **inflado** sin error visible; incoherente con `totalLiquidity` | S | Excluir `type==='investment'` de `totalAssets` o documentar que su `balance` es solo cash. |
 | TD-04 | **Sin pruebas automatizadas** de la lógica financiera (`selectors.js`) | C-3 | Regresiones de cifras **silenciosas** (no rompen la app) | M | Suite `node --test` (sin build) con 20–30 casos sobre net worth, presupuestos, ahorro, rentabilidad. |
 | TD-05 | **`AuditLog` se relee entero en cada escritura** (`repoCreate_`→`repoGet_`) | GAS-C1 | Cada escritura se vuelve más lenta a medida que crece el histórico (coste cuasi-cuadrático) | S | `repoCreate_` devuelve el `record` ya construido en memoria, sin releer la hoja. |
@@ -155,6 +155,16 @@ La deuda se concentra en **tres temas de fondo**: (1) **modelo contable** (el le
 | TD-51 ✅ | **`verifyGoogleToken_` sin validar `iss` ni `exp` explícito** | SEC-002 | Falta defensa en profundidad estándar GIS | S | **HECHO** (`7242f95`): `Auth.gs` valida `iss ∈ {accounts.google.com, https://…}` y `exp > now` antes de las comprobaciones de email/aud. `Auth.gs` **desplegado** (2026-06-09). |
 | TD-52 ✅ | **`goalForecast` usa `monthlySavingsAvg` global** — cada meta reclama el 100% del ahorro | FIN-011 | Fechas de cumplimiento optimistas con N metas activas | M | **HECHO** (`0fcb1ab`): `savingsPerGoal = avg / activePending.length`; cada meta recibe su cuota proporcional. |
 | TD-53 ✅ | **`monthlySavingsAvg` no excluye meses sin datos** — diluye el promedio en histórico corto | FIN-012 | Forecast subestimado para usuarios nuevos | S | **HECHO** (`0fcb1ab`): filtra `active = cf.filter(m => m.income>0 || m.expense>0)` antes de promediar. |
+
+---
+
+## TD nuevos — Sprint A 2026-06-09 (TD-54)
+
+### P2 · Media
+
+| ID | Problema | Origen | Impacto | Esf | Estado |
+|----|----------|--------|---------|-----|--------|
+| TD-54 | **Transacciones en divisa extranjera suman 1:1** en `monthlyIncome/Expense`, `cashflow` y presupuestos — convertir bien exige tasa histórica a la fecha de la tx, no la actual | Sprint A residual (FIN-005) | Flujo de caja/presupuestos distorsionados si hay tx en USD/EUR | M | Pendiente — requiere diseño propio (fuente de tasas históricas). Mitigación: `fxGaps()`/`hasMixedCurrencies` permiten flaggear en UI. Quick win asociado: Dashboard aún no consume `fxGaps` para aviso global (Inversiones sí tiene aviso propio). |
 
 ---
 

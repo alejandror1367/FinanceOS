@@ -23,7 +23,7 @@ Centraliza: patrimonio neto, presupuestos, flujo de caja, inversiones, metas, de
 | PWA instalada en celular | ✅ Funcionando |
 | Google OAuth | ✅ Activo (`patitosalmir@gmail.com` + `alejandrorr1367@gmail.com`) |
 | Backend Apps Script | ✅ Desplegado y verificado en producción |
-| Tests financieros | ✅ **115/115** pasando (24 suites) |
+| Tests financieros | ✅ **136/136** pasando (30 suites) |
 | Módulo Import | ✅ Completamente funcional (BUG-P0-1/P1-1/P1-2/P1-3 corregidos) |
 | Backend patrimonio neto | ✅ CC incluida como pasivo en `computeNetWorth_` (BUG-P0-2, desplegado) |
 | Snapshots de patrimonio | ✅ Crear · eliminar (soft delete) · masivo · outliers — **eliminar arreglado** (sesión 06-03) |
@@ -685,22 +685,24 @@ commit: e6b3c77 · rama: main · SW: v0.2.43 · config.version: 0.2.43 · tests:
 
 > Leer esto antes que cualquier otra sección. Máximo 100 líneas. Fuente de verdad para retomar de inmediato.
 
-**HEAD:** `06db320` · **SW/config.version:** `v0.2.90` · **Tests:** 115/115 (24 suites) · **Rama:** main · **Sync:** al día (pusheado)
+**HEAD:** `d77e1f5` · **SW/config.version:** `v0.2.91` · **Tests:** 136/136 (30 suites) · **Rama:** main · **Sync:** local adelantado (push pendiente)
 
-> **Sesión 2026-06-09 (completa):** R2 ✅ · R3 ✅ · R4 ✅ · R5-Seguridad ✅ · fixes snapshot (valores en vivo, idempotencia fecha) · `Roadmap-Maestro.md` creado como fuente única de planificación.
+> **Sesión 2026-06-09 (2ª parte):** **Sprint A ✅ completado** — FX backend (`getFxRates`, caché 1h) · `computeNetWorth_` convierte/excluye divisas · FE sin suma 1:1 en ninguna ruta (`convertToBase`/`sumInBase`/`fxGaps`) · 21 tests FX nuevos. ⚠ **Deploy pendiente: `Quotes.gs`, `Code.gs`, `Reports.gs`.**
+> **Sesión 2026-06-09 (1ª parte):** R2 ✅ · R3 ✅ · R4 ✅ · R5-Seguridad ✅ · fixes snapshot (valores en vivo, idempotencia fecha) · `Roadmap-Maestro.md` creado como fuente única de planificación.
 
 > **MCP:** `.mcp.json` versionado con **playwright** + **context7** (scope de proyecto).
 > Tras `git pull`: **aprobar** ambos y **reiniciar Claude Code** (las tools MCP se fijan al arrancar).
 
 ### Estado actual real
-- **App en producción:** https://alejandror1367.github.io/FinanceOS/ (PWA v0.2.90, OAuth activo)
-- **Backend Apps Script:** ✅ **Todo desplegado** — Auth.gs · Code.gs · Config.gs · Import.gs · NetWorth.gs (2026-06-09)
-- **Tests:** **115/115** en `tests/selectors.test.js` — 24 suites
+- **App en producción:** https://alejandror1367.github.io/FinanceOS/ (PWA, OAuth activo) — local en v0.2.91 sin push
+- **Backend Apps Script:** 🟡 **Deploy pendiente Sprint A** — `Quotes.gs` · `Code.gs` · `Reports.gs` (FX). Resto al día (2026-06-09).
+- **Tests:** **136/136** en `tests/selectors.test.js` — 30 suites
 - **Roadmap activo:** `docs/Roadmap-Maestro.md` ← FUENTE ÚNICA. Reemplaza todos los roadmaps anteriores.
-- **Plan Opus (R0–R8):** R0 ✅ R1 ✅ R2 ✅ R3 ✅ R4 ✅ R5-Seguridad ✅ — **Sprint A (FX cifras) es el siguiente P0**.
+- **Plan Opus (R0–R8):** R0–R5 ✅ · **Sprint A ✅** — **Sprint B (ventas parciales: B.4 roundMoney + verificación) o Sprint C (WCAG) es el siguiente**.
 
-### Deploy — todo desplegado ✅
-Backend al día. Próximo deploy: Sprint A (Quotes.gs FX + Utils.gs soft-delete guard).
+### Deploy — ⚠ PENDIENTE (Sprint A FX)
+`Quotes.gs` (getFxRates_, caché 1h) · `Code.gs` (ruta getFxRates) · `Reports.gs` (computeNetWorth_ convierte/excluye divisas).
+Hasta el deploy, el backend en producción sigue sumando divisas 1:1 en computeNetWorth_ (el FE ya no).
 
 ### Arquitectura actual
 ```
@@ -721,12 +723,14 @@ Flujo: `Views → Services → Store → Views` (never direct to net/IndexedDB f
 
 ### Bugs abiertos
 - 🟡 Verificación en vivo snapshots nuevo formato (priceService values) — pendiente Playwright
-- 🟡 FX multi-moneda: patrimonio USD se suma 1:1 a COP sin tasa (Sprint A P0)
+- 🟡 Verificación en vivo FX: aviso de exclusión en Inversiones + `getFxRates` responde — tras deploy
+- 🟡 TD-54: tx en divisa extranjera suman 1:1 en cashflow/presupuestos (necesita tasa histórica — diseño propio)
 
 ### Pendientes en orden — ROADMAP-MAESTRO (Sprints A–J)
 > Detalle completo: `docs/Roadmap-Maestro.md`.
-1. **Sprint A — Integridad cifras P0** ← SIGUIENTE: FX en backend · soft-delete guard · withholdingRate · saldo idempotente · deploy
-2. **Sprint B — Inversiones ventas parciales P0**: modal cantidad · prorrateo comisión · cdtCurrentValue tope days
+0. **Deploy manual Sprint A** ← ACCIÓN DEL DUEÑO: `Quotes.gs` + `Code.gs` + `Reports.gs`
+1. ~~Sprint A — Integridad cifras P0~~ ✅ 2026-06-09 (commits f7e1330 · 34383ff · d77e1f5)
+2. **Sprint B — Inversiones ventas parciales P0**: B.1–B.3 ya hechos (TD-43/44 ✅); queda B.4 roundMoney + B.5 verificación tests
 3. **Sprint C — Accesibilidad WCAG AA P1**: todo S, sin deploy — contraste · aria · reduced-motion · progressbar
 4. **Sprint D — Cuentas remuneradas P1**: rediseñar `calcYield` (saldo promedio, NO balance actual) · deploy
 5. **Sprint E — Deudas y Metas P2**: avgRate multi-moneda · amortize % · goalForecast repartido
@@ -735,7 +739,8 @@ Flujo: `Views → Services → Store → Views` (never direct to net/IndexedDB f
 8. **Sprint H — Charts responsive P3** · **Sprint I — QA + v1.0** · **Sprint J — Avanzado + opcionales**
 
 ### Riesgos abiertos
-- FX multi-moneda silencioso: patrimonio USD×~4000 se suma 1:1 → cifra inflada (Sprint A P0)
+- FX backend en producción aún suma 1:1 hasta deploy de Sprint A (FE ya corregido)
+- TD-54: cashflow/presupuestos con tx en divisa extranjera suman 1:1 (tasa histórica pendiente de diseño)
 - `calcYield` sobreestima hasta ~7× → rediseño obligatorio antes de Sprint D
 - `analyzePortfolio` tomaría LockService → congela cola de sync
 - Sesión de facto perpetua sin app-lock; 2º email en `allowedEmails` con acceso total
@@ -747,6 +752,7 @@ Flujo: `Views → Services → Store → Views` (never direct to net/IndexedDB f
 - `apiClient.js` siempre POST, idToken en body (SEC-001) · `verifyGoogleToken_` valida iss+exp
 - `logAccessDenied_`: rate-limit via CacheService (5/60s) — 5 paths de rechazo auditados
 - Precios en vivo: `priceService.js` · `investments.js` escribe · `selectors.js` lee
+- **Política FX única FE/BE (Sprint A):** convertir con tasa o **excluir + flaggear** (`fxGaps`/`fxExcludedCount`) — nunca sumar 1:1. Tasas: `getFxRates` (caché 1h backend, persistencia localStorage en FE, degradación offline a última conocida)
 
 ### Archivos críticos
 ```
@@ -758,7 +764,7 @@ src/services/dataService.js        — saveSnapshot(frontendValues) pasa valores
 backend/NetWorth.gs                — saveNetWorthSnapshot_ usa valores FE si vienen; idempotencia fecha corregida
 backend/Auth.gs                    — logAccessDenied_ con rate-limit; iss/exp validados
 backend/Config.gs                  — APP.importMaxChars · APP.accessDeniedRateLimitMax/Ttl
-tests/selectors.test.js            — 115/115 tests (24 suites)
+tests/selectors.test.js            — 136/136 tests (30 suites)
 ```
 
 ---

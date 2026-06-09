@@ -88,7 +88,11 @@ Ver §5.
 
 ---
 
-### Sprint A — Integridad de cifras maestras (P0)
+### Sprint A — Integridad de cifras maestras (P0) ✅ COMPLETADO 2026-06-09
+
+> **Estado:** A.1/A.4/A.5/A.6 ya estaban resueltos (TD-45/41/42/46). A.2/A.3/A.7 implementados en
+> commits `f7e1330` + `34383ff` + `d77e1f5` — 136/136 tests. ⚠ **Deploy pendiente:** `Quotes.gs`,
+> `Code.gs`, `Reports.gs`. Residual documentado como **TD-54** (tx en divisa con tasa histórica).
 
 **Objetivo:** eliminar los errores silenciosos de cifras que aún persisten tras R0–R5.
 **Prioridad:** P0 — cifras financieras incorrectas.
