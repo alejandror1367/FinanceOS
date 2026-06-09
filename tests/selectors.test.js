@@ -1149,3 +1149,99 @@ describe('savingsStreak', () => {
     assert.equal(selectors.savingsStreak(s), 0);
   });
 });
+
+// ── portfolioAlerts (R4 — I7a) ────────────────────────────────────────────────
+
+describe('portfolioAlerts', () => {
+  before(() => { priceService.update({}, {}); });
+  after(() => { priceService.update({}, {}); });
+
+  function mkInv(id, opts = {}) {
+    return {
+      id, name: opts.name || `Pos-${id}`,
+      symbol: opts.symbol !== undefined ? opts.symbol : id,
+      quantity: opts.qty ?? 1,
+      purchasePrice: opts.buyPx ?? 100,
+      currentPrice: opts.curPx ?? 100,
+      currency: opts.currency || 'COP',
+      assetType: opts.assetType || 'stock',
+      commission: opts.commission || 0,
+      ...(opts.maturityDate ? { maturityDate: opts.maturityDate } : {}),
+      ...(opts.currentValue !== undefined ? { currentValue: opts.currentValue } : {}),
+    };
+  }
+
+  test('portafolio vacío devuelve []', () => {
+    assert.deepEqual(selectors.portfolioAlerts(mkState()), []);
+  });
+
+  test('solo posiciones vendidas → []', () => {
+    const s = mkState({
+      investments: [{ ...mkInv('A'), soldDate: '2025-01-01' }],
+    });
+    assert.deepEqual(selectors.portfolioAlerts(s), []);
+  });
+
+  test('sin diversificación: 2 lotes del mismo ticker → alerta diversification', () => {
+    const s = mkState({
+      investments: [
+        mkInv('A1', { symbol: 'AAPL', qty: 2, buyPx: 100, curPx: 100 }),
+        mkInv('A2', { symbol: 'AAPL', qty: 1, buyPx: 80,  curPx: 100 }),
+      ],
+    });
+    const al = selectors.portfolioAlerts(s);
+    assert.ok(al.some((a) => a.type === 'diversification'));
+  });
+
+  test('concentración > 30%: posición que representa ~91% del portafolio', () => {
+    // A: 10 × 100 = 1000 COP (≈91%)  B: 1 × 100 = 100 COP (≈9%)
+    const s = mkState({
+      investments: [
+        mkInv('A', { symbol: 'BIG', qty: 10, buyPx: 100, curPx: 100 }),
+        mkInv('B', { symbol: 'SML', qty: 1,  buyPx: 100, curPx: 100 }),
+      ],
+    });
+    const al = selectors.portfolioAlerts(s);
+    const concA = al.find((a) => a.type === 'concentration' && a.inv?.id === 'A');
+    assert.ok(concA, 'debe detectar concentración de la posición A (≈91%)');
+    assert.ok(Number(concA.message.match(/([\d.]+)%/)?.[1]) > 30,
+      'porcentaje en el mensaje debe ser > 30');
+  });
+
+  test('CDT vence en ≤ 30 días → alerta maturity', () => {
+    const soon = new Date(Date.now() + 15 * 86400000).toISOString().slice(0, 10);
+    const s = mkState({
+      investments: [
+        mkInv('C1', { symbol: '', assetType: 'cdt', maturityDate: soon, qty: 1000, buyPx: 1, curPx: 1 }),
+        mkInv('C2', { symbol: 'X', qty: 100, buyPx: 10, curPx: 10 }),
+      ],
+    });
+    const al = selectors.portfolioAlerts(s);
+    assert.ok(al.some((a) => a.type === 'maturity'));
+  });
+
+  test('CDT vence en > 30 días → sin alerta maturity', () => {
+    const far = new Date(Date.now() + 60 * 86400000).toISOString().slice(0, 10);
+    const s = mkState({
+      investments: [mkInv('C3', { assetType: 'cdt', maturityDate: far, qty: 1000, buyPx: 1, curPx: 1 })],
+    });
+    assert.ok(!selectors.portfolioAlerts(s).some((a) => a.type === 'maturity'));
+  });
+
+  test('P&L no realizado < −20% → alerta loss', () => {
+    // 1 × buyPx=100, curPx=70 → P&L = −30%
+    const s = mkState({ investments: [mkInv('L1', { qty: 1, buyPx: 100, curPx: 70 })] });
+    assert.ok(selectors.portfolioAlerts(s).some((a) => a.type === 'loss'));
+  });
+
+  test('P&L −10% → sin alerta loss (por encima del umbral −20%)', () => {
+    const s = mkState({ investments: [mkInv('L2', { qty: 1, buyPx: 100, curPx: 90 })] });
+    assert.ok(!selectors.portfolioAlerts(s).some((a) => a.type === 'loss'));
+  });
+
+  test('posición sin precio (curPx=0) → sin alerta loss', () => {
+    // curVal=0 → condición (curVal>0) no se cumple → no se calcula P&L
+    const s = mkState({ investments: [mkInv('NP', { qty: 1, buyPx: 100, curPx: 0 })] });
+    assert.ok(!selectors.portfolioAlerts(s).some((a) => a.type === 'loss'));
+  });
+});

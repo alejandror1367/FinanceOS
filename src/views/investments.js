@@ -753,6 +753,69 @@ export function renderInvestments() {
     }
     wrap.appendChild(summaryCard);
 
+    // ── Sección Análisis — alertas determinísticas de portafolio (R4 / I7a) ──
+    const alerts = selectors.portfolioAlerts(s);
+    const isAnalysisCollapsed = _collapsed.has('analysis');
+    const analysisEl = el('div', { class: 'section' });
+
+    const analysisHead = el('button', {
+      class: 'inv-section-head inv-section-head--toggle',
+      'aria-expanded': String(!isAnalysisCollapsed),
+      on: { click: () => {
+        _collapsed.has('analysis') ? _collapsed.delete('analysis') : _collapsed.add('analysis');
+        _saveCollapsed();
+        paint(false);
+      }},
+    });
+    analysisHead.appendChild(el('div', { class: 'inv-section-title' }, [
+      el('span', { class: 't-h2', text: 'Análisis del portafolio' }),
+      alerts.length > 0
+        ? Badge(String(alerts.length), 'warning')
+        : Badge('Sin alertas', 'positive'),
+    ]));
+    analysisHead.appendChild(
+      el('span', { class: `inv-section-chevron${isAnalysisCollapsed ? ' is-collapsed' : ''}`, html: icon('chevronDown') })
+    );
+    analysisEl.appendChild(analysisHead);
+
+    if (!isAnalysisCollapsed) {
+      const analysisCard = el('div', { class: 'card card--pad-sm' });
+      if (!alerts.length) {
+        analysisCard.appendChild(el('p', { class: 't-caption text-secondary', style: 'padding:var(--space-3) 0' },
+          ['Portafolio sin alertas activas.']));
+      } else {
+        const SEVERITY_BADGE = { warning: 'warning', error: 'negative', info: 'info' };
+        const alertsList = el('div', { class: 'row-list' });
+        alerts.forEach((alert) => {
+          const row = el('div', { class: 'row' }, [
+            el('div', { class: 'row__main' }, [
+              el('div', { class: 'row__title' }, [
+                Badge(
+                  alert.type === 'concentration' ? 'Concentración'
+                  : alert.type === 'maturity'    ? 'Vencimiento'
+                  : alert.type === 'loss'        ? 'Pérdida'
+                  : 'Diversificación',
+                  SEVERITY_BADGE[alert.severity] || 'info'
+                ),
+                el('span', { style: 'margin-left:var(--space-2)', text: alert.message }),
+              ]),
+              alert.isApproximate
+                ? el('div', { class: 'row__sub t-caption text-tertiary' }, ['Estimado — sin precio en vivo'])
+                : null,
+            ].filter(Boolean)),
+          ]);
+          alertsList.appendChild(row);
+        });
+        analysisCard.appendChild(alertsList);
+      }
+      if (priceService.fetchedAt) {
+        analysisCard.appendChild(el('p', { class: 't-caption text-tertiary', style: 'margin:var(--space-3) 0 0' },
+          [priceAgeLabel()]));
+      }
+      analysisEl.appendChild(analysisCard);
+    }
+    wrap.appendChild(analysisEl);
+
     // ── Operaciones cerradas (posiciones totalmente vendidas) ─────────────────
     if (closedGroups.length > 0) {
       const isClosedCollapsed = _collapsed.has('closed');

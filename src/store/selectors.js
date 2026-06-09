@@ -826,6 +826,93 @@ export const selectors = {
     return streak;
   },
 
+  // R4 helper: value in base currency of a single active investment position.
+  // Mirrors investmentsValue logic (FIN-005/TD-02): returns null if the position's
+  // foreign currency has no FX rate (cannot be valued without risking silent ×~4000 error).
+  positionValue(inv, base) {
+    if (!inv || inv.isDeleted || inv.soldDate) return null;
+    const fx     = priceService.fxRates;
+    const lp     = priceService.priceFor(inv.symbol);
+    const price  = lp?.price || inv.currentPrice || 0;
+    const native = inv.currentValue || ((Number(inv.quantity) || 0) * price) || inv.costBasis || 0;
+    if (!native) return null;
+    const cur = inv.currency || base;
+    if (cur === base) return native;
+    if (!fx[cur]) return null;
+    return native * fx[cur];
+  },
+
+  // R4 — portfolio alerts (I7a): deterministic rules, no AI.
+  // Returns [{ type, severity, message, isApproximate?, inv? }].
+  // Types: 'concentration' (>30%), 'maturity' (CDT≤30d), 'loss' (P&L<−20%), 'diversification' (1 ticker).
+  portfolioAlerts(s) {
+    const base   = s.baseCurrency || 'COP';
+    const active = (s.investments || []).filter((i) => !i.isDeleted && !i.soldDate);
+    if (!active.length) return [];
+
+    const alerts = [];
+    const total  = selectors.investmentsValue(s);
+
+    // Sin diversificación: solo 1 ticker único activo
+    const tickers = new Set(active.map((i) => (i.symbol || i.name || i.id || '').toUpperCase()));
+    if (tickers.size === 1) {
+      alerts.push({ type: 'diversification', severity: 'warning',
+        message: 'Portafolio no diversificado: solo 1 activo activo.' });
+    }
+
+    const now = Date.now();
+    for (const inv of active) {
+      const name = inv.name || inv.symbol || inv.id || '?';
+
+      // Concentración > 30%
+      if (total > 0) {
+        const val = selectors.positionValue(inv, base);
+        if (val !== null) {
+          const pct = (val / total) * 100;
+          if (pct > 30) {
+            alerts.push({
+              type: 'concentration', severity: 'warning',
+              message: `${name} concentra ${pct.toFixed(1)}% del portafolio (umbral: 30%)`,
+              isApproximate: !priceService.priceFor(inv.symbol), inv,
+            });
+          }
+        }
+      }
+
+      // CDT vence en ≤ 30 días
+      if (inv.assetType === 'cdt' && inv.maturityDate) {
+        const daysLeft = (new Date(inv.maturityDate).getTime() - now) / 86400000;
+        if (daysLeft >= 0 && daysLeft <= 30) {
+          const d = Math.ceil(daysLeft);
+          alerts.push({
+            type: 'maturity', severity: 'info',
+            message: `CDT "${name}" vence en ${d} día${d === 1 ? '' : 's'}`,
+            inv,
+          });
+        }
+      }
+
+      // P&L no realizado < −20% (en moneda nativa; porcentaje no requiere FX)
+      const lp        = priceService.priceFor(inv.symbol);
+      const px        = lp?.price || inv.currentPrice || 0;
+      const curVal    = inv.currentValue || ((Number(inv.quantity) || 0) * px) || 0;
+      const costBasis = (Number(inv.quantity) || 0) * (Number(inv.purchasePrice || inv.avgCost) || 0)
+                      + (Number(inv.commission) || 0);
+      if (costBasis > 0 && curVal > 0) {
+        const pnlPct = ((curVal - costBasis) / costBasis) * 100;
+        if (pnlPct < -20) {
+          alerts.push({
+            type: 'loss', severity: 'error',
+            message: `${name}: P&L ${pnlPct.toFixed(1)}% (por debajo de −20%)`,
+            isApproximate: !lp, inv,
+          });
+        }
+      }
+    }
+
+    return alerts;
+  },
+
   // Detecta si hay entidades con divisas distintas a baseCurrency (TD-02).
   // Úsalo para mostrar un aviso en la UI antes de implementar conversión FX.
   hasMixedCurrencies(s) {
