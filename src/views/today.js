@@ -8,6 +8,7 @@ import { selectors } from '../store/selectors.js';
 import { formatMoney, relativeDay } from '../utils/format.js';
 import { Card, KpiCard, Badge, ProgressBar, EmptyState, Button } from '../components/ui.js';
 import { openTxModal } from './transactions.js';
+import { dismiss, isDismissed, clearStale } from '../services/dismissService.js';
 
 function rowItem(iconName, title, sub, amount, cls) {
   return el('div', { class: 'row' }, [
@@ -52,6 +53,7 @@ export function renderToday() {
   const root = el('div');
 
   function repaint() {
+    clearStale();
     const s = store.get();
     const cur = s.baseCurrency;
     const accMap = {}; (s.accounts || []).forEach((a) => { accMap[a.id] = a; });
@@ -161,15 +163,37 @@ export function renderToday() {
         : EmptyState({ title: 'Sin movimientos', iconName: 'transactions' }),
     });
 
-    const upcomingCard = Card({
-      title: 'Próximos pagos',
-      action: el('span', { class: 'row-flex', html: icon('calendar') }),
-      body: upcoming.length
-        ? el('div', { class: 'row-list' }, upcoming.map((r) =>
-            rowItem(catMap[r.categoryId] ? catMap[r.categoryId].icon : 'calendar',
-              r.description, relativeDay(r.nextRunDate), formatMoney(r.amount, cur))))
-        : EmptyState({ title: 'Nada próximo', iconName: 'calendar' }),
-    });
+    // Contenedor para upcoming — permite re-render parcial sin repintar toda la vista.
+    const upcomingArea = el('div');
+
+    function renderUpcoming() {
+      const visible = upcoming.filter((r) => !isDismissed(r.id));
+      mount(upcomingArea, Card({
+        title: 'Próximos pagos',
+        action: el('span', { class: 'row-flex', html: icon('calendar') }),
+        body: visible.length
+          ? el('div', { class: 'row-list' }, visible.map((r) => {
+              const cat = catMap[r.categoryId];
+              return el('div', { class: 'row' }, [
+                el('div', { class: 'row__avatar', html: icon(cat?.icon || 'calendar') }),
+                el('div', { class: 'row__main' }, [
+                  el('div', { class: 'row__title', text: r.description }),
+                  el('div', { class: 'row__sub', text: relativeDay(r.nextRunDate) }),
+                ]),
+                el('div', { class: 'row__amount tabular', text: formatMoney(r.amount, cur) }),
+                el('button', {
+                  class: 'btn btn--ghost btn--sm',
+                  text: 'Visto ✓',
+                  'aria-label': `Marcar como visto: ${r.description}`,
+                  on: { click: () => { dismiss(r.id, r.nextRunDate); renderUpcoming(); } },
+                }),
+              ]);
+            }))
+          : EmptyState({ title: 'Nada próximo', iconName: 'calendar' }),
+      }));
+    }
+
+    renderUpcoming();
 
     const goalsCard = Card({
       title: 'Metas prioritarias',
@@ -205,7 +229,7 @@ export function renderToday() {
         el('div', { class: 'section' }, [paraHoyCard]),
         el('div', { class: 'grid grid--2 section' }, [
           recentCard,
-          el('div', { class: 'stack' }, [upcomingCard, goalsCard]),
+          el('div', { class: 'stack' }, [upcomingArea, goalsCard]),
         ]),
       ])
     );
