@@ -1,6 +1,6 @@
 # Prompt de continuación — FinanceOS
-**Generado:** 2026-06-09 (sesión R0+R1 completados)
-**HEAD:** `ac570e8` (+ docs-handoff) · **SW:** `v0.2.80` · **Tests:** 104/104 (22 suites)
+**Generado:** 2026-06-09 (sesión R0–R5 completados, Roadmap-Maestro.md)
+**HEAD:** `06db320` · **SW:** `v0.2.90` · **Tests:** 115/115 (24 suites)
 
 ---
 
@@ -13,67 +13,63 @@ Tras git pull deben APROBARSE y REINICIARSE Claude Code: las tools MCP se fijan 
 PROYECTO: FinanceOS — PWA financiera personal y privada de Alejo.
 Repo: https://github.com/alejandror1367/FinanceOS (rama main).
 Prod: https://alejandror1367.github.io/FinanceOS/
-HEAD: ac570e8 (+ docs-handoff) · SW v0.2.80 · config.version 0.2.80 · Tests 104/104 (22 suites)
+HEAD: 06db320 · SW v0.2.90 · Tests 115/115 (24 suites)
 
 INVARIANTES (ver CLAUDE.md): JS ES Modules sin build step · sin frameworks/bundlers ·
 cero deps npm en runtime · frontend abstraído tras src/services/ · Apps Script +
 Google Sheets (13 hojas) + GitHub Pages + OAuth de Google · offline-first.
 
-HECHO Y DESPLEGADO:
-- Sprints 1–9 completados · QA Playwright 15/15 PASS · backend al día (5 .gs desplegados 2026-06-09)
-- R0 ✅: fix FE↔BE pasivos CC (FIN-014 en Reports.gs) · ccDebt/liabilitiesDebt expuestos ·
-  TD-01 marcado · Auth/Code/Utils/Quotes/Reports desplegados
-- R1 ✅: liquidityCoverageMonths + savingsStreak (selectores promedio 3m) · 104/104 tests ·
-  fire.js: fecha estimada, ProgressBar, variantes Lean/Fat/Barista, EmptyState ·
-  analytics.js: insights cobertura liquidez, racha ahorro, concentración gastos
+ROADMAP ACTIVO: docs/Roadmap-Maestro.md ← fuente única (reemplaza todos los anteriores).
+Sprints R0–R5 (plan Opus) completados y desplegados en sesión 2026-06-09.
 
-PLAN ACTIVO: docs/Roadmap-Revisado-Opus.md (R0+R1 ✅, siguiente R2)
-Hallazgos vigentes:
-- portfolioCAGR/portfolioVsBenchmark NO existen (necesario para R4).
-- calcYield (R5) debe usar saldo promedio, NO balance actual (sobreestima ~7×).
-- ensureHeaders_ NO es append-only idempotente: solo appendear al final del schema.
+HECHO Y DESPLEGADO (sesión 2026-06-09):
+- R0 ✅: fix FE↔BE pasivos CC · ccDebt/liabilitiesDebt expuestos · 5 .gs desplegados
+- R1 ✅: liquidityCoverageMonths · savingsStreak · FIRE (variantes/ProgressBar/fecha) · 3 insights analytics
+- R2 ✅: dismissService.js · botón "Visto ✓" hoy/dashboard · tests
+- R3 ✅: snapshots 6 campos desglose · frontend values (fix INV=$0/snapshot $314k) · idempotencia fecha · deploy
+- R4 ✅: portfolioAlerts · positionValue · cdtCurrentValue · fix dashboard investmentsSummary
+- R5 ✅: logAccessDenied_ rate-limit · iss/exp · importMaxChars 50K · deploy
+- Roadmap-Maestro.md como fuente única de planificación
 
-PENDIENTES EN ORDEN (plan R0–R8):
+HALLAZGOS VIGENTES:
+- calcYield (Sprint D) DEBE usar saldo promedio/acumulación diaria, NO balance actual (sobreestima ~7×).
+- ensureHeaders_ NO es append-only idempotente: solo appendear al final.
+- getBootstrap_ limita a 24m de transacciones (confirmar impacto histórico).
 
-1. R2 — Dismiss de pagos ← SIGUIENTE (sin deploy):
-   - dismissService.js: dismiss(id, untilDate), isDismissed(id), clearStale() — localStorage.
-   - Semántica DISMISS hasta próxima ocurrencia (NO snooze de N días que reaparece).
-   - Recurrentes → dismissedUntil = nextRunDate; CC → fin del ciclo actual.
-   - Botón "Visto ✓" en filas upcomingPayments; filtro en VISTA (selector intacto — pureza).
-   - Tests: dismiss, expiry por ocurrencia, clear.
-   - Archivos: src/services/dismissService.js (nuevo) · src/views/today.js · dashboard.js · tests/
+PENDIENTES EN ORDEN (Roadmap-Maestro Sprints A–J):
 
-2. R3 — Snapshots enriquecidos (deploy): 6 campos append en NetWorthSnapshots
-   (investmentsValue, investmentsCost, accountsValue, otherAssets, ccDebt, liabilitiesDebt).
-   SIN liquidity (≡ accountsValue). saveNetWorthSnapshot_ captura desglose.
-   networth.js muestra detalle. Archivos: backend/Config.gs · backend/NetWorth.gs · src/views/networth.js
+1. Sprint A — Integridad cifras P0 ← SIGUIENTE (deploy):
+   - FX backend en Quotes.gs (COP/USD/EUR, caché 1h).
+   - soft-delete guard en Utils.gs (rechazar update/delete en isDeleted=true).
+   - withholdingRate en selectors.js (rentabilidad neta de retención).
 
-3. R4 — Alertas portafolio I7a (sin deploy): construir positionValue/totalPortfolioValue (NO existen) ·
-   portfolioAlerts (concentración>30%, CDT<30d, P&L<-20%, sin diversificación) · precios stale.
+2. Sprint B — Ventas parciales P0 (sin deploy):
+   - Modal "Vender" con campo cantidad parcial o total.
+   - Prorrateo proporcional de comisiones al costo base.
+   - cdtCurrentValue: no exceder valor nominal.
 
-4. R5 — Cuentas remuneradas I8 (deploy): REDISEÑAR calcYield (saldo promedio o acumulación diaria,
-   NO balance actual) · lastYieldDate · interestRate EA · idempotencia (accountId, periodo).
+3. Sprint C — Accesibilidad WCAG AA P1 (sin deploy, todo JS):
+   - Contraste · aria-label · aria-live · reduced-motion.
 
-5. R6 — Import/Export (sin deploy): fixtures antes de dupKey · export por período.
+4. Sprint D — Cuentas remuneradas P1 (deploy):
+   - REDISEÑAR calcYield: saldo promedio o acumulación diaria — NO balance actual.
+   - lastYieldDate · interestRate EA · idempotencia (accountId, periodo).
 
-6. R7 (OPCIONAL, deploy) — Narrativa Groq: SIN script lock · datos minimizados ·
-   anti prompt-injection · caché CacheService.
+5. Sprint E–J: Deudas/Metas · Import/Export · Backend perf · Charts · QA · Avanzado.
+   Ver Roadmap-Maestro.md para detalle.
 
-7. R8 (OPCIONAL) — App-lock local (PIN+auto-lock) · limpiar allowedEmails.
-
-BUGS / HALLAZGOS ABIERTOS:
-- 🟡 Verificación en vivo R1 pendiente con Playwright (fire.js + analytics.js).
+BUGS / VERIFICACIONES PENDIENTES:
+- 🟡 Verificación en vivo R1 (fire.js variantes + analytics insights) — Playwright.
 - 🟡 Flujo venta parcial/total en UI Inversiones — por confirmar en vivo.
 
 RIESGOS ABIERTOS:
-- calcYield sobreestima patrimonio hasta ~7× → rediseño obligatorio antes de R5.
-- analyzePortfolio (R7) tomaría LockService → head-of-line blocking del sync.
-- Sesión de facto perpetua sin app-lock; 2º email con acceso total a la BD.
-- getBootstrap_ limita a 24m de transacciones (confirmar impacto histórico).
+- calcYield sobreestima patrimonio hasta ~7× → Sprint D obligatorio.
+- Sesión de facto perpetua sin app-lock; 2º email con acceso total.
+- getBootstrap_ limita a 24m de transacciones.
 
 FORMA DE TRABAJO: fases pequeñas y verificables · explicar qué/por qué ·
-correr node --test tests/selectors.test.js tras cada cambio de selector (104/104 base) ·
+correr node --test tests/selectors.test.js tras cada cambio de selector (115/115 base) ·
 commits atómicos por feature · hook auto-bumpa SW + config.version al commitear src/.
-Para mensajes de commit multilínea: git commit -F _commitmsg.txt (archivo temporal).
+Para mensajes de commit multilínea en PowerShell: git commit -F _commitmsg.txt (archivo temporal).
 Empezar con: git log --oneline -5 · git status · node --test tests/selectors.test.js.
 ```

@@ -2,65 +2,93 @@
 
 ## Resumen ejecutivo
 
-Sesión de implementación pura: se completaron los sprints R0 (pre-flight) y R1 (FIRE + insights) del plan revisado Opus. El backend quedó 100% sincronizado con el código del repo tras el deploy manual de 5 archivos `.gs`, y el frontend ganó selectores más precisos, el simulador FIRE enriquecido y tres insights nuevos en Analítica.
+Sesión completa de implementación del plan Opus R0–R5 sobre FinanceOS. Se corrigieron bugs críticos de patrimonio (snapshot mostraba $314k en lugar de $12.9M real por precios stale en Apps Script), se completaron los 6 sprints del plan Opus, y se unificaron todos los roadmaps en `docs/Roadmap-Maestro.md`.
 
-## Tabla de cambios implementados
+## Hallazgos principales
 
-| Cambio | Impacto |
-|---|---|
-| Fix FE↔BE pasivos CC en `computeNetWorth_` (FIN-014) | Elimina doble conteo de tarjeta CC en patrimonio neto del backend |
-| `ccDebt` + `liabilitiesDebt` expuestos en `computeNetWorth_` | Habilita snapshots enriquecidos (R3) sin cambio adicional de backend |
-| Deploy de 5 `.gs` (Auth, Code, Utils, Quotes, Reports) | Backend en prod alineado con repo; activa FX, Alpaca, fix soft-delete, seguridad token |
-| TD-01 marcado ✅ + regla `ensureHeaders_` | Deuda técnica documentada; previene corrupción futura de esquema |
-| `liquidityCoverageMonths(s)` — promedio 3m | Insight de cobertura preciso; no sobreestima con mes parcial |
-| `savingsStreak(s)` — excluye mes en curso | Racha real sin falso negativo del mes incompleto |
-| `fire.js`: fecha estimada (≈ YYYY) | Convierte "X años" en fecha concreta, más accionable |
-| `fire.js`: ProgressBar patrimonio/objetivo | Visualización de avance hacia FIRE en tiempo real |
-| `fire.js`: variantes Lean/Fat/Barista/Standard | Permite simular distintos estilos de vida FIRE sin recalcular manualmente |
-| `fire.js`: EmptyState mejorado | Onboarding claro cuando no hay datos financieros registrados |
-| `analytics.js`: insight cobertura de liquidez | Fondo de emergencia visible con contexto semántico (positive/info/warning) |
-| `analytics.js`: insight racha de ahorro | Consistencia financiera mensual con gamificación leve |
-| `analytics.js`: insight concentración de gastos | Alerta cuando una categoría domina el gasto (≥40%) |
+| Hallazgo | Severidad | Estado |
+|---|---|---|
+| Snapshot INV=$0 ($314k patrimonio): Apps Script no accede Yahoo Finance → precios stale | Crítico | ✅ Fix R3 |
+| Snapshots duplicados: Sheets auto-convierte `Date` → ISO full → `===` siempre false | Crítico | ✅ Fix R3 |
+| `computeNetWorth_` incluía CC en `totalLiabilities` duplicando el pasivo | Alto | ✅ Fix R0 |
+| `logAccessDenied_` sin rate-limit → spam ilimitado en AuditLog | Medio | ✅ Fix R5 |
+| 4 roadmaps activos en paralelo con contradicciones | Organización | ✅ Unificado |
+
+## Cambios implementados
+
+| Sprint | Cambio | Impacto |
+|---|---|---|
+| R0 | `computeNetWorth_`: excluye CC de `totalLiabilities` | Paridad FE↔BE patrimonio |
+| R0 | Exponer `ccDebt`/`liabilitiesDebt` en Reports.gs | Desglose snapshot correcto |
+| R0 | Deploy 5 `.gs` (Auth, Code, Utils, Quotes, Reports) | TD-01/41/45/50/51 cerrados |
+| R1 | `liquidityCoverageMonths` + `savingsStreak` (selectores) | Insights financieros |
+| R1 | fire.js: fecha estimada, ProgressBar, variantes FIRE | UX simulador |
+| R1 | analytics.js: 3 insights nuevos | Analítica automática |
+| R2 | `dismissService.js` + botón "Visto ✓" hoy/dashboard | UX pagos próximos |
+| R3 | Snapshots 6 campos desglose + frontend values | Fix INV=$0 / $314k→$12.9M |
+| R3 | Idempotencia por fecha (Sheets Date auto-conversión) | Fix duplicados |
+| R4 | `portfolioAlerts` + `positionValue` + `cdtCurrentValue` | Alertas portafolio |
+| R4 | Fix `investmentsSummary` en dashboard | Paridad dashboard↔inversiones |
+| R5 | `logAccessDenied_` con rate-limit CacheService | Seguridad AuditLog |
+| R5 | `importMaxChars` configurable en Config.gs | Seguridad import |
+| Docs | `Roadmap-Maestro.md` (fuente única, ~400 líneas) | Organización |
 
 ## Archivos modificados
 
-| Archivo | Cambio |
-|---|---|
-| `backend/Reports.gs` | Fix FIN-014 + ccDebt/liabilitiesDebt (requirió deploy) |
-| `src/store/selectors.js` | +2 selectores: liquidityCoverageMonths, savingsStreak |
-| `src/views/fire.js` | Fecha estimada, ProgressBar, variantes, EmptyState, tooltips |
-| `src/views/analytics.js` | 3 insights nuevos en buildInsights |
-| `tests/selectors.test.js` | +7 tests (FIN-014 + liquidityCoverageMonths + savingsStreak) |
-| `docs/TechnicalDebt.md` | TD-01 ✅, TD-41/45/50/51/02 marcados desplegados |
+**Backend (deploy manual realizado por Alejo):**
+- `backend/Auth.gs` — logAccessDenied_ con rate-limit
+- `backend/Config.gs` — APP.importMaxChars, rate-limit params
+- `backend/Import.gs` — usa APP.importMaxChars
+- `backend/Code.gs` — docblock SEC-001
+- `backend/NetWorth.gs` — 6 campos snapshot, frontend values, idempotencia fecha
+- `backend/Reports.gs` — excluir CC de totalLiabilities, exponer ccDebt/liabilitiesDebt
 
-## Commits realizados
+**Frontend:**
+- `src/services/apiClient.js` — comentario SEC-001
+- `src/services/dataService.js` — saveSnapshot(frontendValues)
+- `src/services/dismissService.js` — nuevo
+- `src/store/selectors.js` — liquidityCoverageMonths, savingsStreak, positionValue, portfolioAlerts
+- `src/views/fire.js` — fecha estimada, ProgressBar, variantes, EmptyState
+- `src/views/analytics.js` — 3 insights nuevos
+- `src/views/today.js` — botón "Visto ✓"
+- `src/views/dashboard.js` — botón "Visto ✓", investmentsSummary fix
+- `src/views/networth.js` — doSaveSnapshot con payload, desglose snapshot
+
+**Tests:** `tests/selectors.test.js` — +11 tests → 115/115 (24 suites)
+
+**Docs:**
+- `docs/Roadmap-Maestro.md` — nuevo, fuente única
+- `docs/NEXT_SESSION.md` — actualizado
+- `docs/TechnicalDebt.md` — TD-01/41/45/50/51 marcados ✅
+- `PROJECT_HANDOFF.md` — CONTEXTO MÍNIMO, §2, §15, §18, §19 actualizados
+
+## Commits relevantes
 
 ```
-9657ea3 fix(backend): excluir CC de totalLiabilities en computeNetWorth_ + exponer ccDebt/liabilitiesDebt (R0)
-f3390c5 test(selectors): paridad FIN-014 totalLiabilities excluye credit_card (R0-B)
-68177c7 docs(debt): marcar TD-01 resuelto + regla ensureHeaders_ append-only (R0-C)
-83782be feat(selectors): liquidityCoverageMonths y savingsStreak con promedio 3m (R1)
-9762873 feat(fire): fecha estimada, ProgressBar, variantes FIRE y EmptyState (R1)
-ac570e8 feat(analytics): insights cobertura de liquidez, racha de ahorro y concentración (R1)
+06db320 docs: Roadmap-Maestro.md — fuente única de planificación unificada
+b0ca32d fix(dashboard): investmentsSummary para paridad exacta con sección Inversiones
+4a92a49 fix(selectors): investmentsValue y positionValue usan cdtCurrentValue para CDTs
+bdf03f6 feat(selectors): portfolioAlerts + positionValue — alertas determinísticas (R4)
+c9f63bf fix(dismiss): untilDate = max(nextRunDate, tomorrow) para pagos vencidos (R2)
+ad76b96 feat(networth): mostrar desglose en filas de snapshot cuando disponible (R3)
+ab655cb fix(networth): snapshot envia valores en vivo desde store+priceService (R3)
+a3a5fe3 fix(backend): idempotencia snapshot por fecha (Sheets Date auto-conversión) (R3)
+ac2f8f8 feat(networth): saveNetWorthSnapshot_ acepta valores del frontend (R3)
+81e07cf feat(networth): 6 campos de desglose en NetWorthSnapshots (R3)
+2164d52 feat(security): logAccessDenied_ con rate-limit en Auth.gs (R5)
+60a8637 feat(security): importMaxChars y params rate-limit en Config.gs (R5)
 ```
-
-**Tests:** 97/97 base → 104/104 (+7 tests, 22 suites)  
-**SW:** v0.2.77 → v0.2.80
 
 ## Trabajo pendiente y no verificado en vivo
 
-- `fire.js`: variantes Lean/Fat/Barista, ProgressBar, fecha estimada — no verificado con Playwright
-- `analytics.js`: los 3 insights nuevos — no verificado con datos reales en producción
-- Flujo venta parcial/total en UI Inversiones — pendiente desde sesiones anteriores
+- fire.js variantes / ProgressBar / fecha estimada — Playwright con auth real
+- analytics.js 3 insights nuevos — Playwright
+- Flujo venta parcial/total en UI Inversiones
 
 ## Próximas 5 tareas prioritarias
 
-1. **R2 — Dismiss de pagos** (`/implement R2`): `dismissService.js` con semántica dismiss-hasta-próxima-ocurrencia · botón "Visto ✓" en `today.js`/`dashboard.js` · filtro en vista (selector intacto) · tests.
-
-2. **Verificación en vivo R1** (`/verify` con Playwright): recorrer `#/fire` probando cada variante y ProgressBar; recorrer `#/analytics` verificando los 3 insights nuevos con datos reales.
-
-3. **R3 — Snapshots enriquecidos** (`/implement R3`): 6 campos en `NetWorthSnapshots` via `Config.gs` + `NetWorth.gs` · deploy manual · `networth.js` muestra desglose.
-
-4. **R4 — Alertas portafolio** (`/implement R4`): construir `positionValue`/`totalPortfolioValue` en selectors (NO existen) + `portfolioAlerts` con 4 condiciones determinísticas.
-
-5. **R5 — Cuentas remuneradas** (`/implement R5`): rediseñar `calcYield` con saldo promedio (NO balance actual) · idempotencia por `(accountId, periodo)` · deploy.
+1. **Sprint A (P0)**: FX backend (Quotes.gs COP/USD/EUR, caché 1h) + soft-delete guard + withholdingRate — **requiere deploy**
+2. **Sprint B (P0)**: Modal ventas parciales + prorrateo comisión + tope cdtCurrentValue
+3. **Verificación Playwright**: R1 fire.js y analytics.js con auth real
+4. **Sprint C (P1)**: Accesibilidad WCAG AA — contraste, aria, reduced-motion — sin deploy
+5. **Sprint D (P1)**: Rediseño `calcYield` (saldo promedio, NO balance actual — sobreestima ~7×) — **requiere deploy**
