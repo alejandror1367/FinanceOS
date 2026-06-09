@@ -17,6 +17,16 @@ var APP = {
   // Auth (TD-09 opción C) — Google OAuth. Añade aquí los correos autorizados.
   allowedEmails: ['patitosalmir@gmail.com', 'alejandrorr1367@gmail.com'],
   googleClientId: '444939967819-uv535tm5fg5glrj2fqc4l3llrqmhvqbb.apps.googleusercontent.com',
+
+  // SEC-005: límite de caracteres del extracto enviados a Groq (~12k tokens a 4 chars/token).
+  // Preserva la cabecera del CSV (el inicio del archivo). Ajustable sin redespliegue si se
+  // mueve a PropertiesService, pero al estar aquí es revisable en el repo.
+  importMaxChars: 50000,
+
+  // SEC-006: rate-limit de auditoría de accesos denegados.
+  // Máximo de registros en AuditLog por IP/email dentro de la ventana TTL (segundos).
+  accessDeniedRateLimitMax: 5,
+  accessDeniedRateLimitTtl: 60, // 60 segundos
 };
 
 /**

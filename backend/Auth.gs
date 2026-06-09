@@ -3,7 +3,38 @@
  * Reemplaza la autenticación por token compartido.
  * El frontend envía el id_token de Google en cada request;
  * aquí se verifica contra la API pública de Google y se cachea.
+ *
+ * SEC-006: los accesos denegados se registran en AuditLog con rate-limit
+ * (APP.accessDeniedRateLimitMax intentos por APP.accessDeniedRateLimitTtl segundos
+ * por clave email/razón) para evitar flood del AuditLog en ataques de fuerza bruta.
  */
+
+/**
+ * Registra un acceso denegado en AuditLog respetando el rate-limit configurado.
+ * Usa CacheService para contar intentos por clave dentro de la ventana TTL.
+ * @param {string} reason — razón del rechazo ('ISS_INVALID'|'EXP_INVALID'|'EMAIL_UNVERIFIED'|'EMAIL_UNAUTHORIZED'|'AUD_INVALID')
+ * @param {string|null} email — email intentado (si decodificable del payload)
+ */
+function logAccessDenied_(reason, email) {
+  try {
+    var max = APP.accessDeniedRateLimitMax || 5;
+    var ttl = APP.accessDeniedRateLimitTtl || 60;
+    var rateKey = 'auth_deny_' + reason + '_' + (email || 'unknown');
+    var cache = CacheService.getScriptCache();
+    var countStr = cache.get(rateKey);
+    var count = countStr ? parseInt(countStr, 10) : 0;
+    if (count >= max) {
+      // Límite superado: solo loguear en Logger, no escribir al AuditLog
+      Logger.log('[Auth] rate-limit activo para ' + rateKey + ' (' + count + ' intentos)');
+      return;
+    }
+    cache.put(rateKey, String(count + 1), ttl);
+    var summary = reason + (email ? ' email=' + email : '');
+    logAudit_('ACCESS_DENIED', 'Auth', null, summary);
+  } catch (e) {
+    Logger.log('[Auth] logAccessDenied_ error: ' + e.message);
+  }
+}
 
 /**
  * Verifica el id_token de Google y valida que el email pertenezca al propietario.
@@ -43,6 +74,7 @@ function verifyGoogleToken_(idToken) {
     if (VALID_ISSUERS.indexOf(data.iss) === -1) {
       Logger.log('[Auth] Issuer inválido: ' + data.iss);
       cache.put(cacheKey, '0', 60);
+      logAccessDenied_('ISS_INVALID', data.email || null);
       return false;
     }
 
@@ -51,12 +83,14 @@ function verifyGoogleToken_(idToken) {
     if (!data.exp || parseInt(data.exp, 10) <= nowSec) {
       Logger.log('[Auth] Token expirado: exp=' + data.exp);
       cache.put(cacheKey, '0', 60);
+      logAccessDenied_('EXP_INVALID', data.email || null);
       return false;
     }
 
     // 1. Email verificado por Google
     if (!data.email_verified || data.email_verified === 'false') {
       cache.put(cacheKey, '0', 60);
+      logAccessDenied_('EMAIL_UNVERIFIED', data.email || null);
       return false;
     }
 
@@ -64,8 +98,7 @@ function verifyGoogleToken_(idToken) {
     if (APP.allowedEmails.indexOf(data.email) === -1) {
       cache.put(cacheKey, '0', 300); // 5 min para cuentas no autorizadas
       Logger.log('[Auth] Intento de acceso no autorizado: ' + data.email);
-      // SEC-006/TD-09: bitácora de accesos denegados
-      try { logAudit_('AUTH_DENIED', 'Auth', null, data.email); } catch (_) {}
+      logAccessDenied_('EMAIL_UNAUTHORIZED', data.email);
       return false;
     }
 
@@ -74,6 +107,7 @@ function verifyGoogleToken_(idToken) {
     if (APP.googleClientId && String(data.aud || '').indexOf(APP.googleClientId) === -1) {
       Logger.log('[Auth] Audience no válida: ' + data.aud);
       cache.put(cacheKey, '0', 60);
+      logAccessDenied_('AUD_INVALID', data.email || null);
       return false;
     }
 

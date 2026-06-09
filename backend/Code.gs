@@ -2,15 +2,29 @@
  * Code.gs — punto de entrada del Web App y router por `action`.
  * FinanceOS · Fase 2.
  *
- * Lecturas  -> doGet(?action=...&...params)
- * Escrituras-> doPost(body JSON: { action, data })
+ * Lecturas  -> doGet(?action=...&...params)   [SOLO uso manual/diagnóstico]
+ * Escrituras-> doPost(body JSON: { action, data, idToken })
  *
  * Respuesta estándar (docs/Architecture.md §7.2):
  *   { success: true,  data: {...} }
  *   { success: false, error: "..." }
  *
- * NOTA CORS (Fase 3): el frontend hará POST con content-type text/plain
+ * NOTA CORS (Fase 3): el frontend hace POST con content-type text/plain
  * para evitar el preflight; el cuerpo se lee de e.postData.contents.
+ * El idToken viaja en el body JSON (no en la URL) — ver apiClient.js.
+ *
+ * SEC-001 / ACEPTACIÓN FORMAL:
+ * ─────────────────────────────────────────────────────────────────────────
+ * Apps Script no permite headers personalizados en doGet (limitación de
+ * plataforma). El frontend SIEMPRE usa POST (apiClient.js usa method:'POST'
+ * para toda acción, incluidas las de lectura). doGet solo se expone como
+ * fallback de diagnóstico manual (browser → URL directa). En ese contexto
+ * el idToken aparece en la URL (?idToken=...) — riesgo residual aceptado
+ * porque: (a) la conexión es HTTPS (URL cifrada en tránsito), (b) el token
+ * tiene TTL de 1 hora y se verifica exp en Auth.gs, (c) doGet no lo
+ * invoca ningún path automatizado del frontend. Si en el futuro se necesita
+ * un doGet autenticado en producción, migrar esa acción a doPost.
+ * ─────────────────────────────────────────────────────────────────────────
  */
 
 // Mapa de acciones -> función handler. Las funciones viven en los .gs por
