@@ -1150,6 +1150,35 @@ describe('savingsStreak', () => {
   });
 });
 
+// ── investmentsValue: CDT usa valor accrued (no face value) ──────────────────
+
+describe('investmentsValue CDT accrued', () => {
+  before(() => { priceService.update({}, {}); });
+  after(() => { priceService.update({}, {}); });
+
+  test('CDT con tasa EA > 0: investmentsValue > capital invertido', () => {
+    const purchaseDate = new Date(Date.now() - 365 * 86400000).toISOString().slice(0, 10); // hace 1 año
+    const s = mkState({
+      investments: [{
+        id: 'c1', assetType: 'cdt', quantity: 1_000_000, interestRate: 10,
+        purchaseDate, currentPrice: 1, currency: 'COP',
+      }],
+      baseCurrency: 'COP',
+    });
+    const val = selectors.investmentsValue(s);
+    // Después de 1 año al 10% EA: valor ≈ 1.100.000
+    assert.ok(val > 1_000_000, `CDT capitalizado debe superar capital: ${val}`);
+    assert.ok(Math.abs(val - 1_100_000) < 5_000, `esperaba ~1.100.000, recibí ${val}`);
+  });
+
+  test('CDT sin interestRate: investmentsValue = capital (face value)', () => {
+    const s = mkState({
+      investments: [{ id: 'c2', assetType: 'cdt', quantity: 500_000, currency: 'COP', currentPrice: 1 }],
+    });
+    assert.equal(selectors.investmentsValue(s), 500_000);
+  });
+});
+
 // ── portfolioAlerts (R4 — I7a) ────────────────────────────────────────────────
 
 describe('portfolioAlerts', () => {

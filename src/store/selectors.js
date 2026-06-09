@@ -65,9 +65,12 @@ export const selectors = {
     const sum = s.investments.filter((i) => !i.isDeleted && !i.soldDate).reduce((acc, i) => {
       const lp    = priceService.priceFor(i.symbol);
       const price = lp?.price || i.currentPrice || 0;
-      // Fondos FIC almacenan el valor total de la posición en currentValue (no qty×price).
+      // CDTs: usar el valor capitalizado (interés compuesto) en lugar de qty×price (face value).
+      // Fondos FIC: almacenan el valor total en currentValue (no qty×price).
       // Fallback a costBasis cuando no hay precio vivo ni currentValue (p. ej. FIC sin Yahoo).
-      const native = i.currentValue || ((i.quantity || 0) * price) || i.costBasis || 0;
+      const native = i.assetType === 'cdt'
+        ? selectors.cdtCurrentValue(i)
+        : i.currentValue || ((i.quantity || 0) * price) || i.costBasis || 0;
       if (!native) return acc;
       const cur = i.currency || base;
       if (cur === base) return acc + native;
@@ -834,7 +837,9 @@ export const selectors = {
     const fx     = priceService.fxRates;
     const lp     = priceService.priceFor(inv.symbol);
     const price  = lp?.price || inv.currentPrice || 0;
-    const native = inv.currentValue || ((Number(inv.quantity) || 0) * price) || inv.costBasis || 0;
+    const native = inv.assetType === 'cdt'
+      ? selectors.cdtCurrentValue(inv)
+      : inv.currentValue || ((Number(inv.quantity) || 0) * price) || inv.costBasis || 0;
     if (!native) return null;
     const cur = inv.currency || base;
     if (cur === base) return native;
