@@ -5,7 +5,7 @@ import { el } from '../utils/dom.js';
 import { icon } from '../utils/icons.js';
 import { store } from '../store/store.js';
 import { dataService } from '../services/dataService.js';
-import { importService, UnknownFormatError } from '../services/importService.js';
+import { importService, UnknownFormatError, dupKey } from '../services/importService.js';
 import { formatMoney, formatDate } from '../utils/format.js';
 import { Button, Badge } from '../components/ui.js';
 import { toast } from '../services/toast.js';
@@ -24,10 +24,6 @@ const SOURCES = [
 
 const TYPE_LABEL = { income: 'Ingreso', expense: 'Gasto', transfer: 'Transferencia' };
 const TYPE_COLOR  = { income: 'positive', expense: 'negative', transfer: 'neutral' };
-
-function dupKey(item) {
-  return `${item.date}|${Math.abs(item.amount || 0).toFixed(0)}`;
-}
 
 export function renderImport() {
   const root = el('div');
@@ -96,7 +92,7 @@ export function renderImport() {
         state.unknownHeaders = err.headers;
       } else {
         state.phase = 'idle';
-        toast(err.message || 'Error al procesar el archivo.', { type: 'error' });
+        toast(err.message || 'Error al procesar el archivo.', { type: 'negative' });
       }
       render();
     });
@@ -148,7 +144,7 @@ export function renderImport() {
     help.appendChild(el('p', {}, [
       'Para Bancolombia, NuBank, Nequi y Global66 descarga el CSV desde la app o portal web. ' +
       'Para XTB usa la exportación de historial de operaciones. ' +
-      'Los PDFs y formatos desconocidos se interpretan automáticamente con IA (requiere GEMINI_API_KEY en Apps Script).',
+      'Los PDFs y formatos desconocidos se convierten con un prompt guiado de IA (se muestran las instrucciones paso a paso).',
     ]));
     wrap.appendChild(help);
 
@@ -191,6 +187,11 @@ Extrae TODAS las transacciones sin omitir ninguna.`;
       `Archivo: ${state.file?.name || ''} · Los headers detectados no coinciden con ningún banco configurado. `,
       'Usa el siguiente prompt en claude.ai para convertir el extracto al formato FinanceOS CSV e importarlo sin problemas.',
     ]));
+    if (state.unknownHeaders?.length) {
+      infoCard.appendChild(el('p', { style: 'margin:0 0 12px;color:var(--text-tertiary);font-size:var(--fs-micro);word-break:break-word' }, [
+        `Columnas detectadas: ${state.unknownHeaders.join(' · ')}`,
+      ]));
+    }
 
     const steps = el('ol', { style: 'margin:0 0 16px;padding-left:20px;font-size:var(--fs-caption);color:var(--text-secondary);line-height:2' });
     ['Copia el prompt de abajo.', 'Abre claude.ai y sube el PDF o pega el contenido del extracto.', 'Claude te devuelve un CSV listo.', 'Guárdalo como financeos-import.csv y arrástralo aquí.'].forEach((s) => {
@@ -231,7 +232,6 @@ Extrae TODAS las transacciones sin omitir ninguna.`;
     const STEPS = {
       reading: { label: 'Leyendo archivo…',          sub: 'Procesando en tu dispositivo' },
       pdf:     { label: 'Extrayendo texto del PDF…',  sub: 'Analizando con PDF.js' },
-      ai:      { label: 'Interpretando con IA…',      sub: 'Enviando a Gemini' },
     };
     const step = STEPS[state.progress] || STEPS.reading;
 
@@ -263,8 +263,9 @@ Extrae TODAS las transacciones sin omitir ninguna.`;
     bankBadge.textContent = bank.name || 'Desconocido';
 
     const periodText = period ? ` · ${formatDate(period.from)} – ${formatDate(period.to)}` : '';
+    const skippedText = result.skipped > 0 ? ` · ${result.skipped} fila${result.skipped > 1 ? 's' : ''} sin monto omitida${result.skipped > 1 ? 's' : ''}` : '';
     const meta = el('span', { class: 'import-preview-meta' }, [
-      `${items.length} transacciones · ${currency}${periodText}`,
+      `${items.length} transacciones · ${currency}${periodText}${skippedText}`,
     ]);
     const previewHeader = el('div', { class: 'import-preview-header' });
     previewHeader.appendChild(bankBadge);
@@ -278,6 +279,17 @@ Extrae TODAS las transacciones sin omitir ninguna.`;
       warn.appendChild(el('span', { html: icon('bell') }));
       warn.appendChild(el('span', {}, [
         `${n} posible${n > 1 ? 's' : ''} duplicado${n > 1 ? 's' : ''} detectado${n > 1 ? 's' : ''} y deseleccionado${n > 1 ? 's' : ''} automáticamente.`,
+      ]));
+      wrap.appendChild(warn);
+    }
+
+    // IMP-2: las transferencias del extracto no traen cuenta destino (toAccountId),
+    // que el backend exige; se importan como gasto/ingreso según el signo original.
+    if (items.some((it) => it.type === 'transfer')) {
+      const warn = el('div', { class: 'import-warning import-warning--info' });
+      warn.appendChild(el('span', { html: icon('transactions') }));
+      warn.appendChild(el('span', {}, [
+        'Las transferencias se importarán como gasto (salida) o ingreso (entrada) — el extracto no indica la cuenta destino.',
       ]));
       wrap.appendChild(warn);
     }
@@ -406,41 +418,60 @@ Extrae TODAS las transacciones sin omitir ninguna.`;
     footer.appendChild(importBtn);
     wrap.appendChild(footer);
 
+    // IMP-1/IMP-3: el backend exige categoryId para income/expense, con kind que
+    // coincida con el tipo. Resolver SIEMPRE una categoría del kind correcto:
+    // nombre del CSV (si matchea kind) → default del selector (solo gastos) →
+    // fallback "Otros …" o primera categoría del kind. Sin esto, todo ingreso
+    // importado moría en dead-letter al sincronizar.
+    function resolveCategoryId(item, type) {
+      const kind = type === 'income' ? 'income' : 'expense';
+      const cats = (store.get().categories || []).filter((c) => c.kind === kind && !c.isDeleted);
+      if (item.categoryName) {
+        const m = cats.find((c) => c.name.toLowerCase().trim() === item.categoryName.toLowerCase().trim());
+        if (m) return { id: m.id, auto: false };
+      }
+      if (kind === 'expense' && state.defaultCategoryId) return { id: state.defaultCategoryId, auto: false };
+      const fallback = cats.find((c) => /^otros/i.test(c.name)) || cats[0];
+      return { id: fallback?.id, auto: !!fallback };
+    }
+
     async function doImport() {
       state.phase = 'importing';
       state.imported = 0;
       render();
 
       const toImport = items.filter((_, i) => state.selected.has(i));
-      let ok = 0;
+      let ok = 0, failed = 0, autoCat = 0;
       for (const item of toImport) {
         try {
-          // Resuelve categoría: por nombre (FinanceOS CSV) > default seleccionado
-          let categoryId = item.type === 'expense' ? (state.defaultCategoryId || undefined) : undefined;
-          if (item.categoryName) {
-            const cats = store.get().categories || [];
-            const match = cats.find((c) =>
-              c.name.toLowerCase().trim() === item.categoryName.toLowerCase().trim()
-            );
-            if (match) categoryId = match.id;
+          // IMP-2: transfer sin toAccountId es invalidable por el backend →
+          // convertir según el signo original (negativo = salida → gasto).
+          let type = item.type || 'expense';
+          if (type === 'transfer') {
+            type = (item.signedAmount ?? -1) < 0 ? 'expense' : 'income';
           }
+          const cat = resolveCategoryId(item, type);
+          if (cat.auto) autoCat++;
           await dataService.create('transactions', {
             date: item.date,
             description: item.description || item.symbol || '',
             amount: Number(item.amount) || 0,
-            type: item.type || 'expense',
+            type,
             accountId: state.accountId || undefined,
-            categoryId,
+            categoryId: cat.id,
             currency: item.currency || result.currency || 'COP',
             importedFrom: bank.name || 'Import',
           });
           ok++;
           state.imported = ok;
         } catch (err) {
+          failed++;
           toast(`Error importando fila: ${err.message}`, { type: 'warning' });
         }
       }
       state.imported = ok;
+      state.failed = failed;
+      state.autoCat = autoCat;
       state.phase = 'done';
       render();
     }
@@ -467,7 +498,20 @@ Extrae TODAS las transacciones sin omitir ninguna.`;
     wrap.appendChild(el('h2', { class: 'import-done__title' }, [
       `${state.imported} transacción${state.imported !== 1 ? 'es' : ''} importada${state.imported !== 1 ? 's' : ''}`,
     ]));
-    wrap.appendChild(el('p', { class: 'import-done__sub' }, ['Los saldos se actualizarán al sincronizar.']));
+    wrap.appendChild(el('p', { class: 'import-done__sub' }, ['Saldos actualizados; la sincronización corre en segundo plano.']));
+
+    // F.3: resumen de calidad de la importación — fallos y categorías auto-asignadas.
+    if (state.failed > 0) {
+      wrap.appendChild(el('p', { class: 't-caption text-negative' }, [
+        `⚠ ${state.failed} fila${state.failed > 1 ? 's' : ''} fallaron y no se importaron.`,
+      ]));
+    }
+    if (state.autoCat > 0) {
+      const pct = state.imported ? Math.round((state.autoCat / state.imported) * 100) : 0;
+      wrap.appendChild(el('p', { class: pct > 30 ? 't-caption text-negative' : 't-caption text-tertiary' }, [
+        `${state.autoCat} de ${state.imported} (${pct}%) con categoría asignada automáticamente${pct > 30 ? ' — revísalas en Transacciones' : ''}.`,
+      ]));
+    }
 
     const actions = el('div', { class: 'import-done__actions' });
     actions.appendChild(Button('Importar otro', {

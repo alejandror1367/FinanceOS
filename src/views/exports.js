@@ -135,6 +135,44 @@ export function renderExports() {
       COLLECTIONS.map((c) => tile('exports', c.label, () => exportCSV(c.key, c.label)))),
   });
 
+  // F.6: export de transacciones por período (desde/hasta) con contador en vivo.
+  const fromEl = el('input', { class: 'input', type: 'date' });
+  const toEl   = el('input', { class: 'input', type: 'date' });
+  const countEl = el('p', { class: 't-caption text-secondary', style: { margin: 'var(--space-2) 0 0' } });
+  function inRange() {
+    const from = fromEl.value, to = toEl.value;
+    return (store.get().transactions || []).filter((t) => {
+      const d = String(t.date || '').slice(0, 10);
+      return (!from || d >= from) && (!to || d <= to);
+    });
+  }
+  function updateCount() {
+    const n = inRange().length;
+    countEl.textContent = `${n} transacción${n !== 1 ? 'es' : ''} en el rango seleccionado`;
+  }
+  fromEl.addEventListener('change', updateCount);
+  toEl.addEventListener('change', updateCount);
+  updateCount();
+
+  const periodCard = Card({
+    title: 'Transacciones por período',
+    body: el('div', {}, [
+      el('p', { class: 't-caption text-secondary', text: 'Exporta solo las transacciones de un rango de fechas (deja un campo vacío para no acotar por ese lado).' }),
+      el('div', { class: 'field-row mt-4' }, [
+        el('div', { class: 'field' }, [el('label', { class: 'field__label', text: 'Desde' }), fromEl]),
+        el('div', { class: 'field' }, [el('label', { class: 'field__label', text: 'Hasta' }), toEl]),
+      ]),
+      countEl,
+      el('div', { class: 'mt-4' }, [Button('Exportar rango (CSV)', { variant: 'primary', iconName: 'exports', onClick: () => {
+        const rows = inRange();
+        if (!rows.length) { toast('Sin transacciones en el rango', { type: 'warning' }); return; }
+        const suffix = `${fromEl.value || 'inicio'}_${toEl.value || 'hoy'}`;
+        downloadFile(`financeos-transactions-${suffix}.csv`, toCSV(rows), 'text/csv');
+        toast(`${rows.length} transacciones exportadas (CSV)`);
+      } })]),
+    ]),
+  });
+
   const backupCard = Card({
     title: 'Respaldo completo',
     body: el('div', {}, [
@@ -159,6 +197,6 @@ export function renderExports() {
       el('h2', { class: 't-h1', text: 'Exportaciones' }),
       el('p', { class: 'page-header__sub', text: 'CSV, respaldos y resúmenes en PDF.' }),
     ]),
-    el('div', { class: 'stack' }, [csvCard, el('div', { class: 'grid grid--2' }, [backupCard, reportCard])]),
+    el('div', { class: 'stack' }, [csvCard, periodCard, el('div', { class: 'grid grid--2' }, [backupCard, reportCard])]),
   ]);
 }
