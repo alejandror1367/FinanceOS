@@ -23,7 +23,7 @@ Centraliza: patrimonio neto, presupuestos, flujo de caja, inversiones, metas, de
 | PWA instalada en celular | ✅ Funcionando |
 | Google OAuth | ✅ Activo (`patitosalmir@gmail.com` + `alejandrorr1367@gmail.com`) |
 | Backend Apps Script | ✅ Desplegado y verificado en producción |
-| Tests financieros | ✅ **136/136** pasando (30 suites) |
+| Tests financieros | ✅ **155/155** selectors (35 suites) + **13/13** recurring |
 | Módulo Import | ✅ Completamente funcional (BUG-P0-1/P1-1/P1-2/P1-3 corregidos) |
 | Backend patrimonio neto | ✅ CC incluida como pasivo en `computeNetWorth_` (BUG-P0-2, desplegado) |
 | Snapshots de patrimonio | ✅ Crear · eliminar (soft delete) · masivo · outliers — **eliminar arreglado** (sesión 06-03) |
@@ -52,7 +52,12 @@ Centraliza: patrimonio neto, presupuestos, flujo de caja, inversiones, metas, de
 | Dashboard fix | ✅ `investmentsSummary` paridad exacta con sección Inversiones |
 | Selectors CDT | ✅ `investmentsValue` y `positionValue` usan `cdtCurrentValue` para CDTs |
 | Roadmap-Maestro.md | ✅ Fuente única de planificación — consolida 4 roadmaps + TechnicalDebt |
-| Pendiente | Sprint A (FX multi-moneda P0) · Sprint B (ventas parciales) · Sprint C (accesibilidad) |
+| Sprints A–E, G, H (2026-06-10) | ✅ FX desplegado · ventas parciales · WCAG AA · cuentas remuneradas (desplegado) · deudas/metas · backend perf (cursor desplegado) · charts/bottom-nav |
+| Sprint I (2026-06-10) | 🟡 I.2–I.5 ✅ · I.1 (QA Playwright en vivo) pendiente de login |
+| TD-39 recurrentes automáticos | ✅ `recurringService` materializa vencidos al cargar — `d37a938` |
+| App-lock J.4 + J.4b | ✅ PIN (PBKDF2) + huella/Face ID (WebAuthn) — `53083b3` · `57ac36c` |
+| Cuentas remuneradas ampliadas | ✅ `YIELD_TYPES`: savings · bank · digital_wallet · investment — `461c156` |
+| Pendiente | Sprint F (Import/Export) · J.3 (Groq) · J.5 (2º email) · I.1 (QA login) · TD-54 |
 
 ---
 
@@ -502,21 +507,21 @@ HEAD pasó de `75eacca` a **`b870d6c`**. SW `v0.2.10 → v0.2.13`. Tests `33 →
 ```
 Rama:    main
 Remote:  https://github.com/alejandror1367/FinanceOS.git
-HEAD:    b855818  docs: Sprint A completado — TD-02 cerrado, TD-54 nuevo, handoff y roadmap al dia
-SW:      v0.2.91  (sincronizado con config.version)
+HEAD:    461c156  feat(accounts): cuentas remuneradas también en billeteras digitales e inversión
+SW:      v0.2.105 (sincronizado con config.version)
 Status:  limpio · pusheado
 ```
 
 ### Commits recientes
 ```
-b855818 docs: Sprint A completado — TD-02 cerrado, TD-54 nuevo, handoff y roadmap al dia
-d77e1f5 test(fx): A.7 — suites FX para patrimonio, liquidez, deudas y XIRR
-34383ff fix(fx): A.3 eliminar suma 1:1 silenciosa en todas las rutas multi-moneda
-f7e1330 feat(backend): A.2 FX rates — getFxRates + conversión en computeNetWorth_
-f6ceb11 docs: handoff 2026-06-09 — R0-R5 completados, snapshot fixes, Roadmap-Maestro
-06db320 docs: Roadmap-Maestro.md — fuente única de planificación unificada
-ab655cb fix(snapshot): idempotencia por fecha — normalizar date antes de comparar
-a3a5fe3 fix(snapshot): usar precios en vivo del frontend al guardar snapshot de patrimonio
+461c156 feat(accounts): cuentas remuneradas también en billeteras digitales e inversión
+0398281 docs: J.4b desbloqueo biométrico WebAuthn — roadmap y handoff al día
+57ac36c feat(security): desbloqueo biométrico con WebAuthn (J.4b · huella/Face ID)
+ad4b37c docs: J.4 app-lock + TD-39 recurrentes — roadmap y handoff al día
+53083b3 feat(security): app-lock local opcional con PIN (J.4 / N5)
+6864d6d docs: TD-39 marcado resuelto (ejecución automática de recurrentes)
+d37a938 feat(recurring): ejecución automática de recurrentes vencidos (TD-39)
+b422c86 docs: Sprint I (QA + v1.0) — I.4 housekeeping TD + I.5 docs al estado v1.0
 ```
 
 ---
@@ -685,7 +690,7 @@ commit: e6b3c77 · rama: main · SW: v0.2.43 · config.version: 0.2.43 · tests:
 
 > Leer esto antes que cualquier otra sección. Máximo 100 líneas. Fuente de verdad para retomar de inmediato.
 
-**HEAD:** `57ac36c` · **SW/config.version:** `v0.2.104` · **Tests:** 155/155 selectors + 13 recurring · **Rama:** main · **Sync:** local adelantado (push pendiente)
+**HEAD:** `461c156` · **SW/config.version:** `v0.2.105` · **Tests:** 155/155 selectors (35 suites) + 13/13 recurring · **Rama:** main · **Sync:** up to date
 
 > **Sesión 2026-06-10:** **Sprint A ✅ desplegado** (FX) · **banner FX** Dashboard (`1223eee`) · **Sprint B ✅** (`14bb7dc`) · **Sprint C ✅ WCAG AA** (`c8be635`, `66f7b5a`) · **Sprint D ✅ desplegado** cuentas remuneradas (`4ec3836`, `9cc4fd6`, `28ebde0`, `1f05f94`) · **Sprint E ✅** Deudas y Metas (`ee27d5b`) · **Sprint G ✅ desplegado** backend perf — G.1–G.6 ya hechos, G.7 cursor opt-in en `getTransactions` (`bdde64a`, deploy ✅) · **Sprint H ✅** charts/a11y — H.1/H.2 ya hechos, H.3 bottom-nav (`82b913a`, ajuste `5ba0151`) · **Sprint I 🟡** QA+v1.0 — I.2–I.5 ✅; I.1 pendiente login · **TD-39 ✅** recurrentes automáticos (`d37a938`) · **J.4 ✅** app-lock PIN (`53083b3`).
 > **Sesión 2026-06-09 (2ª parte):** **Sprint A ✅ completado y desplegado** — FX backend (`getFxRates`, caché 1h) · `computeNetWorth_` convierte/excluye divisas · FE sin suma 1:1 en ninguna ruta (`convertToBase`/`sumInBase`/`fxGaps`) · 21 tests FX nuevos. Deploy Sprint A: **`Quotes.gs` · `Code.gs` · `Reports.gs` ✅ desplegados 2026-06-10**.
@@ -695,7 +700,7 @@ commit: e6b3c77 · rama: main · SW: v0.2.43 · config.version: 0.2.43 · tests:
 > Tras `git pull`: **aprobar** ambos y **reiniciar Claude Code** (las tools MCP se fijan al arrancar).
 
 ### Estado actual real
-- **App en producción:** https://alejandror1367.github.io/FinanceOS/ (PWA, OAuth activo) · local v0.2.100
+- **App en producción:** https://alejandror1367.github.io/FinanceOS/ (PWA, OAuth activo) · v0.2.105
 - **Backend Apps Script:** ✅ **Al día** — Sprint A, D y G (G.7: `Transactions.gs` cursor opt-in) desplegados 2026-06-10.
 - **Tests:** **155/155** en `tests/selectors.test.js` — 35 suites
 - **Roadmap activo:** `docs/Roadmap-Maestro.md` ← FUENTE ÚNICA. Reemplaza todos los roadmaps anteriores.
@@ -761,14 +766,69 @@ Flujo: `Views → Services → Store → Views` (never direct to net/IndexedDB f
 ```
 CLAUDE.md                          — Invariantes absolutos (leer SIEMPRE primero)
 docs/Roadmap-Maestro.md            — ★ FUENTE ÚNICA de planificación (reemplaza todos los roadmaps)
-src/store/selectors.js             — Lógica financiera pura (115 tests)
-src/views/networth.js              — doSaveSnapshot envía payload con precios en vivo
-src/services/dataService.js        — saveSnapshot(frontendValues) pasa valores al backend
-backend/NetWorth.gs                — saveNetWorthSnapshot_ usa valores FE si vienen; idempotencia fecha corregida
-backend/Auth.gs                    — logAccessDenied_ con rate-limit; iss/exp validados
-backend/Config.gs                  — APP.importMaxChars · APP.accessDeniedRateLimitMax/Ttl
-tests/selectors.test.js            — 136/136 tests (30 suites)
+src/store/selectors.js             — Lógica financiera pura (calcYield, goalSavingsSplit, FX, 155 tests)
+src/core/applock.js                — App-lock: PIN PBKDF2 + huella WebAuthn (J.4/J.4b)
+src/services/recurringService.js   — Ejecución automática de recurrentes (TD-39, 13 tests)
+src/views/accounts.js              — YIELD_TYPES · modal "Registrar rendimiento" (Sprint D)
+backend/Transactions.gs            — cursor opt-in getTransactions (G.7, desplegado)
+backend/Config.gs                  — Schema Accounts.lastYieldDate · APP.importMaxChars
+tests/selectors.test.js            — 155/155 (35 suites) · tests/recurring.test.js — 13/13
 ```
+
+---
+
+## Cambios realizados en sesión 2026-06-10
+
+> Sesión maratónica: deploy Sprint A confirmado + Sprints B·C·D·E·G·H·I(parcial) + TD-39 + J.4/J.4b.
+
+**Auditorías realizadas:** ninguna formal; verificación sistemática "código vs roadmap" antes de cada sprint (8 de las tareas listadas ya estaban hechas de sesiones previas y se marcaron sin re-implementar).
+
+**Bugs corregidos:**
+- Penny drift en acumulados por sección de Inversiones — `roundMoney` por sección, total = suma de secciones redondeadas (B.4, `14bb7dc`)
+- Keyframes con duración literal ignoraban `prefers-reduced-motion` — regla universal WAI (C.4, `c8be635`)
+- Label "Tema" truncado a "T…" en Ajustes (C.10, `66f7b5a`)
+- Comentario de `bottomNavOrder` desincronizado del array (H.3)
+
+**Bugs pendientes:** TD-54 (tx divisa extranjera 1:1 en cashflow/presupuestos — necesita tasa histórica) · verificaciones en vivo con login (ver §18).
+
+**Mejoras financieras:**
+- `calcYield` sobre **saldo promedio ponderado por tiempo** (no balance actual que sobreestima ~7×) + `accountAvgBalance` + `txEffectOnAccount` (D.1, `4ec3836`)
+- Modal "Registrar rendimiento": preview → tx income única (fuente única, sin doble conteo) + idempotencia por `lastYieldDate` (D.4/D.5, `1f05f94`)
+- `goalSavingsSplit`: reparto del ahorro entre metas activas extraído a selector testeable (E.3, `ee27d5b`)
+- Cuentas remuneradas ampliadas a `digital_wallet` e `investment` con set `YIELD_TYPES` + caveat patrimonio para investment (`461c156`)
+- Ejecución automática de recurrentes vencidos: `recurringService` con ids deterministas `rec_{id}_{fecha}` idempotentes FE/BE, catch-up con tope (TD-39, `d37a938`)
+
+**Mejoras backend:**
+- Schema `Accounts.lastYieldDate` append-only (D.2, `9cc4fd6`) — desplegado + `setupDatabase()`
+- Cursor opt-in en `getTransactions` → `{items,nextCursor}`, retrocompatible (G.7, `bdde64a`) — desplegado
+
+**Mejoras UX/UI:**
+- Banner FX global en Dashboard cuando `fxGaps().count > 0` con link a Inversiones (`1223eee`)
+- Badge "X% EA" + campo tasa en form + preset RappiCuenta (D.3/D.6, `28ebde0`)
+- Bottom-nav final: Dashboard·Hoy·Transacciones·Inversiones·Ajustes (preferencia dueño, `5ba0151`)
+
+**Seguridad:**
+- App-lock PIN: PBKDF2-SHA256 150k iter + salt, overlay de arranque, auto-lock 5 min/background, 5 intentos → signOut (J.4, `53083b3`)
+- Desbloqueo biométrico WebAuthn (huella/Face ID), opt-in con PIN de respaldo (J.4b, `57ac36c`)
+
+**Decisiones arquitectónicas:**
+- Rendimiento de cuenta remunerada = 1 tx `income` (fuente única; no inflar balance aparte)
+- Recurrentes: materialización client-side al cargar (no trigger backend) — offline-first, idempotente
+- WebAuthn local como *gate de presencia biométrica* (sin verificación server-side de firma — modelo sin servidor)
+- Cursor de paginación **aditivo**: sin `paginate` el contrato array se mantiene intacto
+
+**Riesgos mitigados:** FX 1:1 en backend (deploy A) · `calcYield` sobreestimando (D) · sesión perpetua sin barrera local (J.4/J.4b).
+**Riesgos pendientes:** TD-54 · 2º email en `allowedEmails` (J.5) · verificaciones en vivo.
+
+**Archivos modificados (código):** `selectors.js` · `dashboard.js` · `investments.js` · `accounts.js` · `goals.js` · `settings.js` · `routes.js` · `app.js` · `applock.js` (nuevo) · `recurringService.js` (nuevo) · `tokens.css` · `components.css` · `backend/Config.gs` · `backend/Transactions.gs` · `tests/selectors.test.js` (+19) · `tests/recurring.test.js` (nuevo, 13)
+
+**Commits relevantes:** `0c944b6` `1223eee` `14bb7dc` `c8be635` `66f7b5a` `4ec3836` `9cc4fd6` `28ebde0` `1f05f94` `ee27d5b` `bdde64a` `82b913a` `5ba0151` `b422c86` `d37a938` `53083b3` `57ac36c` `461c156` (+docs)
+
+## Estado posterior a la sesión 2026-06-10
+
+**Completado ✅:** Sprints A (desplegado) · B · C · D (desplegado) · E · G (desplegado) · H · I.2–I.5 · TD-39 · J.1/J.2/J.4/J.4b · banner fxGaps · YIELD_TYPES ampliado. Checklist v1.0: 15/16.
+**Parcialmente 🟡:** Sprint I (falta I.1 QA en vivo) · Sprint J (faltan J.3 Groq y J.5 2º email) · TD-02 (resta TD-54).
+**Pendiente 🔴:** Sprint F Import/Export (sin empezar; F.1 fixtures requiere decisión: sintéticos vs extractos reales anonimizados) · verificaciones en vivo con login (snapshots, FX, modal rendimiento, app-lock, recurrentes, bottom-nav 375px).
 
 ---
 
@@ -1494,72 +1554,75 @@ Tras git pull deben APROBARSE y REINICIARSE Claude Code: las tools MCP se fijan 
 PROYECTO: FinanceOS — PWA financiera personal y privada de Alejo.
 Repo: https://github.com/alejandror1367/FinanceOS (rama main).
 Prod: https://alejandror1367.github.io/FinanceOS/
-HEAD: b855818 · SW v0.2.91 · Tests 136/136 (30 suites)
+HEAD: 461c156 · SW v0.2.105 · Tests 155/155 selectors + 13/13 recurring
 
 INVARIANTES (ver CLAUDE.md): JS ES Modules sin build step · sin frameworks/bundlers ·
 cero deps npm en runtime · frontend abstraído tras src/services/ · Apps Script +
 Google Sheets (13 hojas) + GitHub Pages + OAuth de Google · offline-first.
 
 ROADMAP ACTIVO: docs/Roadmap-Maestro.md ← fuente única.
-R0–R5 ✅ · Sprint A ✅ (2026-06-09, commits f7e1330 · 34383ff · d77e1f5).
+Sprints A–E, G, H ✅ · I 🟡 (falta I.1) · F 🔴 sin empezar · J 🟡 (faltan J.3/J.5).
+Backend AL DÍA: Sprint A (FX) + D (lastYieldDate) + G (cursor) desplegados.
 
-HECHO EN SPRINT A (2026-06-09, 2ª parte):
-- A.2 ✅: getFxRates_ en Quotes.gs (USD/EUR→COP, caché 1h) · ruta getFxRates en Code.gs ·
-  computeNetWorth_ convierte o excluye divisas (fxExcludedCount) — NUNCA 1:1.
-- A.3 ✅: convertToBase/sumInBase en selectors (liquidez, activos, pasivos, CC, deudas,
-  XIRR, investmentsSummary) · selector fxGaps() · aviso de exclusión en vista Inversiones ·
-  fix degradación offline (refresh no borra últimas tasas conocidas).
-- A.7 ✅: 21 tests FX nuevos → 136/136.
-- A.1/A.4/A.5/A.6 ya estaban hechas (TD-45/41/42/46) — verificado, no re-implementadas.
-- TD-02 cerrado · TD-54 nuevo documentado.
-
-⚠ ACCIÓN MANUAL DEL DUEÑO — DEPLOY PENDIENTE:
-Quotes.gs · Code.gs · Reports.gs (Apps Script). Hasta el deploy, el backend en
-producción sigue sumando divisas 1:1 en computeNetWorth_ (el frontend ya no).
+HECHO EN SESIÓN 2026-06-10 (todo pusheado y desplegado):
+- Sprint A deploy confirmado · banner fxGaps en Dashboard (1223eee).
+- B.4 roundMoney por sección en Inversiones (14bb7dc).
+- C.4 reduced-motion universal + C.10 label Tema (c8be635, 66f7b5a).
+- Sprint D completo: calcYield sobre SALDO PROMEDIO ponderado por tiempo (4ec3836),
+  lastYieldDate en schema (9cc4fd6, setupDatabase ejecutado), badge %EA + preset
+  RappiCuenta (28ebde0), modal Registrar rendimiento — 1 tx income, idempotente
+  por lastYieldDate (1f05f94). YIELD_TYPES ampliado a digital_wallet+investment (461c156).
+- E.3 goalSavingsSplit selector + tests sameMonth (ee27d5b).
+- G.7 cursor opt-in en getTransactions {items,nextCursor}, retrocompatible (bdde64a).
+- H.3 bottom-nav final: dashboard·today·transactions·investments·settings (5ba0151).
+- I.2-I.5: housekeeping TD (TD-11 ✅) + checklist v1.0 15/16 (b422c86).
+- TD-39: recurringService — materializa recurrentes vencidos al cargar, ids
+  deterministas rec_{id}_{fecha} idempotentes, catch-up con tope (d37a938, 13 tests).
+- J.4 app-lock PIN (PBKDF2 150k iter, overlay, auto-lock 5min, 5 intentos→signOut)
+  + J.4b huella/Face ID via WebAuthn con PIN de respaldo (53083b3, 57ac36c).
 
 PENDIENTES EN ORDEN:
 
-1. Deploy manual Sprint A (dueño) → verificar con Playwright:
-   - getFxRates responde {success:true, data:{USD,EUR}}.
-   - Vista Inversiones muestra aviso "N posiciones excluidas por falta de tasa" si aplica.
-   - Snapshots nuevo formato (valores priceService) — verificación pendiente de antes.
+1. Sprint F — Import/Export (P2, sin deploy, SIN EMPEZAR):
+   ⚠ F.1 fixtures de regresión OBLIGATORIO antes de F.2 (dedup).
+   Decisión abierta del dueño: fixtures sintéticos vs extractos reales anonimizados.
+   F.2 dupKey date|amount|descNorm · F.3 resumen calidad post-import (>30% sin
+   categoría = alerta) · F.4 validar montos cero/negativos antes del preview ·
+   F.5 perfil RappiCuenta en bankProfiles.js · F.6 export por período desde/hasta.
 
-2. Quick win: Dashboard consume fxGaps() para aviso global de valor incompleto
-   (Inversiones ya tiene aviso propio).
+2. I.1 — QA Playwright en vivo (requiere LOGIN del dueño en el browser Playwright):
+   15 rutas · 375px · dark/light · 0 errores JS/red. Único criterio v1.0 sin marcar.
 
-3. Sprint B residual (P1): B.4 roundMoney(v, currency) en acumulados de vista Inversiones
-   (B.1–B.3 ya hechos vía TD-43/44). Ver Roadmap-Maestro.
+3. Verificaciones en vivo acumuladas (mismo login): snapshots formato nuevo · avisos
+   FX en Inversiones · modal Registrar rendimiento · app-lock PIN/huella · recurrentes
+   automáticos · bottom-nav 375px.
 
-4. Sprint C — Accesibilidad WCAG AA (P1, sin deploy): contraste --text-tertiary ·
-   aria-label técnico en forms · esc() en charts · prefers-reduced-motion.
+4. J.5 — 2º email en allowedEmails (alejandrorr1367@gmail.com): confirmar identidad
+   con el dueño, documentar o eliminar (backend/Config.gs, requiere deploy si cambia).
 
-5. Sprint D — Cuentas remuneradas (P1, deploy): REDISEÑAR calcYield con saldo
-   promedio/acumulación diaria — NO balance actual (sobreestima ~7×).
+5. J.3 — Narrativa Groq de portafolio (OPCIONAL): sin script lock · % relativos sin
+   montos COP · anti prompt-injection · caché CacheService · disclaimer.
 
-6. Sprint E–J: ver Roadmap-Maestro.md.
+6. TD-54 — tx en divisa extranjera 1:1 en cashflow/presupuestos: requiere diseño de
+   tasa histórica a fecha de tx (mitigado en UI con banner fxGaps).
 
-HALLAZGOS VIGENTES:
-- TD-54: tx en divisa extranjera suman 1:1 en monthlyIncome/Expense, cashflow y
-  presupuestos — convertir exige tasa histórica a fecha de tx (diseño propio pendiente).
-- ensureHeaders_ NO es append-only idempotente: solo appendear al final.
-- getBootstrap_ limita a 24m de transacciones (confirmar impacto histórico).
+CAVEATS:
+- Patrón de esta sesión: MUCHAS tareas del roadmap ya estaban hechas de sesiones
+  previas — SIEMPRE verificar código real antes de re-implementar.
+- node --test tests/ (modo directorio) falla por quirk de Node 24/Windows; correr
+  archivos explícitos: node --test tests/selectors.test.js tests/recurring.test.js.
+- accountYield es type-agnostic; YIELD_TYPES vive en accounts.js (no en selectors).
+- El saldo de cuentas investment NO cuenta en patrimonio (solo posiciones) — el modal
+  de rendimiento lo avisa.
+- Cursor G.7: solo se activa con paginate=true|cursor; sin params, contrato array intacto.
 
-POLÍTICA FX (decisión Sprint A): convertir con tasa o excluir + flaggear
-(fxGaps/fxExcludedCount) — nunca sumar 1:1. Tasas via getFxRates (caché 1h backend,
-localStorage en FE, degradación offline a última conocida).
-
-RIESGOS ABIERTOS:
-- Backend producción suma 1:1 hasta deploy Sprint A.
-- calcYield sobreestima patrimonio hasta ~7× → Sprint D obligatorio.
-- Sesión de facto perpetua sin app-lock; 2º email con acceso total.
-
-FORMA DE TRABAJO: fases pequeñas y verificables · explicar qué/por qué ·
-correr node --test tests/selectors.test.js tras cada cambio de selector (136/136 base) ·
-commits atómicos por feature · hook auto-bumpa SW + config.version al commitear src/.
-Para mensajes de commit multilínea en PowerShell: git commit -F _commitmsg.txt (archivo temporal).
+FORMA DE TRABAJO: fases pequeñas y verificables · explicar qué/por qué · correr
+node --test tests/selectors.test.js tras cada cambio de selector (155/155 base) ·
+commits atómicos · hook auto-bumpa SW + config.version al commitear src/.
+Para mensajes multilínea en PowerShell: git commit -F archivo temporal.
 Empezar con: git log --oneline -5 · git status · node --test tests/selectors.test.js.
 ```
 
 ---
 
-*Actualizado el 2026-06-09 por Claude (handoff Sprint A): FX backend + FE sin 1:1 + 21 tests. HEAD b855818 · v0.2.91 · 136/136 tests.*
+*Actualizado el 2026-06-10 por Claude (handoff): Sprints B-I + TD-39 + app-lock PIN/huella. HEAD 461c156 · v0.2.105 · 155/155 + 13/13 tests.*
