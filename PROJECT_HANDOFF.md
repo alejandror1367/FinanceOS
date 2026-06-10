@@ -685,9 +685,9 @@ commit: e6b3c77 · rama: main · SW: v0.2.43 · config.version: 0.2.43 · tests:
 
 > Leer esto antes que cualquier otra sección. Máximo 100 líneas. Fuente de verdad para retomar de inmediato.
 
-**HEAD:** `66f7b5a` · **SW/config.version:** `v0.2.95` · **Tests:** 136/136 (30 suites) · **Rama:** main · **Sync:** local adelantado (push pendiente)
+**HEAD:** `1f05f94` · **SW/config.version:** `v0.2.98` · **Tests:** 148/148 (33 suites) · **Rama:** main · **Sync:** local adelantado (push pendiente)
 
-> **Sesión 2026-06-10:** **Sprint A desplegado ✅** (FX en producción) · **Quick win banner FX** en Dashboard (`fxGaps`, `1223eee`) · **Sprint B ✅** — B.4 `roundMoney` acumulados por sección (`14bb7dc`) · **Sprint C ✅ (WCAG AA)** — C.4 reduced-motion universal (`c8be635`) + C.10 label "Tema" sin truncar (`66f7b5a`); C.1–C.3/C.5–C.9 ya estaban hechos.
+> **Sesión 2026-06-10:** **Sprint A desplegado ✅** (FX en producción) · **banner FX** Dashboard (`1223eee`) · **Sprint B ✅** (`14bb7dc`) · **Sprint C ✅ WCAG AA** (`c8be635`, `66f7b5a`) · **Sprint D ✅ cuentas remuneradas** — `calcYield` sobre saldo promedio (`4ec3836`), schema `lastYieldDate` (`9cc4fd6`), tasa/badge/preset (`28ebde0`), modal registrar rendimiento (`1f05f94`). ⚠ **D.7 deploy pendiente: `Config.gs` + `setupDatabase()`**.
 > **Sesión 2026-06-09 (2ª parte):** **Sprint A ✅ completado y desplegado** — FX backend (`getFxRates`, caché 1h) · `computeNetWorth_` convierte/excluye divisas · FE sin suma 1:1 en ninguna ruta (`convertToBase`/`sumInBase`/`fxGaps`) · 21 tests FX nuevos. Deploy Sprint A: **`Quotes.gs` · `Code.gs` · `Reports.gs` ✅ desplegados 2026-06-10**.
 > **Sesión 2026-06-09 (1ª parte):** R2 ✅ · R3 ✅ · R4 ✅ · R5-Seguridad ✅ · fixes snapshot (valores en vivo, idempotencia fecha) · `Roadmap-Maestro.md` creado como fuente única de planificación.
 
@@ -695,14 +695,17 @@ commit: e6b3c77 · rama: main · SW: v0.2.43 · config.version: 0.2.43 · tests:
 > Tras `git pull`: **aprobar** ambos y **reiniciar Claude Code** (las tools MCP se fijan al arrancar).
 
 ### Estado actual real
-- **App en producción:** https://alejandror1367.github.io/FinanceOS/ (PWA, OAuth activo) · v0.2.91
-- **Backend Apps Script:** ✅ **Al día** — Sprint A desplegado 2026-06-10 (`Quotes.gs` · `Code.gs` · `Reports.gs`). FX completo.
-- **Tests:** **136/136** en `tests/selectors.test.js` — 30 suites
+- **App en producción:** https://alejandror1367.github.io/FinanceOS/ (PWA, OAuth activo) · local v0.2.98
+- **Backend Apps Script:** 🟡 Sprint A desplegado ✅; **Sprint D (D.7) pendiente: subir `Config.gs` + `setupDatabase()`** para la columna `lastYieldDate`.
+- **Tests:** **148/148** en `tests/selectors.test.js` — 33 suites
 - **Roadmap activo:** `docs/Roadmap-Maestro.md` ← FUENTE ÚNICA. Reemplaza todos los roadmaps anteriores.
-- **Plan Opus (R0–R8):** R0–R5 ✅ · **Sprint A ✅** · **Sprint B ✅** · **Sprint C ✅ (WCAG AA)** — **Sprint D (cuentas remuneradas, `calcYield`, requiere deploy) es el siguiente**.
+- **Plan Opus (R0–R8):** R0–R5 ✅ · **Sprint A/B/C/D ✅** — **Sprint E (Deudas y Metas, sin deploy) es el siguiente**.
 
-### Deploy — ✅ Sprint A desplegado (2026-06-10)
-`Quotes.gs` (getFxRates_, caché 1h) · `Code.gs` (ruta getFxRates) · `Reports.gs` (computeNetWorth_ convierte/excluye divisas) — **en producción**.
+### Deploy — ✅ Sprint A (2026-06-10) · 🔴 Sprint D pendiente
+`Quotes.gs` · `Code.gs` · `Reports.gs` (FX) — **en producción**.
+🔴 **D.7 PENDIENTE:** subir `backend/Config.gs` y ejecutar `setupDatabase()` para crear la columna
+`lastYieldDate` en la hoja Accounts. Hasta entonces, registrar rendimiento funciona en local
+(IndexedDB) y la tx de ingreso sí sincroniza, pero el backend ignora `lastYieldDate`.
 
 ### Arquitectura actual
 ```
@@ -731,8 +734,8 @@ Flujo: `Views → Services → Store → Views` (never direct to net/IndexedDB f
 1. ~~Sprint A — Integridad cifras P0~~ ✅ 2026-06-09 · ~~Deploy Sprint A~~ ✅ 2026-06-10
 2. ~~Sprint B — Inversiones ventas parciales~~ ✅ 2026-06-10 (B.1–B.5: TD-43/44 + B.4 `14bb7dc` + suite)
 3. ~~Sprint C — Accesibilidad WCAG AA~~ ✅ 2026-06-10 (C.4 `c8be635` + C.10 `66f7b5a`; resto previo)
-4. **Sprint D — Cuentas remuneradas P1** ← SIGUIENTE: rediseñar `calcYield` (saldo promedio, NO balance actual) · ⚠ deploy `.gs` (D.2)
-5. **Sprint E — Deudas y Metas P2**: avgRate multi-moneda · amortize % · goalForecast repartido
+4. ~~Sprint D — Cuentas remuneradas~~ ✅ 2026-06-10 (`calcYield` saldo promedio + modal rendimiento) · 🔴 **falta deploy D.7: `Config.gs` + `setupDatabase()`**
+5. **Sprint E — Deudas y Metas P1/P2** ← SIGUIENTE (sin deploy): `avgRate` multi-moneda · `amortize` con % · goalForecast repartido
 6. **Sprint F — Import/Export P2**: fixtures primero · dupKey · export por período
 7. **Sprint G — Backend perf P3**: O(1) en adjustBalance_ · paginación · purgeDeleted_ en bloque
 8. **Sprint H — Charts responsive P3** · **Sprint I — QA + v1.0** · **Sprint J — Avanzado + opcionales**

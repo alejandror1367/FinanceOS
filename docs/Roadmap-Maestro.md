@@ -179,30 +179,34 @@ Ver §5.
 
 ---
 
-### Sprint D — Cuentas remuneradas (P1)
+### Sprint D — Cuentas remuneradas (P1) ✅ COMPLETADO (2026-06-10) · ⚠ requiere deploy (D.7)
 
 **Objetivo:** soportar Global66/RappiCuenta con cálculo de rendimiento financieramente correcto.
 **Prioridad:** P1 (fórmula incorrecta infla patrimonio).
 **Riesgo:** P1 sin rediseño de fórmula (ver hallazgo C3 en Auditoria-Estrategica-Revisada-Opus.md).
 **Deploy:** sí.
 **Dependencias:** ninguna, pero la implementación NO arranca hasta tener fórmula correcta (D.1 es bloqueante).
-**Esfuerzo estimado:** ~1.5–2 días.
+**Estado:** D.1–D.6, D.8 ✅ (`4ec3836`, `9cc4fd6`, `28ebde0`, `1f05f94`). **D.7 deploy pendiente del dueño.**
 
 | # | Tarea | ID origen | Archivo | Esf | Deploy |
 |---|---|---|---|---|---|
-| D.1 | **Rediseñar `calcYield`**: usar saldo promedio del período o acumulación diaria del interés (NO balance actual que sobreestima hasta ~7×) | C3 / Opus | `src/views/accounts.js` o `src/store/selectors.js` | M | — |
-| D.2 | Schema `Accounts`: agregar `lastYieldDate` al final (append-only) y anotar `interestRate` como EA en comentarios | Opus Sprint 5 | `backend/Config.gs` | S | ✅ |
-| D.3 | Badge "X% EA" visible si `interestRate > 0` en la fila de la cuenta | Opus Sprint 5 | `src/views/accounts.js` | S | — |
-| D.4 | Modal "Registrar rendimiento": preview → confirmación → tx ingreso + update `lastYieldDate`; idempotencia por clave `(accountId, periodo)`; disable durante operación | Opus Sprint 5 | `src/views/accounts.js` | M | — |
-| D.5 | Decidir fuente única del rendimiento (evitar doble conteo: la cuenta `savings` ya cuenta como liquidez; no crear además una tx `income` en paralelo) | R10 / Opus | `src/views/accounts.js` | S | — |
-| D.6 | Preset `RappiCuenta` (type: savings, interestRate: 9 EA, currency: COP) | Opus Sprint 5 | `src/views/accounts.js` | S | — |
-| D.7 | Deploy `Config.gs` + `Accounts.gs`; ejecutar `setupDatabase()` | backend | — | M | ✅ |
-| D.8 | Tests `calcYield`: saldo constante, saldo con depósito intra-período, saldo con retiro | Opus Sprint 5 | `tests/selectors.test.js` | M | — |
+| D.1 ✅ | **`calcYield`** sobre saldo PROMEDIO ponderado por tiempo (NO balance actual); `accountAvgBalance` reconstruye saldo histórico; fórmula EA compuesta | C3 / Opus | `src/store/selectors.js` | M | — |
+| D.2 ✅ | Schema `Accounts`: `lastYieldDate` al final (append-only) + `interestRate` anotado como EA | Opus Sprint 5 | `backend/Config.gs` | S | ⚠ pendiente |
+| D.3 ✅ | Badge "X% EA" si savings/bank con `interestRate > 0` + campo tasa en el form | Opus Sprint 5 | `src/views/accounts.js` | S | — |
+| D.4 ✅ | Modal "Registrar rendimiento": preview → confirmar → tx ingreso + `lastYieldDate`; idempotencia por período (lastYieldDate) | Opus Sprint 5 | `src/views/accounts.js` | M | — |
+| D.5 ✅ | Fuente única: rendimiento = 1 tx `income` que sube el saldo una vez (sin doble conteo con liquidez) | R10 / Opus | `src/views/accounts.js` | S | — |
+| D.6 ✅ | Preset `RappiCuenta` (savings, 9 EA, COP); presets pueden fijar `interestRate` | Opus Sprint 5 | `src/views/accounts.js` | S | — |
+| D.7 🔴 | **Deploy `Config.gs`; ejecutar `setupDatabase()`** para añadir columna `lastYieldDate` | backend | — | M | ⚠ DUEÑO |
+| D.8 ✅ | Tests `calcYield`/`accountAvgBalance`/`txEffectOnAccount`: saldo constante, depósito/retiro intra-período, tasa 0, período inválido (+12) | Opus Sprint 5 | `tests/selectors.test.js` | M | — |
 
 **Criterio de aceptación:**
-- `calcYield` con $1M depositado el día 1 y retirado $900K el día 15 da resultado proporcional al saldo promedio (~$950K × tasa).
-- Registrar rendimiento dos veces con el mismo `(accountId, periodo)` no duplica la transacción.
-- `node --test` verde.
+- ✅ `calcYield` usa saldo promedio ponderado por tiempo: con −900K el día 16 sobre saldo final 100K, el interés se calcula sobre ~550K (promedio), no sobre 100K (actual) ni sobre el pico. (La cifra "~950K" del criterio original era ilustrativa; el método correcto es el saldo promedio del período.)
+- ✅ Idempotencia: tras registrar, `lastYieldDate = hoy` → un segundo registro el mismo período estima $0 y se bloquea.
+- ✅ `node --test` verde (148/148).
+
+> **⚠ DEPLOY PENDIENTE (D.7):** subir `backend/Config.gs` y ejecutar `setupDatabase()` en Apps Script
+> para crear la columna `lastYieldDate`. Hasta entonces, registrar rendimiento funciona en local
+> (IndexedDB) pero al sincronizar el backend ignora `lastYieldDate` (no rompe nada; la tx de ingreso sí sincroniza).
 
 ---
 
