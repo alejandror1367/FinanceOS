@@ -44,7 +44,7 @@ var SCHEMAS = {
     { key: 'institution', type: 's' },
     { key: 'isArchived', type: 'b' },
     { key: 'creditLimit', type: 'n' },
-    { key: 'interestRate', type: 'n' },
+    { key: 'interestRate', type: 'n' },  // tasa EFECTIVA ANUAL % (EA): CC = interés del crédito; savings/bank = rendimiento de la cuenta remunerada
     { key: 'cutoffDay', type: 'n' },
     { key: 'paymentDay', type: 'n' },
     { key: 'minPayment', type: 'n' },
@@ -52,6 +52,10 @@ var SCHEMAS = {
     { key: 'isDeleted', type: 'b' },
     { key: 'createdAt', type: 'ts' },
     { key: 'updatedAt', type: 'ts' },
+    // Sprint D (D.2): APPEND-ONLY — nuevas columnas SOLO al final (ensureHeaders_ no
+    // reordena). Última fecha hasta la que se registró rendimiento de una cuenta
+    // remunerada; el frontend acumula el interés desde aquí (idempotencia por período).
+    { key: 'lastYieldDate', type: 'd' },
   ],
   Transactions: [
     { key: 'id', type: 's' },
