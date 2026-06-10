@@ -58,6 +58,66 @@ export async function verifyPin(pin) {
   return constantEq(hash, cfg.hash);
 }
 
+// ── Desbloqueo biométrico (J.4b · WebAuthn) ───────────────────────────────────
+// Opt-in y SIEMPRE con PIN de respaldo: la huella/Face ID es un atajo, no el único
+// factor (no todo dispositivo tiene biometría y hace falta recuperación). La clave
+// privada vive en el chip seguro del dispositivo; aquí solo se guarda el credentialId.
+// Modelo local sin servidor: no verificamos la firma server-side — usamos WebAuthn
+// como gate de PRESENCIA biométrica (si get() resuelve, el SO ya validó la huella).
+const LS_BIO_KEY = 'financeos.applock.bio';
+const rpId = () => location.hostname;
+
+export async function isBiometricSupported() {
+  try {
+    return !!(window.PublicKeyCredential
+      && await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable());
+  } catch { return false; }
+}
+
+export function isBiometricEnabled() {
+  try { return !!localStorage.getItem(LS_BIO_KEY); } catch { return false; }
+}
+
+function loadBio() {
+  try { return JSON.parse(localStorage.getItem(LS_BIO_KEY) || 'null'); } catch { return null; }
+}
+
+export async function registerBiometric() {
+  const challenge = crypto.getRandomValues(new Uint8Array(32));
+  const userId = crypto.getRandomValues(new Uint8Array(16));
+  const cred = await navigator.credentials.create({
+    publicKey: {
+      challenge,
+      rp: { name: 'FinanceOS', id: rpId() },
+      user: { id: userId, name: 'owner', displayName: 'FinanceOS' },
+      pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+      authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'preferred' },
+      timeout: 60000,
+    },
+  });
+  if (!cred) throw new Error('No se pudo registrar la huella.');
+  localStorage.setItem(LS_BIO_KEY, JSON.stringify({ id: b64(cred.rawId) }));
+}
+
+export function clearBiometric() { localStorage.removeItem(LS_BIO_KEY); }
+
+// Lanza el prompt nativo de huella/Face ID. true si el SO valida; false/throw si no.
+export async function unlockBiometric() {
+  const cfg = loadBio();
+  if (!cfg) return false;
+  const challenge = crypto.getRandomValues(new Uint8Array(32));
+  const assertion = await navigator.credentials.get({
+    publicKey: {
+      challenge,
+      allowCredentials: [{ type: 'public-key', id: unb64(cfg.id) }],
+      userVerification: 'required',
+      timeout: 60000,
+      rpId: rpId(),
+    },
+  });
+  return !!assertion;
+}
+
 // ── Pantalla de bloqueo ───────────────────────────────────────────────────────
 let overlayEl = null;
 let locked = false;
@@ -95,6 +155,18 @@ export function showLock() {
 
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter') attempt(); });
 
+    async function tryBio() {
+      errEl.textContent = '';
+      try {
+        if (await unlockBiometric()) { cleanup(); resolve(); }
+        else errEl.textContent = 'Biometría no reconocida. Usa tu PIN.';
+      } catch { errEl.textContent = 'Biometría cancelada. Usa tu PIN.'; }
+    }
+
+    const bioBtn = isBiometricEnabled()
+      ? el('button', { class: 'btn btn--ghost', type: 'button', text: 'Usar huella / Face ID', on: { click: tryBio } })
+      : null;
+
     overlayEl = el('div', { class: 'applock', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Aplicación bloqueada' }, [
       el('div', { class: 'applock__card' }, [
         el('div', { class: 'applock__icon', html: icon('settings') }),
@@ -103,15 +175,18 @@ export function showLock() {
         input,
         errEl,
         el('button', { class: 'btn btn--primary', type: 'button', text: 'Desbloquear', on: { click: attempt } }),
+        bioBtn,
         el('button', {
           class: 'btn btn--ghost btn--sm', type: 'button', text: '¿Olvidaste tu PIN? Iniciar sesión de nuevo',
           on: { click: () => auth.signOut() },
         }),
-      ]),
+      ].filter(Boolean)),
     ]);
     document.body.append(overlayEl);
     document.body.classList.add('modal-open');
-    setTimeout(() => input.focus(), 50);
+    // Intento biométrico automático (best-effort; si el navegador exige gesto, queda el botón).
+    if (bioBtn) setTimeout(() => tryBio().catch(() => {}), 100);
+    else setTimeout(() => input.focus(), 50);
 
     function cleanup() {
       overlayEl?.remove();

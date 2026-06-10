@@ -154,26 +154,44 @@ export function renderSettings() {
   }
   function renderSecurity() {
     const enabled = applock.isEnabled();
-    securitySlot.replaceChildren(Card({
-      title: 'Seguridad',
-      body: el('div', { class: 'row-list' }, [
-        settingRow(
-          'Bloqueo con PIN',
-          enabled ? 'Activado · se pide al abrir y tras 5 min de inactividad' : 'Protege la app en este dispositivo con un PIN local',
-          enabled
-            ? el('div', { class: 'row-flex', style: { gap: '8px' } }, [
-                Button('Cambiar', { variant: 'ghost', iconName: 'edit', onClick: pinModal }),
-                Button('Desactivar', { variant: 'ghost', iconName: 'trash', onClick: () => confirmDialog({
-                  title: 'Desactivar bloqueo con PIN',
-                  message: 'La app dejará de pedir PIN en este dispositivo. ¿Continuar?',
-                  confirmLabel: 'Desactivar',
-                  onConfirm: () => { applock.clearPin(); toast('Bloqueo desactivado'); renderSecurity(); },
-                }) }),
-              ])
-            : Button('Activar', { variant: 'primary', iconName: 'settings', onClick: pinModal }),
-        ),
-      ]),
-    }));
+    const rows = [
+      settingRow(
+        'Bloqueo con PIN',
+        enabled ? 'Activado · se pide al abrir y tras 5 min de inactividad' : 'Protege la app en este dispositivo con un PIN local',
+        enabled
+          ? el('div', { class: 'row-flex', style: { gap: '8px' } }, [
+              Button('Cambiar', { variant: 'ghost', iconName: 'edit', onClick: pinModal }),
+              Button('Desactivar', { variant: 'ghost', iconName: 'trash', onClick: () => confirmDialog({
+                title: 'Desactivar bloqueo con PIN',
+                message: 'La app dejará de pedir PIN en este dispositivo. Esto también quita el desbloqueo por huella. ¿Continuar?',
+                confirmLabel: 'Desactivar',
+                onConfirm: () => { applock.clearBiometric(); applock.clearPin(); toast('Bloqueo desactivado'); renderSecurity(); },
+              }) }),
+            ])
+          : Button('Activar', { variant: 'primary', iconName: 'settings', onClick: pinModal }),
+      ),
+    ];
+    securitySlot.replaceChildren(Card({ title: 'Seguridad', body: el('div', { class: 'row-list' }, rows) }));
+
+    // J.4b: fila de huella/Face ID — solo si hay PIN activo (respaldo) y el dispositivo
+    // lo soporta. La comprobación es async; se añade la fila cuando se resuelve.
+    if (enabled) {
+      applock.isBiometricSupported().then((supported) => {
+        if (!supported) return;
+        const bioOn = applock.isBiometricEnabled();
+        rows.push(settingRow(
+          'Desbloqueo con huella / Face ID',
+          bioOn ? 'Activado · úsalo en la pantalla de bloqueo (el PIN sigue como respaldo)' : 'Desbloquea con tu huella o rostro; el PIN queda como respaldo',
+          bioOn
+            ? Button('Desactivar', { variant: 'ghost', iconName: 'trash', onClick: () => { applock.clearBiometric(); toast('Huella desactivada'); renderSecurity(); } })
+            : Button('Activar', { variant: 'ghost', iconName: 'settings', onClick: async () => {
+                try { await applock.registerBiometric(); toast('Huella activada'); renderSecurity(); }
+                catch { toast('No se pudo activar la huella', { type: 'negative' }); }
+              } }),
+        ));
+        securitySlot.replaceChildren(Card({ title: 'Seguridad', body: el('div', { class: 'row-list' }, rows) }));
+      }).catch(() => {});
+    }
   }
   renderSecurity();
 
