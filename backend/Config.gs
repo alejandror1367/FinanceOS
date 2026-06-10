@@ -15,6 +15,9 @@ var APP = {
   propKeySpreadsheetId: 'FINANCEOS_DB_ID',
 
   // Auth (TD-09 opción C) — Google OAuth. Añade aquí los correos autorizados.
+  // J.5: ambos correos pertenecen a Alejo (propietario único). El segundo es su
+  // cuenta personal alternativa, con acceso total intencional a la misma BD.
+  // Confirmado por el dueño el 2026-06-10. La app sigue siendo monousuario.
   allowedEmails: ['patitosalmir@gmail.com', 'alejandrorr1367@gmail.com'],
   googleClientId: '444939967819-uv535tm5fg5glrj2fqc4l3llrqmhvqbb.apps.googleusercontent.com',
 

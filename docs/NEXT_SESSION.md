@@ -56,8 +56,8 @@ PENDIENTES EN ORDEN:
    FX en Inversiones · modal Registrar rendimiento · app-lock PIN/huella · recurrentes
    automáticos · bottom-nav 375px.
 
-4. J.5 — 2º email en allowedEmails (alejandrorr1367@gmail.com): confirmar identidad
-   con el dueño, documentar o eliminar (backend/Config.gs, requiere deploy si cambia).
+4. J.5 ✅ RESUELTO 2026-06-10 — alejandrorr1367@gmail.com confirmado como cuenta
+   alternativa del dueño; documentado en backend/Config.gs (solo comentario, sin deploy).
 
 5. J.3 — Narrativa Groq de portafolio (OPCIONAL): sin script lock · % relativos sin
    montos COP · anti prompt-injection · caché CacheService · disclaimer.

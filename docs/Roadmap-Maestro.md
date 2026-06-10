@@ -340,7 +340,7 @@ Ver §5.
 | J.3 | Narrativa Groq de portafolio (OPCIONAL): `analyzePortfolio` **sin script lock** · datos minimizados (% relativos, no montos COP) · anti prompt-injection en `Investments.name` · caché CacheService · disclaimer "no es asesoría" · botón opt-in | Opus Sprint 7 | `backend/Analysis.gs` (nuevo), `src/views/investments.js` | M | ✅ |
 | J.4 ✅ | App-lock local opcional: PIN 4–6 dígitos (hash PBKDF2-SHA256 en localStorage) + auto-lock por inactividad/segundo plano + fallback re-login OAuth | N5 / Opus Sprint 8 | `src/core/applock.js` | M | — `53083b3` |
 | J.4b ✅ | Desbloqueo biométrico (huella/Face ID) vía **WebAuthn** — opt-in, con PIN de respaldo; clave en chip seguro, solo `credentialId` en localStorage | N5 / I1 (reconsiderado) | `src/core/applock.js`, `src/views/settings.js` | M | — `57ac36c` |
-| J.5 | Confirmar identidad del segundo email en `allowedEmails`; documentar o eliminar | N6 / Opus Sprint 8 | `backend/Config.gs:18` | S | parcial |
+| J.5 ✅ | Confirmar identidad del segundo email en `allowedEmails`; documentar o eliminar — **confirmado por el dueño (2026-06-10): es su cuenta alternativa; documentado en `Config.gs`, no se elimina** | N6 / Opus Sprint 8 | `backend/Config.gs:18` | S | — (solo comentario) |
 
 **Criterio de aceptación para J.3 (si se hace):**
 - `analyzePortfolio` nunca toma el `LockService.getScriptLock()` (no hace writes a Sheets).
