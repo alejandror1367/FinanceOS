@@ -47,7 +47,7 @@ export const navSections = [
 ];
 
 // Rutas destacadas para la barra inferior móvil (FE-012): priorizadas por frecuencia de uso.
-// Dashboard · Hoy · Transacciones · Presupuestos · Inversiones.
-// El resto (Ajustes, Patrimonio, Metas, Deudas, etc.) sigue accesible desde el menú
+// Dashboard · Hoy · Transacciones · Inversiones · Ajustes.
+// El resto (Presupuestos, Patrimonio, Metas, Deudas, etc.) sigue accesible desde el menú
 // lateral (botón ☰ del topbar) y la paleta de comandos (⌘K).
-export const bottomNavOrder = ['dashboard', 'today', 'transactions', 'budgets', 'investments'];
+export const bottomNavOrder = ['dashboard', 'today', 'transactions', 'investments', 'settings'];
