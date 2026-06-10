@@ -685,7 +685,7 @@ commit: e6b3c77 · rama: main · SW: v0.2.43 · config.version: 0.2.43 · tests:
 
 > Leer esto antes que cualquier otra sección. Máximo 100 líneas. Fuente de verdad para retomar de inmediato.
 
-**HEAD:** `53083b3` · **SW/config.version:** `v0.2.103` · **Tests:** 155/155 selectors + 13 recurring · **Rama:** main · **Sync:** local adelantado (push pendiente)
+**HEAD:** `57ac36c` · **SW/config.version:** `v0.2.104` · **Tests:** 155/155 selectors + 13 recurring · **Rama:** main · **Sync:** local adelantado (push pendiente)
 
 > **Sesión 2026-06-10:** **Sprint A ✅ desplegado** (FX) · **banner FX** Dashboard (`1223eee`) · **Sprint B ✅** (`14bb7dc`) · **Sprint C ✅ WCAG AA** (`c8be635`, `66f7b5a`) · **Sprint D ✅ desplegado** cuentas remuneradas (`4ec3836`, `9cc4fd6`, `28ebde0`, `1f05f94`) · **Sprint E ✅** Deudas y Metas (`ee27d5b`) · **Sprint G ✅ desplegado** backend perf — G.1–G.6 ya hechos, G.7 cursor opt-in en `getTransactions` (`bdde64a`, deploy ✅) · **Sprint H ✅** charts/a11y — H.1/H.2 ya hechos, H.3 bottom-nav (`82b913a`, ajuste `5ba0151`) · **Sprint I 🟡** QA+v1.0 — I.2–I.5 ✅; I.1 pendiente login · **TD-39 ✅** recurrentes automáticos (`d37a938`) · **J.4 ✅** app-lock PIN (`53083b3`).
 > **Sesión 2026-06-09 (2ª parte):** **Sprint A ✅ completado y desplegado** — FX backend (`getFxRates`, caché 1h) · `computeNetWorth_` convierte/excluye divisas · FE sin suma 1:1 en ninguna ruta (`convertToBase`/`sumInBase`/`fxGaps`) · 21 tests FX nuevos. Deploy Sprint A: **`Quotes.gs` · `Code.gs` · `Reports.gs` ✅ desplegados 2026-06-10**.
@@ -725,7 +725,7 @@ Flujo: `Views → Services → Store → Views` (never direct to net/IndexedDB f
 - 🟡 Verificación en vivo snapshots nuevo formato (priceService values) — pendiente Playwright con login
 - 🟡 Verificación en vivo FX: aviso de exclusión en Inversiones + `getFxRates` responde — pendiente Playwright con login (deploy ✅ hecho)
 - 🟡 TD-54: tx en divisa extranjera suman 1:1 en cashflow/presupuestos (necesita tasa histórica — diseño propio)
-- 🟡 Verificación en vivo app-lock J.4 (overlay PIN, auto-lock) — pendiente login; PBKDF2 validado en navegador
+- 🟡 Verificación en vivo app-lock J.4/J.4b (overlay PIN + huella) — pendiente login; PBKDF2 y WebAuthn (UVPA disponible) validados en navegador
 - 🟡 Verificación en vivo recurrentes TD-39 (materialización al cargar) — pendiente login; lógica pura con 13 tests
 
 ### Pendientes en orden — ROADMAP-MAESTRO (Sprints A–J)
@@ -739,7 +739,7 @@ Flujo: `Views → Services → Store → Views` (never direct to net/IndexedDB f
 7. ~~Sprint H — Charts responsive~~ ✅ 2026-06-10 (H.3 bottom-nav `82b913a`; H.1/H.2 previo)
 8. ~~Sprint I — QA + v1.0~~ 🟡 2026-06-10 (I.2–I.5 ✅; **I.1 Playwright en vivo pendiente de login**)
 9. **Sprint F — Import/Export P2** ← SIGUIENTE (sin deploy): fixtures primero · dupKey · export por período
-10. **Sprint J — Avanzado + opcionales**: XIRR/CAGR ✅ · J.2 roundMoney ✅ · **J.4 app-lock PIN ✅** (`53083b3`) · TD-39 recurrentes ✅ (`d37a938`) · pendientes: J.3 Groq · J.5 2º email
+10. **Sprint J — Avanzado + opcionales**: XIRR/CAGR ✅ · J.2 roundMoney ✅ · **J.4 app-lock PIN ✅** (`53083b3`) · **J.4b huella WebAuthn ✅** (`57ac36c`) · TD-39 recurrentes ✅ (`d37a938`) · pendientes: J.3 Groq · J.5 2º email
 - **TD-39 ✅** ejecución automática de recurrentes (`d37a938`)
 
 ### Riesgos abiertos
