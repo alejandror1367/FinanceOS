@@ -696,16 +696,13 @@ commit: e6b3c77 · rama: main · SW: v0.2.43 · config.version: 0.2.43 · tests:
 
 ### Estado actual real
 - **App en producción:** https://alejandror1367.github.io/FinanceOS/ (PWA, OAuth activo) · local v0.2.98
-- **Backend Apps Script:** 🟡 Sprint A desplegado ✅; **Sprint D (D.7) pendiente: subir `Config.gs` + `setupDatabase()`** para la columna `lastYieldDate`.
+- **Backend Apps Script:** ✅ **Al día** — Sprint A y Sprint D (D.7: `Config.gs` + `setupDatabase()`, columna `lastYieldDate`) desplegados 2026-06-10.
 - **Tests:** **148/148** en `tests/selectors.test.js` — 33 suites
 - **Roadmap activo:** `docs/Roadmap-Maestro.md` ← FUENTE ÚNICA. Reemplaza todos los roadmaps anteriores.
 - **Plan Opus (R0–R8):** R0–R5 ✅ · **Sprint A/B/C/D ✅** — **Sprint E (Deudas y Metas, sin deploy) es el siguiente**.
 
-### Deploy — ✅ Sprint A (2026-06-10) · 🔴 Sprint D pendiente
-`Quotes.gs` · `Code.gs` · `Reports.gs` (FX) — **en producción**.
-🔴 **D.7 PENDIENTE:** subir `backend/Config.gs` y ejecutar `setupDatabase()` para crear la columna
-`lastYieldDate` en la hoja Accounts. Hasta entonces, registrar rendimiento funciona en local
-(IndexedDB) y la tx de ingreso sí sincroniza, pero el backend ignora `lastYieldDate`.
+### Deploy — ✅ Sprint A + Sprint D (2026-06-10)
+`Quotes.gs` · `Code.gs` · `Reports.gs` (FX) y `Config.gs` (columna `lastYieldDate`, `setupDatabase()` ejecutado) — **todo en producción**.
 
 ### Arquitectura actual
 ```
@@ -734,7 +731,7 @@ Flujo: `Views → Services → Store → Views` (never direct to net/IndexedDB f
 1. ~~Sprint A — Integridad cifras P0~~ ✅ 2026-06-09 · ~~Deploy Sprint A~~ ✅ 2026-06-10
 2. ~~Sprint B — Inversiones ventas parciales~~ ✅ 2026-06-10 (B.1–B.5: TD-43/44 + B.4 `14bb7dc` + suite)
 3. ~~Sprint C — Accesibilidad WCAG AA~~ ✅ 2026-06-10 (C.4 `c8be635` + C.10 `66f7b5a`; resto previo)
-4. ~~Sprint D — Cuentas remuneradas~~ ✅ 2026-06-10 (`calcYield` saldo promedio + modal rendimiento) · 🔴 **falta deploy D.7: `Config.gs` + `setupDatabase()`**
+4. ~~Sprint D — Cuentas remuneradas~~ ✅ 2026-06-10 (`calcYield` saldo promedio + modal rendimiento · D.7 deploy ✅)
 5. **Sprint E — Deudas y Metas P1/P2** ← SIGUIENTE (sin deploy): `avgRate` multi-moneda · `amortize` con % · goalForecast repartido
 6. **Sprint F — Import/Export P2**: fixtures primero · dupKey · export por período
 7. **Sprint G — Backend perf P3**: O(1) en adjustBalance_ · paginación · purgeDeleted_ en bloque
