@@ -282,26 +282,21 @@ Ver §5.
 
 ---
 
-### Sprint H — Charts responsive y a11y avanzada (P2)
+### Sprint H — Charts responsive y a11y avanzada (P2) ✅ COMPLETADO (2026-06-10) · sin deploy
 
 **Objetivo:** charts legibles en móvil y accesibles por teclado.
-**Prioridad:** P2.
-**Riesgo:** bajo.
-**Deploy:** no.
-**Dependencias:** ninguna.
-**Esfuerzo estimado:** ~1 día.
+**Estado:** H.1–H.3 ✅. H.1 y H.2 ya estaban implementados en sesiones previas; **H.3 cerrado esta sesión** (`82b913a`).
 
 | # | Tarea | ID origen | Archivo | Esf | Deploy |
 |---|---|---|---|---|---|
-| H.1 | Rotar/decimar labels eje X por `n` items; `font-size` relativo al viewBox; altura responsiva por CSS | FE-005 / TD-40 | `src/components/charts.js:13,43,49,74-75` | M | — |
-| H.2 | Tabla `sr-only` con valores por serie/segmento para acceso por teclado/lector de pantalla | FE-011 / TD-07 | `src/components/charts.js:37,70` | M | — |
-| H.3 | Bottom-nav móvil: ítem "Más" o priorizar las rutas más usadas (Inversiones/Presupuestos) | FE-012 | `src/core/routes.js:48` | S | — |
+| H.1 ✅ | Rotación (n>6) + decimación (n>8) de labels eje X · `font-size` en unidades del viewBox (escala con el ancho) · `height:auto` | FE-005 / TD-40 | `src/components/charts.js:58-105` | M | — |
+| H.2 ✅ | Tablas `sr-only` con valores por serie/segmento (`buildLineSrTable`/`buildDonutSrTable`) | FE-011 / TD-07 | `src/components/charts.js:12,32` | M | — |
+| H.3 ✅ | Bottom-nav móvil prioriza Dashboard·Hoy·Transacciones·Presupuestos·Inversiones; resto vía ☰ y ⌘K | FE-012 | `src/core/routes.js:49-53` | S | — |
 
 **Criterio de aceptación:**
-- En viewport 375px el eje X de LineChart no solapa labels.
-- El `<table class="sr-only">` de un Donut chart anuncia correctamente cada segmento con VoiceOver/NVDA.
-
-**Nota:** TD-07 (H.2) está parcialmente abordado. Verificar estado exacto en git log.
+- ✅ En viewport 375px LineChart rota labels (n>6) y decima (n>8) → no solapan.
+- ✅ LineChart y Donut adjuntan `<table class="sr-only">` con valores por serie/segmento.
+- ✅ Bottom-nav móvil expone las 5 rutas más usadas (incluye Presupuestos e Inversiones).
 
 ---
 

@@ -687,7 +687,7 @@ commit: e6b3c77 · rama: main · SW: v0.2.43 · config.version: 0.2.43 · tests:
 
 **HEAD:** `ee27d5b` · **SW/config.version:** `v0.2.99` · **Tests:** 155/155 (35 suites) · **Rama:** main · **Sync:** local adelantado (push pendiente)
 
-> **Sesión 2026-06-10:** **Sprint A ✅ desplegado** (FX) · **banner FX** Dashboard (`1223eee`) · **Sprint B ✅** (`14bb7dc`) · **Sprint C ✅ WCAG AA** (`c8be635`, `66f7b5a`) · **Sprint D ✅ desplegado** cuentas remuneradas (`4ec3836`, `9cc4fd6`, `28ebde0`, `1f05f94`) · **Sprint E ✅** Deudas y Metas (`ee27d5b`) · **Sprint G ✅ desplegado** backend perf — G.1–G.6 ya hechos, G.7 cursor opt-in en `getTransactions` (`bdde64a`, deploy ✅).
+> **Sesión 2026-06-10:** **Sprint A ✅ desplegado** (FX) · **banner FX** Dashboard (`1223eee`) · **Sprint B ✅** (`14bb7dc`) · **Sprint C ✅ WCAG AA** (`c8be635`, `66f7b5a`) · **Sprint D ✅ desplegado** cuentas remuneradas (`4ec3836`, `9cc4fd6`, `28ebde0`, `1f05f94`) · **Sprint E ✅** Deudas y Metas (`ee27d5b`) · **Sprint G ✅ desplegado** backend perf — G.1–G.6 ya hechos, G.7 cursor opt-in en `getTransactions` (`bdde64a`, deploy ✅) · **Sprint H ✅** charts/a11y — H.1/H.2 ya hechos, H.3 bottom-nav prioriza Presupuestos/Inversiones (`82b913a`).
 > **Sesión 2026-06-09 (2ª parte):** **Sprint A ✅ completado y desplegado** — FX backend (`getFxRates`, caché 1h) · `computeNetWorth_` convierte/excluye divisas · FE sin suma 1:1 en ninguna ruta (`convertToBase`/`sumInBase`/`fxGaps`) · 21 tests FX nuevos. Deploy Sprint A: **`Quotes.gs` · `Code.gs` · `Reports.gs` ✅ desplegados 2026-06-10**.
 > **Sesión 2026-06-09 (1ª parte):** R2 ✅ · R3 ✅ · R4 ✅ · R5-Seguridad ✅ · fixes snapshot (valores en vivo, idempotencia fecha) · `Roadmap-Maestro.md` creado como fuente única de planificación.
 
@@ -695,11 +695,11 @@ commit: e6b3c77 · rama: main · SW: v0.2.43 · config.version: 0.2.43 · tests:
 > Tras `git pull`: **aprobar** ambos y **reiniciar Claude Code** (las tools MCP se fijan al arrancar).
 
 ### Estado actual real
-- **App en producción:** https://alejandror1367.github.io/FinanceOS/ (PWA, OAuth activo) · local v0.2.99
+- **App en producción:** https://alejandror1367.github.io/FinanceOS/ (PWA, OAuth activo) · local v0.2.100
 - **Backend Apps Script:** ✅ **Al día** — Sprint A, D y G (G.7: `Transactions.gs` cursor opt-in) desplegados 2026-06-10.
 - **Tests:** **155/155** en `tests/selectors.test.js` — 35 suites
 - **Roadmap activo:** `docs/Roadmap-Maestro.md` ← FUENTE ÚNICA. Reemplaza todos los roadmaps anteriores.
-- **Plan Opus (R0–R8):** R0–R5 ✅ · **Sprint A/B/C/D/E/G ✅** — **Sprint F (Import/Export) o H (charts) es el siguiente**.
+- **Plan Opus (R0–R8):** R0–R5 ✅ · **Sprint A/B/C/D/E/G/H ✅** — **Sprint F (Import/Export) o I (QA+v1.0) es el siguiente**.
 
 ### Deploy — ✅ Sprint A + D + G (2026-06-10)
 `Quotes.gs` · `Code.gs` · `Reports.gs` (FX) · `Config.gs` (`lastYieldDate`, `setupDatabase()`) · `Transactions.gs` (G.7 cursor) — **todo en producción**.
@@ -734,8 +734,9 @@ Flujo: `Views → Services → Store → Views` (never direct to net/IndexedDB f
 4. ~~Sprint D — Cuentas remuneradas~~ ✅ 2026-06-10 (`calcYield` saldo promedio + modal rendimiento · D.7 deploy ✅)
 5. ~~Sprint E — Deudas y Metas~~ ✅ 2026-06-10 (`goalSavingsSplit` + tests; resto previo) — `ee27d5b`
 6. ~~Sprint G — Backend perf~~ ✅ 2026-06-10 (G.1–G.6 previo · G.7 cursor `bdde64a` · deploy ✅)
-7. **Sprint F — Import/Export P2** ← SIGUIENTE (sin deploy): fixtures primero · dupKey · export por período
-8. **Sprint H — Charts responsive P3** · **Sprint I — QA + v1.0** · **Sprint J — Avanzado + opcionales**
+7. ~~Sprint H — Charts responsive~~ ✅ 2026-06-10 (H.3 bottom-nav `82b913a`; H.1/H.2 previo)
+8. **Sprint F — Import/Export P2** ← SIGUIENTE (sin deploy): fixtures primero · dupKey · export por período
+9. **Sprint I — QA + v1.0** · **Sprint J — Avanzado + opcionales**
 
 ### Riesgos abiertos
 - TD-54: cashflow/presupuestos con tx en divisa extranjera suman 1:1 (tasa histórica pendiente de diseño)
