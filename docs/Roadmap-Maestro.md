@@ -257,31 +257,28 @@ Ver §5.
 
 ---
 
-### Sprint G — Backend: performance y robustez de sync (P2)
+### Sprint G — Backend: performance y robustez de sync (P2) ✅ COMPLETADO (2026-06-10) · ⚠ deploy G.7
 
 **Objetivo:** quitar O(n) de hot paths y blindar la cola de sync contra condiciones de carrera.
-**Prioridad:** P2 (performance y mantenibilidad).
-**Riesgo:** medio (toca el repositorio genérico; probar con `recalculateBalances` de respaldo).
-**Deploy:** varios (`.gs`).
-**Dependencias:** ninguna.
-**Esfuerzo estimado:** ~3–4 días.
+**Estado:** G.1–G.7 ✅. G.1–G.6 ya estaban implementados en sesiones previas (verificado en código); **G.7 cursor cerrado esta sesión** (`bdde64a`) — antes solo estaba la ventana de 24m; faltaba la paginación por cursor (estaba diferida).
 
 | # | Tarea | ID origen | Archivo | Esf | Deploy |
 |---|---|---|---|---|---|
-| G.1 | Lectura puntual (`repoFindRowIndex_` + `getRange`) en `adjustBalance_` y validación de categoría; cachear `repoReadAll_` por request | BE-005 / TD-05,24 | `backend/Transactions.gs:40-63`, `Accounts.gs:70-75` | M | ✅ |
-| G.2 | `reconcileAndHydrate`: merge `{...existing, ...op.data}` para ops `update` (no reemplazar el registro entero con el patch) | BE-004 / TD-47 | `src/services/dataService.js:78-85` | S | — |
-| G.3 | `flushBatch`: emparejar respuestas por `res.entityId === op.entityId` (no por índice) | BE-010 / TD-26 | `src/services/syncEngine.js:71-84` | S | — |
-| G.4 | `isTransient`: dead-letter directo si falta token local (no reintentar "No autorizado") | BE-011 / TD-10 | `src/services/syncEngine.js:43` | S | — |
-| G.5 | `purgeDeleted_`: reconstruir hoja en bloque (filtrar vivas + `setValues` en bloque) en lugar de `deleteRow` en bucle | BE-007 / TD-28 | `backend/Utils.gs:189-214` | M | ✅ |
-| G.6 | Archivado/truncado de `AuditLog` por antigüedad (90 días) | BE-008 / TD-05,28 | `backend/Audit.gs`, `Utils.gs` | M | ✅ |
-| G.7 | Paginación por cursor en `getTransactions`; `getBootstrap` solo N recientes (ventana 12–24 meses) | BE-006 / TD-25 | `backend/Transactions.gs:10-16`, `Reports.gs:144` | L | ✅ |
+| G.1 ✅ | `repoReadAll_` cacheado por request + `repoGet_`/`repoFindRowIndex_` puntual en `adjustBalance_` | BE-005 / TD-05,24 | `backend/Accounts.gs:73`, `Utils.gs:115` | M | ✅ |
+| G.2 ✅ | `reconcileAndHydrate`: merge `{...existing, ...op.data}` para ops `update` | BE-004 / TD-47 | `src/services/dataService.js:89` | S | — |
+| G.3 ✅ | `flushBatch`: empareja respuestas por `entityId` (no por índice) | BE-010 / TD-26 | `src/services/syncEngine.js:76` | S | — |
+| G.4 ✅ | `isTransient`: errores de negocio/"No autorizado" → dead-letter (no reintenta) | BE-011 / TD-10 | `src/services/syncEngine.js:40` | S | — |
+| G.5 ✅ | `purgeDeleted_`: reconstruye la hoja en bloque (`clearContent`+`setValues`) | BE-007 / TD-28 | `backend/Utils.gs:236` | M | ✅ |
+| G.6 ✅ | `truncateAuditLog_`: archiva entradas > 90 días en bloque | BE-008 / TD-05,28 | `backend/Audit.gs:34` | M | ✅ |
+| G.7 ✅ | Cursor opt-in en `getTransactions` (`{items,nextCursor}`) + ventana 24m en `getBootstrap_` | BE-006 / TD-25 | `backend/Transactions.gs:14`, `Reports.gs:228` | L | ⚠ pendiente |
 
 **Criterio de aceptación:**
-- Crear una transacción con histórico de 1000 registros tarda igual que con 100 (sin O(n) en `adjustBalance_`).
-- `AuditLog` en producción tiene solo los 90 días más recientes tras ejecutar el archivado.
-- `getTransactions` devuelve cursor para la siguiente página.
+- ✅ `adjustBalance_` usa `repoGet_` sobre caché por request (sin O(n) por escritura tras la 1ª lectura).
+- ✅ `truncateAuditLog_` deja solo los 90 días recientes (acción admin `truncateAuditLog`).
+- ✅ `getTransactions` con `paginate=true` devuelve `nextCursor` para la siguiente página.
 
-**Nota:** TD-47 (G.2), TD-26 (G.3), TD-10 (G.4), TD-28 (G.5) están marcados ✅ en TechnicalDebt.md. Verificar en git log antes de re-implementar.
+> **⚠ DEPLOY PENDIENTE (G.7):** subir `backend/Transactions.gs`. Cambio aditivo y retrocompatible
+> (sin `paginate`/`cursor` devuelve el array de siempre); no rompe a `getBootstrap_` ni a los clientes actuales.
 
 ---
 
