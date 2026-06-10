@@ -6,7 +6,7 @@
 
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { selectors, convertToBase, accountAvgBalance, calcYield, txEffectOnAccount, sameMonth } from '../src/store/selectors.js';
+import { selectors, convertToBase, transactionAmountBase, accountAvgBalance, calcYield, txEffectOnAccount, sameMonth } from '../src/store/selectors.js';
 import { priceService } from '../src/services/priceService.js';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -349,6 +349,42 @@ describe('flujo mensual', () => {
   test('savingsRate es 0 sin ingresos (sin división por cero)', () => {
     assert.equal(selectors.savingsRate(mkState(), REF), 0);
   });
+
+  test('TD-54: usa amountBase en tx extranjera, no amount nativo 1:1', () => {
+    const s = mkState({
+      transactions: [
+        tx('1', 'income', 100, '2026-05-10', { currency: 'USD', amountBase: 400_000 }),
+        tx('2', 'expense', 50, '2026-05-12', { currency: 'USD', amountBase: 200_000 }),
+      ],
+    });
+    assert.equal(selectors.monthlyIncome(s, REF), 400_000);
+    assert.equal(selectors.monthlyExpense(s, REF), 200_000);
+    assert.equal(selectors.monthlySavings(s, REF), 200_000);
+  });
+
+  test('TD-54: calcula amountBase desde fxRateToBase histórico cuando no viene persistido', () => {
+    const s = mkState({
+      transactions: [
+        tx('1', 'income', 100, '2026-05-10', { currency: 'USD', fxRateToBase: 4100 }),
+        tx('2', 'expense', 50, '2026-05-12', { currency: 'USD', fxRateToBase: 4050 }),
+      ],
+    });
+    assert.equal(selectors.monthlyIncome(s, REF), 410_000);
+    assert.equal(selectors.monthlyExpense(s, REF), 202_500);
+  });
+
+  test('TD-54: excluye tx extranjera sin tasa histórica del flujo mensual', () => {
+    const s = mkState({
+      transactions: [
+        tx('1', 'income', 1_000_000, '2026-05-10'),
+        tx('2', 'income', 100, '2026-05-10', { currency: 'USD' }),
+        tx('3', 'expense', 200_000, '2026-05-12'),
+        tx('4', 'expense', 50, '2026-05-12', { currency: 'USD' }),
+      ],
+    });
+    assert.equal(selectors.monthlyIncome(s, REF), 1_000_000);
+    assert.equal(selectors.monthlyExpense(s, REF), 200_000);
+  });
 });
 
 // ── budgetConsumed / budgetStats ──────────────────────────────────────────────
@@ -422,6 +458,76 @@ describe('presupuestos', () => {
     });
     const budget = { categoryId: 'cat1', period: 'annual', periodKey: new Date(Date.UTC(2026, 0, 1)), amount: 1_000_000 };
     assert.equal(selectors.budgetConsumed(s, budget), 350_000);
+  });
+
+  test('TD-54: budgetConsumed convierte tx extranjera con tasa histórica', () => {
+    const s = mkState({
+      transactions: [
+        tx('1', 'expense', 100_000, '2026-05-10', { categoryId: 'cat1' }),
+        tx('2', 'expense', 50, '2026-05-20', { categoryId: 'cat1', currency: 'USD', fxRateToBase: 4000 }),
+        tx('3', 'expense', 25, '2026-05-21', { categoryId: 'cat1', currency: 'USD' }),
+      ],
+    });
+    const budget = { categoryId: 'cat1', period: 'monthly', periodKey: '2026-05', amount: 500_000 };
+    assert.equal(selectors.budgetConsumed(s, budget), 300_000);
+  });
+});
+
+describe('cashflow y categorías multi-moneda (TD-54)', () => {
+  function monthDate(offset = 0) {
+    const d = new Date();
+    d.setDate(15);
+    d.setMonth(d.getMonth() + offset);
+    return d.toISOString().slice(0, 10);
+  }
+
+  function monthKey(offset = 0) {
+    return monthDate(offset).slice(0, 7);
+  }
+
+  test('cashflow usa amountBase/fxRateToBase y excluye tx extranjera sin tasa histórica', () => {
+    const s = mkState({
+      transactions: [
+        tx('1', 'income', 1_000_000, monthDate(), { currency: 'COP' }),
+        tx('2', 'income', 100, monthDate(), { currency: 'USD', amountBase: 400_000 }),
+        tx('3', 'expense', 50, monthDate(), { currency: 'USD', fxRateToBase: 4100 }),
+        tx('4', 'expense', 25, monthDate(), { currency: 'USD' }),
+      ],
+    });
+    const row = selectors.cashflow(s, 1)[0];
+    assert.equal(row.income, 1_400_000);
+    assert.equal(row.expense, 205_000);
+    assert.equal(row.savings, 1_195_000);
+  });
+
+  test('categorySpend, categoryTrends y expenseByCategory no suman USD 1:1', () => {
+    const s = mkState({
+      categories: [{ id: 'cat1', name: 'Comida' }],
+      transactions: [
+        tx('1', 'expense', 100_000, monthDate(), { categoryId: 'cat1' }),
+        tx('2', 'expense', 50, monthDate(), { categoryId: 'cat1', currency: 'USD', fxRateToBase: 4000 }),
+        tx('3', 'expense', 25, monthDate(), { categoryId: 'cat1', currency: 'USD' }),
+      ],
+    });
+    assert.equal(selectors.categorySpend(s, monthKey())[0].amount, 300_000);
+    assert.equal(selectors.categoryTrends(s, 1, 1)[0].total, 300_000);
+    assert.equal(selectors.expenseByCategory(s, new Date(`${monthKey()}-15T12:00:00`))[0].amount, 300_000);
+  });
+
+  test('topCategoryChange compara montos en base y excluye tx extranjeras incompletas', () => {
+    const s = mkState({
+      categories: [{ id: 'cat1', name: 'Comida' }],
+      transactions: [
+        tx('p1', 'expense', 100_000, monthDate(-1), { categoryId: 'cat1' }),
+        tx('c1', 'expense', 100_000, monthDate(), { categoryId: 'cat1' }),
+        tx('c2', 'expense', 50, monthDate(), { categoryId: 'cat1', currency: 'USD', fxRateToBase: 4000 }),
+        tx('c3', 'expense', 25, monthDate(), { categoryId: 'cat1', currency: 'USD' }),
+      ],
+    });
+    const best = selectors.topCategoryChange(s);
+    assert.equal(best.curAmt, 300_000);
+    assert.equal(best.prevAmt, 100_000);
+    assert.equal(best.pct, 200);
   });
 });
 
@@ -1303,6 +1409,28 @@ describe('convertToBase (A.3 / FIN-005)', () => {
   });
 });
 
+describe('transactionAmountBase (TD-54)', () => {
+  test('moneda base usa amount', () => {
+    assert.equal(transactionAmountBase({ amount: 123_000, currency: 'COP' }, 'COP'), 123_000);
+  });
+
+  test('moneda extranjera prefiere amountBase persistido', () => {
+    assert.equal(transactionAmountBase({ amount: 100, currency: 'USD', amountBase: 399_000, fxRateToBase: 4100 }, 'COP'), 399_000);
+  });
+
+  test('moneda extranjera usa fxRateToBase histórico si no hay amountBase', () => {
+    assert.equal(transactionAmountBase({ amount: 100, currency: 'USD', fxRateToBase: 4100 }, 'COP'), 410_000);
+  });
+
+  test('moneda extranjera sin tasa histórica devuelve null', () => {
+    assert.equal(transactionAmountBase({ amount: 100, currency: 'USD' }, 'COP'), null);
+  });
+
+  test('moneda extranjera con campos FX vacíos devuelve null, no 0', () => {
+    assert.equal(transactionAmountBase({ amount: 100, currency: 'USD', amountBase: '', fxRateToBase: '' }, 'COP'), null);
+  });
+});
+
 describe('liquidez y patrimonio multi-moneda (A.3 / FIN-005)', () => {
   before(() => { priceService.update({}, {}); });
   after(() => { priceService.update({}, {}); });
@@ -1501,6 +1629,19 @@ describe('fxGaps (A.3 / FIN-005)', () => {
       ],
     });
     assert.equal(selectors.fxGaps(s).count, 0);
+  });
+
+  test('TD-54: transacciones extranjeras sin tasa histórica generan gap aunque haya tasa spot', () => {
+    priceService.update({}, { USD: 4000 });
+    const s = mkState({
+      transactions: [
+        tx('t1', 'expense', 100, '2026-05-10', { currency: 'USD' }),
+        tx('t2', 'expense', 50, '2026-05-11', { currency: 'USD', fxRateToBase: 4100 }),
+      ],
+    });
+    const gaps = selectors.fxGaps(s);
+    assert.equal(gaps.count, 1);
+    assert.deepEqual(gaps.currencies, ['USD']);
   });
 });
 

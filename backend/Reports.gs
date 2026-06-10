@@ -29,6 +29,25 @@ function toBaseOrNull_(amount, currency, base, fx) {
   return rate ? amt * rate : null;
 }
 
+// TD-54: cashflow/presupuestos no pueden usar tasa spot actual. Una transaccion
+// extranjera entra al reporte solo si trae conversion historica persistida.
+function txAmountBaseOrNull_(tx, base) {
+  var amount = Number(tx && tx.amount) || 0;
+  var cur = String((tx && tx.currency) || base).toUpperCase();
+  if (!cur || cur === base) return amount;
+
+  if (tx.amountBase !== undefined && tx.amountBase !== null && tx.amountBase !== '') {
+    var stored = Number(tx.amountBase);
+    if (isFinite(stored)) return stored;
+  }
+
+  if (tx.fxRateToBase !== undefined && tx.fxRateToBase !== null && tx.fxRateToBase !== '') {
+    var rate = Number(tx.fxRateToBase);
+    if (isFinite(rate) && rate > 0) return amount * rate;
+  }
+  return null;
+}
+
 // true si alguna entidad del contexto tiene divisa distinta a la base.
 function hasForeignCurrency_(ctx, base) {
   var all = [].concat(ctx.accounts, ctx.investments, ctx.assets, ctx.liabilities);
@@ -151,8 +170,15 @@ function getDashboard_(p) {
     function (a) { return a.balance; });
 
   var monthTx = ctx.transactions.filter(function (t) { return monthKey_(t.date) === mk; });
-  var income = sum_(monthTx.filter(function (t) { return t.type === 'income'; }), function (t) { return t.amount; });
-  var expense = sum_(monthTx.filter(function (t) { return t.type === 'expense'; }), function (t) { return t.amount; });
+  var txFxExcludedCount = 0;
+  function txBaseOrZero_(t) {
+    var v = txAmountBaseOrNull_(t, cur);
+    if (v === null) { txFxExcludedCount++; return 0; }
+    return v;
+  }
+
+  var income = sum_(monthTx.filter(function (t) { return t.type === 'income'; }), txBaseOrZero_);
+  var expense = sum_(monthTx.filter(function (t) { return t.type === 'expense'; }), txBaseOrZero_);
   var savings = income - expense;
 
   // FIN-001: reutilizar investmentsCost de computeNetWorth_ (ya filtra sold/deleted y suma comisión).
@@ -173,7 +199,9 @@ function getDashboard_(p) {
   var byCatMap = {};
   monthTx.forEach(function (t) {
     if (t.type !== 'expense') return;
-    byCatMap[t.categoryId] = (byCatMap[t.categoryId] || 0) + t.amount;
+    var amountBase = txAmountBaseOrNull_(t, cur);
+    if (amountBase === null) return;
+    byCatMap[t.categoryId] = (byCatMap[t.categoryId] || 0) + amountBase;
   });
   var catIndex = {};
   ctx.categories.forEach(function (c) { catIndex[c.id] = c; });
@@ -194,6 +222,7 @@ function getDashboard_(p) {
     monthlyExpense: expense,
     monthlySavings: savings,
     savingsRate: income ? (savings / income) * 100 : 0,
+    txFxExcludedCount: txFxExcludedCount,
     recentTransactions: recent,
     activeGoals: activeGoals,
     upcomingPayments: upcoming,

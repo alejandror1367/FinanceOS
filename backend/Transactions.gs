@@ -93,6 +93,9 @@ function createTransaction_(d) {
     categoryId: d.type === 'transfer' ? '' : d.categoryId,
     description: sanitizeString_(d.description || '', 240),
     status: 'synced',
+    amountBase: d.amountBase !== undefined ? toAmount_(d.amountBase, 'amountBase') : '',
+    fxRateToBase: d.fxRateToBase !== undefined ? toAmount_(d.fxRateToBase, 'fxRateToBase') : '',
+    fxRateDate: d.fxRateDate || '',
   });
   applyTxBalanceDelta_(rec, +1); // actualiza saldo(s) de cuenta (TD-01)
   logAudit_('create', 'Transactions', rec.id, rec.type + ' ' + rec.amount + ' ' + rec.currency);
@@ -118,6 +121,9 @@ function updateTransaction_(d) {
   if (d.date !== undefined) patch.date = d.date;
   if (d.amount !== undefined) patch.amount = toAmount_(d.amount, 'amount');
   if (d.currency !== undefined) patch.currency = sanitizeString_(d.currency, 3);
+  if (d.amountBase !== undefined) patch.amountBase = d.amountBase === '' ? '' : toAmount_(d.amountBase, 'amountBase');
+  if (d.fxRateToBase !== undefined) patch.fxRateToBase = d.fxRateToBase === '' ? '' : toAmount_(d.fxRateToBase, 'fxRateToBase');
+  if (d.fxRateDate !== undefined) patch.fxRateDate = d.fxRateDate || '';
   if (d.accountId !== undefined) patch.accountId = d.accountId;
   patch.toAccountId = merged.type === 'transfer' ? merged.toAccountId : '';
   patch.categoryId = merged.type === 'transfer' ? '' : merged.categoryId;

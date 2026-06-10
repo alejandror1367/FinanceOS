@@ -253,6 +253,24 @@ export const dataService = {
   async create(coll, data) {
     const cfg = ENTITIES[coll];
     const record = stamp({ id: data.id || newId(), ...data });
+    // TD-54 (escritor): al CREAR una tx en divisa extranjera, sellar la conversión
+    // histórica con la tasa spot del momento (es la tasa vigente a la fecha de
+    // creación). Sin este sello, la tx queda excluida de cashflow/presupuestos
+    // para siempre (transactionAmountBase → null). No se sobreescribe si el caller
+    // ya trae amountBase/fxRateToBase (p. ej. un import con tasa propia).
+    if (coll === 'transactions') {
+      const base = store.get().baseCurrency || 'COP';
+      const cur = record.currency || base;
+      if (cur !== base && record.amountBase == null && record.fxRateToBase == null) {
+        const { priceService } = await import('./priceService.js');
+        const rate = priceService.fxRates?.[cur];
+        if (rate > 0) {
+          record.fxRateToBase = rate;
+          record.fxRateDate = new Date().toISOString().slice(0, 10);
+          record.amountBase = roundMoney((Number(record.amount) || 0) * rate, base);
+        }
+      }
+    }
     // TD-14: el dato y su operación de cola se escriben en UNA transacción atómica,
     // para que nunca quede un registro local sin su op de sync (o viceversa).
     const op = syncQueue.makeRecord({ action: ENTITIES[coll].create, entity: cfg.entity, entityId: record.id, data: record });

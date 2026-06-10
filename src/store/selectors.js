@@ -46,6 +46,28 @@ export function convertToBase(amount, currency, base, fx) {
   return rate ? amt * rate : null;
 }
 
+// TD-54: cashflow/presupuestos usan moneda base. Para transacciones en divisa
+// extranjera solo se acepta una tasa historica persistida en la tx; usar la tasa
+// spot actual reescribiria meses pasados y volveria los reportes no auditables.
+export function transactionAmountBase(t, base = 'COP') {
+  const amount = Number(t?.amount) || 0;
+  const cur = t?.currency || base;
+  if (!cur || cur === base) return amount;
+
+  const rawStored = t?.amountBase;
+  if (rawStored !== undefined && rawStored !== null && rawStored !== '') {
+    const stored = Number(rawStored);
+    if (Number.isFinite(stored)) return stored;
+  }
+
+  const rawRate = t?.fxRateToBase;
+  if (rawRate !== undefined && rawRate !== null && rawRate !== '') {
+    const rate = Number(rawRate);
+    if (Number.isFinite(rate) && rate > 0) return amount * rate;
+  }
+  return null;
+}
+
 // Suma montos convertidos a base excluyendo (sin sumar 1:1) los que no tienen tasa FX.
 // amountFn/currencyFn extraen monto y divisa de cada item.
 function sumInBase(items, amountFn, currencyFn, base, fx) {
@@ -246,16 +268,18 @@ export const selectors = {
   },
 
   monthlyIncome(s, ref) {
+    const base = s.baseCurrency || 'COP';
     return s.transactions
       .filter((t) => t.type === 'income' && sameMonth(t.date, ref))
-      .reduce((sum, t) => sum + (t.amount || 0), 0);
+      .reduce((sum, t) => sum + (transactionAmountBase(t, base) ?? 0), 0);
   },
 
   monthlyExpense(s, ref) {
+    const base = s.baseCurrency || 'COP';
     const debtIds = debtAccountIds(s);
     return s.transactions
       .filter((t) => isExpenseLike(t, debtIds) && sameMonth(t.date, ref))
-      .reduce((sum, t) => sum + (t.amount || 0), 0);
+      .reduce((sum, t) => sum + (transactionAmountBase(t, base) ?? 0), 0);
   },
 
   monthlySavings(s, ref) {
@@ -403,6 +427,7 @@ export const selectors = {
 
   // ---- Presupuestos (valores derivados, no persistidos) ----
   budgetConsumed(s, budget) {
+    const base = s.baseCurrency || 'COP';
     const isMonthly = budget.period === 'monthly';
     const pKey = normPeriodKey(budget.periodKey, isMonthly ? 7 : 4);
     return s.transactions
@@ -411,7 +436,7 @@ export const selectors = {
         const key = isMonthly ? String(t.date).slice(0, 7) : String(t.date).slice(0, 4);
         return key === pKey;
       })
-      .reduce((sum, t) => sum + (t.amount || 0), 0);
+      .reduce((sum, t) => sum + (transactionAmountBase(t, base) ?? 0), 0);
   },
 
   budgetStats(s, budget) {
@@ -436,6 +461,7 @@ export const selectors = {
   // ---- Series temporales (Analítica) ----
   // Flujo de caja por mes (últimos n meses, incluye el actual).
   cashflow(s, n = 6) {
+    const base = s.baseCurrency || 'COP';
     const months = lastMonths(n);
     const debtIds = debtAccountIds(s);
     const acc = {};
@@ -443,8 +469,10 @@ export const selectors = {
     for (const t of s.transactions) {
       const key = String(t.date).slice(0, 7);
       if (!acc[key]) continue;
-      if (t.type === 'income') acc[key].income += t.amount || 0;
-      else if (isExpenseLike(t, debtIds)) acc[key].expense += t.amount || 0;
+      const amount = transactionAmountBase(t, base);
+      if (amount === null) continue;
+      if (t.type === 'income') acc[key].income += amount;
+      else if (isExpenseLike(t, debtIds)) acc[key].expense += amount;
     }
     return months.map((m) => {
       const r = acc[m.key];
@@ -454,10 +482,13 @@ export const selectors = {
 
   // Gasto por categoría para un mes dado (YYYY-MM).
   categorySpend(s, monthKey) {
+    const base = s.baseCurrency || 'COP';
     const map = new Map();
     for (const t of s.transactions) {
       if (t.type !== 'expense' || String(t.date).slice(0, 7) !== monthKey) continue;
-      map.set(t.categoryId, (map.get(t.categoryId) || 0) + t.amount);
+      const amount = transactionAmountBase(t, base);
+      if (amount === null) continue;
+      map.set(t.categoryId, (map.get(t.categoryId) || 0) + amount);
     }
     return [...map.entries()]
       .map(([id, amount]) => ({ category: selectors.categoryById(s, id), amount }))
@@ -466,14 +497,17 @@ export const selectors = {
 
   // Mayor variación de gasto por categoría (mes actual vs anterior).
   topCategoryChange(s) {
+    const base = s.baseCurrency || 'COP';
     const months = lastMonths(2);
     if (months.length < 2) return null;
     const cur = new Map(); const prev = new Map();
     for (const t of s.transactions) {
       if (t.type !== 'expense') continue;
       const key = String(t.date).slice(0, 7);
-      if (key === months[1].key) cur.set(t.categoryId, (cur.get(t.categoryId) || 0) + t.amount);
-      else if (key === months[0].key) prev.set(t.categoryId, (prev.get(t.categoryId) || 0) + t.amount);
+      const amount = transactionAmountBase(t, base);
+      if (amount === null) continue;
+      if (key === months[1].key) cur.set(t.categoryId, (cur.get(t.categoryId) || 0) + amount);
+      else if (key === months[0].key) prev.set(t.categoryId, (prev.get(t.categoryId) || 0) + amount);
     }
     let best = null;
     for (const [id, curAmt] of cur.entries()) {
@@ -490,6 +524,7 @@ export const selectors = {
   // Tendencias de gasto por categoría: top topN categorías por total acumulado en los
   // últimos n meses. Devuelve [{category, total, months:[{key,label,amount}]}] desc.
   categoryTrends(s, n = 6, topN = 5) {
+    const base = s.baseCurrency || 'COP';
     const months = lastMonths(n);
     const monthKeys = new Set(months.map((m) => m.key));
     const totals = new Map();
@@ -498,9 +533,11 @@ export const selectors = {
       if (t.type !== 'expense') continue;
       const key = String(t.date).slice(0, 7);
       if (!monthKeys.has(key)) continue;
-      totals.set(t.categoryId, (totals.get(t.categoryId) || 0) + t.amount);
+      const amount = transactionAmountBase(t, base);
+      if (amount === null) continue;
+      totals.set(t.categoryId, (totals.get(t.categoryId) || 0) + amount);
       if (!byMonth.has(t.categoryId)) byMonth.set(t.categoryId, new Map());
-      byMonth.get(t.categoryId).set(key, (byMonth.get(t.categoryId).get(key) || 0) + t.amount);
+      byMonth.get(t.categoryId).set(key, (byMonth.get(t.categoryId).get(key) || 0) + amount);
     }
     return [...totals.entries()]
       .sort((a, b) => b[1] - a[1])
@@ -514,10 +551,13 @@ export const selectors = {
 
   // Gasto por categoría del mes (para analítica ligera)
   expenseByCategory(s, ref) {
+    const base = s.baseCurrency || 'COP';
     const map = new Map();
     for (const t of s.transactions) {
       if (t.type !== 'expense' || !sameMonth(t.date, ref)) continue;
-      map.set(t.categoryId, (map.get(t.categoryId) || 0) + t.amount);
+      const amount = transactionAmountBase(t, base);
+      if (amount === null) continue;
+      map.set(t.categoryId, (map.get(t.categoryId) || 0) + amount);
     }
     return [...map.entries()]
       .map(([categoryId, amount]) => ({ category: selectors.categoryById(s, categoryId), amount }))
@@ -1122,6 +1162,13 @@ export const selectors = {
     s.assets.forEach((a) => check(a.currency));
     s.liabilities.forEach((l) => check(l.currency));
     s.investments.filter((i) => !i.isDeleted && !i.soldDate).forEach((i) => check(i.currency));
+    s.transactions.forEach((t) => {
+      const cur = t.currency || base;
+      if (cur !== base && transactionAmountBase(t, base) === null) {
+        missing.add(cur);
+        count++;
+      }
+    });
     return { count, currencies: [...missing] };
   },
 

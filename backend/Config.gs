@@ -71,6 +71,11 @@ var SCHEMAS = {
     { key: 'isDeleted', type: 'b' },
     { key: 'createdAt', type: 'ts' },
     { key: 'updatedAt', type: 'ts' },
+    // TD-54: conversion historica a moneda base para cashflow/presupuestos.
+    // APPEND-ONLY: no insertar antes de timestamps para no desalinear hojas existentes.
+    { key: 'amountBase', type: 'n' },
+    { key: 'fxRateToBase', type: 'n' },
+    { key: 'fxRateDate', type: 'd' },
   ],
   Categories: [
     { key: 'id', type: 's' },
