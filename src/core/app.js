@@ -221,6 +221,12 @@ async function bootstrap() {
   const { source } = await dataService.init();
   backgroundRefreshPrices(); // no-await: background, no bloquea el arranque
 
+  // TD-39: materializar recurrentes vencidos (no bloquea el arranque; la vista se
+  // actualiza de forma reactiva cuando las transacciones se crean).
+  import('../services/recurringService.js')
+    .then((m) => m.runDueRecurring())
+    .catch(() => {});
+
   // Router.
   router = createRouter({
     routes,
