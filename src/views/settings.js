@@ -10,10 +10,11 @@ import { dataService } from '../services/dataService.js';
 import { apiClient } from '../services/apiClient.js';
 import { syncEngine } from '../services/syncEngine.js';
 import { Card, Badge, Button } from '../components/ui.js';
-import { segmented } from '../components/forms.js';
-import { confirmDialog } from '../components/modal.js';
+import { segmented, field, textInput, setFieldError, focusFieldError } from '../components/forms.js';
+import { openModal, confirmDialog } from '../components/modal.js';
 import { toast } from '../services/toast.js';
 import { guardedOp } from '../components/crud.js';
+import * as applock from '../core/applock.js';
 
 function settingRow(label, sub, control) {
   return el('div', { class: 'row' }, [
@@ -125,6 +126,57 @@ export function renderSettings() {
     ]),
   });
 
+  // Seguridad — App-lock con PIN (J.4). El card se reconstruye al cambiar el estado.
+  const securitySlot = el('div');
+  function pinModal() {
+    const pinEl = textInput({ name: 'pin', value: '', placeholder: '4–6 dígitos' });
+    pinEl.type = 'password'; pinEl.inputMode = 'numeric'; pinEl.maxLength = 6;
+    const confEl = textInput({ name: 'pin2', value: '', placeholder: 'Repite el PIN' });
+    confEl.type = 'password'; confEl.inputMode = 'numeric'; confEl.maxLength = 6;
+    openModal({
+      title: applock.isEnabled() ? 'Cambiar PIN' : 'Activar PIN',
+      body: el('div', {}, [
+        el('p', { class: 't-caption text-secondary mt-2', text: 'Protege la app en este dispositivo con un PIN local. Se pedirá al abrir y tras inactividad.' }),
+        field('PIN', pinEl),
+        field('Confirmar PIN', confEl),
+      ]),
+      submitLabel: 'Guardar PIN',
+      onSubmit: async () => {
+        const pin = pinEl.value.trim();
+        if (!/^\d{4,6}$/.test(pin)) { focusFieldError(pinEl); return setFieldError(pinEl, 'El PIN debe tener 4 a 6 dígitos'); }
+        if (pin !== confEl.value.trim()) { focusFieldError(confEl); return setFieldError(confEl, 'Los PIN no coinciden'); }
+        await applock.setPin(pin);
+        toast('PIN activado');
+        renderSecurity();
+        return true;
+      },
+    });
+  }
+  function renderSecurity() {
+    const enabled = applock.isEnabled();
+    securitySlot.replaceChildren(Card({
+      title: 'Seguridad',
+      body: el('div', { class: 'row-list' }, [
+        settingRow(
+          'Bloqueo con PIN',
+          enabled ? 'Activado · se pide al abrir y tras 5 min de inactividad' : 'Protege la app en este dispositivo con un PIN local',
+          enabled
+            ? el('div', { class: 'row-flex', style: { gap: '8px' } }, [
+                Button('Cambiar', { variant: 'ghost', iconName: 'edit', onClick: pinModal }),
+                Button('Desactivar', { variant: 'ghost', iconName: 'trash', onClick: () => confirmDialog({
+                  title: 'Desactivar bloqueo con PIN',
+                  message: 'La app dejará de pedir PIN en este dispositivo. ¿Continuar?',
+                  confirmLabel: 'Desactivar',
+                  onConfirm: () => { applock.clearPin(); toast('Bloqueo desactivado'); renderSecurity(); },
+                }) }),
+              ])
+            : Button('Activar', { variant: 'primary', iconName: 'settings', onClick: pinModal }),
+        ),
+      ]),
+    }));
+  }
+  renderSecurity();
+
   // Acerca de
   const aboutCard = Card({
     title: 'Acerca de',
@@ -140,6 +192,6 @@ export function renderSettings() {
       el('h2', { class: 't-h1', text: 'Ajustes' }),
       el('p', { class: 'page-header__sub', text: 'Preferencias, datos y configuración de la app.' }),
     ]),
-    el('div', { class: 'grid grid--2' }, [appearanceCard, dataCard, backendCard, aboutCard]),
+    el('div', { class: 'grid grid--2' }, [appearanceCard, dataCard, securitySlot, backendCard, aboutCard]),
   ]);
 }

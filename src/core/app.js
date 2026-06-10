@@ -5,6 +5,7 @@
 
 import { CONFIG } from './config.js';
 import { auth } from './auth.js';
+import * as applock from './applock.js';
 import { store } from '../store/store.js';
 import { selectors } from '../store/selectors.js';
 import { theme } from '../services/theme.js';
@@ -198,6 +199,10 @@ async function bootstrap() {
   if (CONFIG.auth.clientId) {
     setInterval(() => auth.refreshSilent(), 45 * 60 * 1000);
   }
+
+  // J.4 (N5): si hay PIN local configurado, exigir desbloqueo antes de montar la app.
+  await applock.gateOnStartup();
+  applock.startAutoLock(); // bloqueo por inactividad / segundo plano
 
   document.title = CONFIG.appName;
 
