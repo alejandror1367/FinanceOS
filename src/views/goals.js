@@ -202,10 +202,9 @@ export function renderGoals() {
     const goals = [...(s.goals || [])].sort((a, b) => goalStats(b).pct - goalStats(a).pct);
     const totalTarget = goals.reduce((sum, g) => sum + (g.targetAmount || 0), 0);
     const totalCurrent = goals.reduce((sum, g) => sum + (g.currentAmount || 0), 0);
-    // FIN-011 (TD-52): repartir el ahorro mensual entre las metas activas con saldo pendiente.
-    // Sin este reparto, cada meta asume el 100% del ahorro → fechas optimistas con N metas.
-    const activePending = goals.filter((g) => g.status === 'active' && (g.targetAmount || 0) > (g.currentAmount || 0));
-    const savingsPerGoal = selectors.monthlySavingsAvg(s, 3) / Math.max(1, activePending.length);
+    // FIN-011 (TD-52): repartir el ahorro mensual entre las metas activas con saldo
+    // pendiente (selector goalSavingsSplit). Sin reparto, cada meta asume el 100%.
+    const savingsPerGoal = selectors.goalSavingsSplit(s);
 
     mount(root,
       el('div', {}, [

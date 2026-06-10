@@ -12,7 +12,7 @@ export function normPeriodKey(raw, len) {
   return isNaN(d) ? s.slice(0, len) : `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`.slice(0, len);
 }
 
-function sameMonth(iso, ref = new Date()) {
+export function sameMonth(iso, ref = new Date()) {
   const isoKey = String(iso).slice(0, 7);
   const refKey = ref instanceof Date
     ? `${ref.getFullYear()}-${String(ref.getMonth() + 1).padStart(2, '0')}`
@@ -270,6 +270,16 @@ export const selectors = {
     const active = cf.filter((m) => m.income > 0 || m.expense > 0);
     if (!active.length) return 0;
     return active.reduce((sum, m) => sum + m.savings, 0) / active.length;
+  },
+
+  // FIN-011 (TD-52): ahorro mensual promedio repartido entre las metas ACTIVAS con
+  // saldo pendiente. Cada meta recibe avg / N (N = nº de metas pendientes). Sin el
+  // reparto, cada meta asumiría el 100% del ahorro → fechas demasiado optimistas.
+  goalSavingsSplit(s) {
+    const active = (s.goals || []).filter(
+      (g) => g.status === 'active' && (g.targetAmount || 0) > (g.currentAmount || 0)
+    );
+    return selectors.monthlySavingsAvg(s, 3) / Math.max(1, active.length);
   },
 
   savingsRate(s, ref) {

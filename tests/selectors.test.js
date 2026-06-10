@@ -6,7 +6,7 @@
 
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { selectors, convertToBase, accountAvgBalance, calcYield, txEffectOnAccount } from '../src/store/selectors.js';
+import { selectors, convertToBase, accountAvgBalance, calcYield, txEffectOnAccount, sameMonth } from '../src/store/selectors.js';
 import { priceService } from '../src/services/priceService.js';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -1569,5 +1569,66 @@ describe('calcYield (interés sobre saldo promedio, tasa EA)', () => {
     const y = calcYield({ accountId: 'a1', balanceNow: 100_000, transactions: txs, annualRatePct: 12, from: '2026-01-01', to: '2026-01-31' });
     const growth = Math.pow(1.12, 30 / 365) - 1;
     assert.ok(Math.abs(y - 550_000 * growth) < 1, `esperado ≈${550_000 * growth}, dio ${y}`);
+  });
+});
+
+// ── sameMonth (FIN-010 / E.5) ───────────────────────────────────────────────────
+
+describe('sameMonth', () => {
+  test('string YYYY-MM vs Date del mismo mes → true', () => {
+    assert.equal(sameMonth('2026-06', new Date(2026, 5, 15)), true);
+  });
+  test('ISO completo vs Date del mismo mes → true', () => {
+    assert.equal(sameMonth('2026-06-30T12:00:00Z', new Date(2026, 5, 1)), true);
+  });
+  test('meses distintos → false', () => {
+    assert.equal(sameMonth('2026-05', new Date('2026-06-15')), false);
+  });
+  test('ref como string YYYY-MM también compara por mes', () => {
+    assert.equal(sameMonth('2026-06-15', '2026-06'), true);
+    assert.equal(sameMonth('2026-07-01', '2026-06'), false);
+  });
+});
+
+// ── goalSavingsSplit (FIN-011 / E.3) ────────────────────────────────────────────
+
+describe('goalSavingsSplit (reparto del ahorro entre metas activas)', () => {
+  // Construye 3 meses completos con ahorro neto constante para fijar monthlySavingsAvg.
+  function withSavings(perMonthIncome, goals) {
+    function monthAgo(n) {
+      const d = new Date(); d.setDate(15); d.setMonth(d.getMonth() - n);
+      return d.toISOString().slice(0, 10);
+    }
+    const transactions = [];
+    for (let i = 1; i <= 3; i++) {
+      transactions.push({ id: `i${i}`, type: 'income', amount: perMonthIncome, date: monthAgo(i), accountId: 'a1', currency: 'COP' });
+    }
+    return mkState({ transactions, goals });
+  }
+
+  test('dos metas activas reciben la mitad del ahorro mensual cada una', () => {
+    const goals = [
+      { id: 'g1', status: 'active', targetAmount: 1_000_000, currentAmount: 0 },
+      { id: 'g2', status: 'active', targetAmount: 1_000_000, currentAmount: 0 },
+    ];
+    const s = withSavings(600_000, goals);
+    const avg = selectors.monthlySavingsAvg(s, 3);
+    assert.equal(avg, 600_000);
+    assert.equal(selectors.goalSavingsSplit(s), 300_000); // 600K / 2
+  });
+
+  test('metas completadas o sin saldo pendiente no cuentan en el reparto', () => {
+    const goals = [
+      { id: 'g1', status: 'active', targetAmount: 1_000_000, currentAmount: 0 },
+      { id: 'g2', status: 'active', targetAmount: 1_000_000, currentAmount: 1_000_000 }, // ya cumplida
+      { id: 'g3', status: 'paused', targetAmount: 1_000_000, currentAmount: 0 },          // pausada
+    ];
+    const s = withSavings(600_000, goals);
+    assert.equal(selectors.goalSavingsSplit(s), 600_000); // solo g1 activa pendiente → /1
+  });
+
+  test('sin metas activas no divide por cero (Math.max 1)', () => {
+    const s = withSavings(600_000, []);
+    assert.equal(selectors.goalSavingsSplit(s), 600_000);
   });
 });
