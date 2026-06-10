@@ -502,21 +502,21 @@ HEAD pasó de `75eacca` a **`b870d6c`**. SW `v0.2.10 → v0.2.13`. Tests `33 →
 ```
 Rama:    main
 Remote:  https://github.com/alejandror1367/FinanceOS.git
-HEAD:    06db320  docs: Roadmap-Maestro.md — fuente única de planificación unificada
-SW:      v0.2.90  (sincronizado con config.version)
+HEAD:    b855818  docs: Sprint A completado — TD-02 cerrado, TD-54 nuevo, handoff y roadmap al dia
+SW:      v0.2.91  (sincronizado con config.version)
 Status:  limpio · pusheado
 ```
 
 ### Commits recientes
 ```
+b855818 docs: Sprint A completado — TD-02 cerrado, TD-54 nuevo, handoff y roadmap al dia
+d77e1f5 test(fx): A.7 — suites FX para patrimonio, liquidez, deudas y XIRR
+34383ff fix(fx): A.3 eliminar suma 1:1 silenciosa en todas las rutas multi-moneda
+f7e1330 feat(backend): A.2 FX rates — getFxRates + conversión en computeNetWorth_
+f6ceb11 docs: handoff 2026-06-09 — R0-R5 completados, snapshot fixes, Roadmap-Maestro
 06db320 docs: Roadmap-Maestro.md — fuente única de planificación unificada
 ab655cb fix(snapshot): idempotencia por fecha — normalizar date antes de comparar
 a3a5fe3 fix(snapshot): usar precios en vivo del frontend al guardar snapshot de patrimonio
-2164d52 docs(apiClient): SEC-001 — comentario formal de aceptación para idToken en POST body
-60a8637 sec(backend): Sprint 5 — auditoría de accesos denegados con rate-limit y ajuste de import
-b0ca32d fix(dashboard): investmentsSummary para paridad exacta con sección Inversiones
-4a92a49 fix(selectors): investmentsValue y positionValue usan cdtCurrentValue para CDTs
-bdf03f6 feat(selectors): portfolioAlerts + positionValue — alertas determinísticas de portafolio (R4)
 ```
 
 ---
@@ -1413,6 +1413,69 @@ Fuente única de planificación que consolida: Roadmap-Revisado-Opus, Roadmap-Im
 
 ---
 
+## Cambios realizados en sesión 2026-06-09 (2ª parte — Sprint A)
+
+### Auditorías realizadas
+- Verificación previa: A.1/A.4/A.5/A.6 ya resueltas (TD-45/41/42/46 en git log) — no se re-implementaron.
+
+### Bugs corregidos
+- FX 1:1 silencioso en backend: `computeNetWorth_` ahora convierte con tasas o excluye (`fxExcludedCount`) — cuentas, inversiones (valor+costo), assets, liabilities, ccDebt.
+- FX 1:1 silencioso en frontend: `totalLiquidity` · `totalAssets` · `totalLiabilities` · `creditCardDebt` · `debtStats` · `portfolioXIRR` · `investmentsSummary` convierten o excluyen.
+- Degradación offline FX: refresh sin tasas ya no borra las últimas conocidas (`backgroundRefreshPrices` en `app.js`).
+
+### Bugs pendientes
+- TD-54 (nuevo): tx en divisa extranjera suman 1:1 en `monthlyIncome/Expense`, `cashflow`, presupuestos — requiere tasa histórica a fecha de tx (diseño propio).
+- Verificación en vivo snapshots nuevo formato y aviso FX en Inversiones — Playwright tras deploy.
+
+### Mejoras financieras
+- `convertToBase()` + `sumInBase()` exportados en `selectors.js` (puros, testeados).
+- Selector nuevo `fxGaps(s) → { count, currencies }` para flaggear valor incompleto en UI.
+- Vista Inversiones: aviso visible "N posiciones excluidas por falta de tasa"; P&L de cerradas sin tasa en divisa nativa etiquetada.
+
+### Mejoras backend
+- `getFxRates_()` en `Quotes.gs`: mapa `{USD, EUR}→COP` vía Yahoo (`USDCOP=X`/`EURCOP=X`), caché 1h CacheService (`fxRates_v1`).
+- Acción pública `getFxRates` en `Code.gs` (ROUTES + READ_ACTIONS).
+- Tasas solo se consultan si hay divisa extranjera (cero latencia caso todo-COP).
+
+### Decisiones arquitectónicas
+- Política FX única FE/BE: convertir con tasa o excluir + flaggear — **nunca** sumar 1:1.
+
+### Riesgos mitigados
+- Patrimonio inflado/deformado por mezcla de divisas (TD-02 cerrado).
+
+### Riesgos pendientes
+- Backend en producción suma 1:1 hasta deploy de `Quotes.gs`/`Code.gs`/`Reports.gs`.
+- TD-54 · `calcYield` (~7× sobreestima, Sprint D) · sesión perpetua sin app-lock.
+
+### Archivos modificados
+`backend/Quotes.gs` · `backend/Code.gs` · `backend/Reports.gs` · `src/store/selectors.js` ·
+`src/core/app.js` · `src/views/investments.js` · `tests/selectors.test.js` (+21 tests, 136/136) ·
+`docs/TechnicalDebt.md` · `docs/Roadmap-Maestro.md` · `PROJECT_HANDOFF.md`
+
+### Commits relevantes
+- `f7e1330` feat(backend): A.2 FX rates — getFxRates + conversión en computeNetWorth_
+- `34383ff` fix(fx): A.3 eliminar suma 1:1 silenciosa en todas las rutas multi-moneda (SW → v0.2.91)
+- `d77e1f5` test(fx): A.7 — suites FX para patrimonio, liquidez, deudas y XIRR
+- `b855818` docs: Sprint A completado — TD-02 cerrado, TD-54 nuevo
+
+---
+
+## Estado posterior a la sesión 2026-06-09 (2ª parte)
+
+### Completado ✅
+- Sprint A completo: A.2 (FX backend) · A.3 (FE sin 1:1) · A.7 (21 tests) — A.1/A.4/A.5/A.6 ya estaban.
+- TD-02 cerrado · TD-54 documentado · Roadmap-Maestro y TechnicalDebt al día.
+
+### Parcialmente 🟡
+- FX end-to-end: FE listo; backend escrito pero **sin desplegar** (`Quotes.gs`, `Code.gs`, `Reports.gs`).
+- Dashboard aún no consume `fxGaps` para aviso global (Inversiones sí tiene aviso propio) — quick win.
+
+### Pendiente 🔴
+- Deploy manual Sprint A (dueño) → luego verificación Playwright (getFxRates + aviso exclusión).
+- Sprint B residual: B.4 roundMoney (B.1–B.3 ya hechos vía TD-43/44) · Sprint C WCAG · Sprint D calcYield.
+
+---
+
 ## 19. Prompt de nueva sesión
 
 Copia este prompt al iniciar la nueva sesión:
@@ -1428,62 +1491,67 @@ Tras git pull deben APROBARSE y REINICIARSE Claude Code: las tools MCP se fijan 
 PROYECTO: FinanceOS — PWA financiera personal y privada de Alejo.
 Repo: https://github.com/alejandror1367/FinanceOS (rama main).
 Prod: https://alejandror1367.github.io/FinanceOS/
-HEAD: ver `git log --oneline -1` · SW v0.2.90 · Tests 115/115 (24 suites)
+HEAD: b855818 · SW v0.2.91 · Tests 136/136 (30 suites)
 
 INVARIANTES (ver CLAUDE.md): JS ES Modules sin build step · sin frameworks/bundlers ·
 cero deps npm en runtime · frontend abstraído tras src/services/ · Apps Script +
 Google Sheets (13 hojas) + GitHub Pages + OAuth de Google · offline-first.
 
 ROADMAP ACTIVO: docs/Roadmap-Maestro.md ← fuente única.
-Sprints R0–R5 (plan Opus) completados y desplegados en sesión 2026-06-09.
+R0–R5 ✅ · Sprint A ✅ (2026-06-09, commits f7e1330 · 34383ff · d77e1f5).
 
-HECHO Y DESPLEGADO (sesión 2026-06-09):
-- R0 ✅: fix FE↔BE pasivos CC · ccDebt/liabilitiesDebt expuestos · 5 .gs desplegados
-- R1 ✅: liquidityCoverageMonths · savingsStreak · FIRE (variantes/ProgressBar/fecha) · 3 insights analytics
-- R2 ✅: dismissService.js · botón "Visto ✓" hoy/dashboard · tests
-- R3 ✅: snapshots 6 campos desglose · frontend values (fix INV=$0) · idempotencia fecha · deploy
-- R4 ✅: portfolioAlerts · positionValue · cdtCurrentValue · fix dashboard investmentsSummary
-- R5 ✅: logAccessDenied_ rate-limit · iss/exp · importMaxChars 50K · deploy
-- Roadmap-Maestro.md como fuente única de planificación
+HECHO EN SPRINT A (2026-06-09, 2ª parte):
+- A.2 ✅: getFxRates_ en Quotes.gs (USD/EUR→COP, caché 1h) · ruta getFxRates en Code.gs ·
+  computeNetWorth_ convierte o excluye divisas (fxExcludedCount) — NUNCA 1:1.
+- A.3 ✅: convertToBase/sumInBase en selectors (liquidez, activos, pasivos, CC, deudas,
+  XIRR, investmentsSummary) · selector fxGaps() · aviso de exclusión en vista Inversiones ·
+  fix degradación offline (refresh no borra últimas tasas conocidas).
+- A.7 ✅: 21 tests FX nuevos → 136/136.
+- A.1/A.4/A.5/A.6 ya estaban hechas (TD-45/41/42/46) — verificado, no re-implementadas.
+- TD-02 cerrado · TD-54 nuevo documentado.
+
+⚠ ACCIÓN MANUAL DEL DUEÑO — DEPLOY PENDIENTE:
+Quotes.gs · Code.gs · Reports.gs (Apps Script). Hasta el deploy, el backend en
+producción sigue sumando divisas 1:1 en computeNetWorth_ (el frontend ya no).
+
+PENDIENTES EN ORDEN:
+
+1. Deploy manual Sprint A (dueño) → verificar con Playwright:
+   - getFxRates responde {success:true, data:{USD,EUR}}.
+   - Vista Inversiones muestra aviso "N posiciones excluidas por falta de tasa" si aplica.
+   - Snapshots nuevo formato (valores priceService) — verificación pendiente de antes.
+
+2. Quick win: Dashboard consume fxGaps() para aviso global de valor incompleto
+   (Inversiones ya tiene aviso propio).
+
+3. Sprint B residual (P1): B.4 roundMoney(v, currency) en acumulados de vista Inversiones
+   (B.1–B.3 ya hechos vía TD-43/44). Ver Roadmap-Maestro.
+
+4. Sprint C — Accesibilidad WCAG AA (P1, sin deploy): contraste --text-tertiary ·
+   aria-label técnico en forms · esc() en charts · prefers-reduced-motion.
+
+5. Sprint D — Cuentas remuneradas (P1, deploy): REDISEÑAR calcYield con saldo
+   promedio/acumulación diaria — NO balance actual (sobreestima ~7×).
+
+6. Sprint E–J: ver Roadmap-Maestro.md.
 
 HALLAZGOS VIGENTES:
-- calcYield (Sprint D) DEBE usar saldo promedio/acumulación diaria, NO balance actual (sobreestima ~7×).
+- TD-54: tx en divisa extranjera suman 1:1 en monthlyIncome/Expense, cashflow y
+  presupuestos — convertir exige tasa histórica a fecha de tx (diseño propio pendiente).
 - ensureHeaders_ NO es append-only idempotente: solo appendear al final.
 - getBootstrap_ limita a 24m de transacciones (confirmar impacto histórico).
 
-PENDIENTES EN ORDEN (Roadmap-Maestro Sprints A–J):
-
-1. Sprint A — Integridad cifras P0 ← SIGUIENTE (deploy):
-   - FX backend en Quotes.gs (COP/USD/EUR, caché 1h).
-   - soft-delete guard en Utils.gs (rechazar update/delete en isDeleted=true).
-   - withholdingRate en selectors.js (rentabilidad neta de retención).
-
-2. Sprint B — Ventas parciales P0 (sin deploy):
-   - Modal "Vender" con campo cantidad parcial o total.
-   - Prorrateo proporcional de comisiones al costo base.
-   - cdtCurrentValue: no exceder valor nominal.
-
-3. Sprint C — Accesibilidad WCAG AA P1 (sin deploy, todo JS):
-   - Contraste · aria-label · aria-live · reduced-motion.
-
-4. Sprint D — Cuentas remuneradas P1 (deploy):
-   - REDISEÑAR calcYield: saldo promedio o acumulación diaria — NO balance actual.
-   - lastYieldDate · interestRate EA · idempotencia (accountId, periodo).
-
-5. Sprint E–J: Deudas/Metas · Import/Export · Backend perf · Charts · QA · Avanzado.
-   Ver Roadmap-Maestro.md para detalle.
-
-BUGS / VERIFICACIONES PENDIENTES:
-- 🟡 Verificación en vivo R1 (fire.js variantes + analytics insights) — Playwright.
-- 🟡 Flujo venta parcial/total en UI Inversiones — por confirmar en vivo.
+POLÍTICA FX (decisión Sprint A): convertir con tasa o excluir + flaggear
+(fxGaps/fxExcludedCount) — nunca sumar 1:1. Tasas via getFxRates (caché 1h backend,
+localStorage en FE, degradación offline a última conocida).
 
 RIESGOS ABIERTOS:
+- Backend producción suma 1:1 hasta deploy Sprint A.
 - calcYield sobreestima patrimonio hasta ~7× → Sprint D obligatorio.
 - Sesión de facto perpetua sin app-lock; 2º email con acceso total.
-- getBootstrap_ limita a 24m de transacciones.
 
 FORMA DE TRABAJO: fases pequeñas y verificables · explicar qué/por qué ·
-correr node --test tests/selectors.test.js tras cada cambio de selector (115/115 base) ·
+correr node --test tests/selectors.test.js tras cada cambio de selector (136/136 base) ·
 commits atómicos por feature · hook auto-bumpa SW + config.version al commitear src/.
 Para mensajes de commit multilínea en PowerShell: git commit -F _commitmsg.txt (archivo temporal).
 Empezar con: git log --oneline -5 · git status · node --test tests/selectors.test.js.
@@ -1491,4 +1559,4 @@ Empezar con: git log --oneline -5 · git status · node --test tests/selectors.t
 
 ---
 
-*Actualizado el 2026-06-04 por Claude Sonnet 4.6: Alpaca API + fix auto-refresh + secciones desplegables. HEAD 843fed3 · v0.2.65 · 97/97 tests.*
+*Actualizado el 2026-06-09 por Claude (handoff Sprint A): FX backend + FE sin 1:1 + 21 tests. HEAD b855818 · v0.2.91 · 136/136 tests.*

@@ -1,6 +1,6 @@
 # Prompt de continuación — FinanceOS
-**Generado:** 2026-06-09 (sesión R0–R5 completados, Roadmap-Maestro.md)
-**HEAD:** `06db320` · **SW:** `v0.2.90` · **Tests:** 115/115 (24 suites)
+**Generado:** 2026-06-09 (2ª parte — Sprint A FX completado)
+**HEAD:** `b855818` · **SW:** `v0.2.91` · **Tests:** 136/136 (30 suites)
 
 ---
 
@@ -13,62 +13,67 @@ Tras git pull deben APROBARSE y REINICIARSE Claude Code: las tools MCP se fijan 
 PROYECTO: FinanceOS — PWA financiera personal y privada de Alejo.
 Repo: https://github.com/alejandror1367/FinanceOS (rama main).
 Prod: https://alejandror1367.github.io/FinanceOS/
-HEAD: 06db320 · SW v0.2.90 · Tests 115/115 (24 suites)
+HEAD: b855818 · SW v0.2.91 · Tests 136/136 (30 suites)
 
 INVARIANTES (ver CLAUDE.md): JS ES Modules sin build step · sin frameworks/bundlers ·
 cero deps npm en runtime · frontend abstraído tras src/services/ · Apps Script +
 Google Sheets (13 hojas) + GitHub Pages + OAuth de Google · offline-first.
 
-ROADMAP ACTIVO: docs/Roadmap-Maestro.md ← fuente única (reemplaza todos los anteriores).
-Sprints R0–R5 (plan Opus) completados y desplegados en sesión 2026-06-09.
+ROADMAP ACTIVO: docs/Roadmap-Maestro.md ← fuente única.
+R0–R5 ✅ · Sprint A ✅ (2026-06-09, commits f7e1330 · 34383ff · d77e1f5).
 
-HECHO Y DESPLEGADO (sesión 2026-06-09):
-- R0 ✅: fix FE↔BE pasivos CC · ccDebt/liabilitiesDebt expuestos · 5 .gs desplegados
-- R1 ✅: liquidityCoverageMonths · savingsStreak · FIRE (variantes/ProgressBar/fecha) · 3 insights analytics
-- R2 ✅: dismissService.js · botón "Visto ✓" hoy/dashboard · tests
-- R3 ✅: snapshots 6 campos desglose · frontend values (fix INV=$0/snapshot $314k) · idempotencia fecha · deploy
-- R4 ✅: portfolioAlerts · positionValue · cdtCurrentValue · fix dashboard investmentsSummary
-- R5 ✅: logAccessDenied_ rate-limit · iss/exp · importMaxChars 50K · deploy
-- Roadmap-Maestro.md como fuente única de planificación
+HECHO EN SPRINT A (2026-06-09, 2ª parte):
+- A.2 ✅: getFxRates_ en Quotes.gs (USD/EUR→COP, caché 1h) · ruta getFxRates en Code.gs ·
+  computeNetWorth_ convierte o excluye divisas (fxExcludedCount) — NUNCA 1:1.
+- A.3 ✅: convertToBase/sumInBase en selectors (liquidez, activos, pasivos, CC, deudas,
+  XIRR, investmentsSummary) · selector fxGaps() · aviso de exclusión en vista Inversiones ·
+  fix degradación offline (refresh no borra últimas tasas conocidas).
+- A.7 ✅: 21 tests FX nuevos → 136/136.
+- A.1/A.4/A.5/A.6 ya estaban hechas (TD-45/41/42/46) — verificado, no re-implementadas.
+- TD-02 cerrado · TD-54 nuevo documentado.
+
+⚠ ACCIÓN MANUAL DEL DUEÑO — DEPLOY PENDIENTE:
+Quotes.gs · Code.gs · Reports.gs (Apps Script). Hasta el deploy, el backend en
+producción sigue sumando divisas 1:1 en computeNetWorth_ (el frontend ya no).
+
+PENDIENTES EN ORDEN:
+
+1. Deploy manual Sprint A (dueño) → verificar con Playwright:
+   - getFxRates responde {success:true, data:{USD,EUR}}.
+   - Vista Inversiones muestra aviso "N posiciones excluidas por falta de tasa" si aplica.
+   - Snapshots nuevo formato (valores priceService) — verificación pendiente de antes.
+
+2. Quick win: Dashboard consume fxGaps() para aviso global de valor incompleto
+   (Inversiones ya tiene aviso propio).
+
+3. Sprint B residual (P1): B.4 roundMoney(v, currency) en acumulados de vista Inversiones
+   (B.1–B.3 ya hechos vía TD-43/44). Ver Roadmap-Maestro.
+
+4. Sprint C — Accesibilidad WCAG AA (P1, sin deploy): contraste --text-tertiary ·
+   aria-label técnico en forms · esc() en charts · prefers-reduced-motion.
+
+5. Sprint D — Cuentas remuneradas (P1, deploy): REDISEÑAR calcYield con saldo
+   promedio/acumulación diaria — NO balance actual (sobreestima ~7×).
+
+6. Sprint E–J: ver Roadmap-Maestro.md.
 
 HALLAZGOS VIGENTES:
-- calcYield (Sprint D) DEBE usar saldo promedio/acumulación diaria, NO balance actual (sobreestima ~7×).
+- TD-54: tx en divisa extranjera suman 1:1 en monthlyIncome/Expense, cashflow y
+  presupuestos — convertir exige tasa histórica a fecha de tx (diseño propio pendiente).
 - ensureHeaders_ NO es append-only idempotente: solo appendear al final.
 - getBootstrap_ limita a 24m de transacciones (confirmar impacto histórico).
 
-PENDIENTES EN ORDEN (Roadmap-Maestro Sprints A–J):
-
-1. Sprint A — Integridad cifras P0 ← SIGUIENTE (deploy):
-   - FX backend en Quotes.gs (COP/USD/EUR, caché 1h).
-   - soft-delete guard en Utils.gs (rechazar update/delete en isDeleted=true).
-   - withholdingRate en selectors.js (rentabilidad neta de retención).
-
-2. Sprint B — Ventas parciales P0 (sin deploy):
-   - Modal "Vender" con campo cantidad parcial o total.
-   - Prorrateo proporcional de comisiones al costo base.
-   - cdtCurrentValue: no exceder valor nominal.
-
-3. Sprint C — Accesibilidad WCAG AA P1 (sin deploy, todo JS):
-   - Contraste · aria-label · aria-live · reduced-motion.
-
-4. Sprint D — Cuentas remuneradas P1 (deploy):
-   - REDISEÑAR calcYield: saldo promedio o acumulación diaria — NO balance actual.
-   - lastYieldDate · interestRate EA · idempotencia (accountId, periodo).
-
-5. Sprint E–J: Deudas/Metas · Import/Export · Backend perf · Charts · QA · Avanzado.
-   Ver Roadmap-Maestro.md para detalle.
-
-BUGS / VERIFICACIONES PENDIENTES:
-- 🟡 Verificación en vivo R1 (fire.js variantes + analytics insights) — Playwright.
-- 🟡 Flujo venta parcial/total en UI Inversiones — por confirmar en vivo.
+POLÍTICA FX (decisión Sprint A): convertir con tasa o excluir + flaggear
+(fxGaps/fxExcludedCount) — nunca sumar 1:1. Tasas via getFxRates (caché 1h backend,
+localStorage en FE, degradación offline a última conocida).
 
 RIESGOS ABIERTOS:
+- Backend producción suma 1:1 hasta deploy Sprint A.
 - calcYield sobreestima patrimonio hasta ~7× → Sprint D obligatorio.
 - Sesión de facto perpetua sin app-lock; 2º email con acceso total.
-- getBootstrap_ limita a 24m de transacciones.
 
 FORMA DE TRABAJO: fases pequeñas y verificables · explicar qué/por qué ·
-correr node --test tests/selectors.test.js tras cada cambio de selector (115/115 base) ·
+correr node --test tests/selectors.test.js tras cada cambio de selector (136/136 base) ·
 commits atómicos por feature · hook auto-bumpa SW + config.version al commitear src/.
 Para mensajes de commit multilínea en PowerShell: git commit -F _commitmsg.txt (archivo temporal).
 Empezar con: git log --oneline -5 · git status · node --test tests/selectors.test.js.

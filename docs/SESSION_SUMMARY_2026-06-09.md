@@ -92,3 +92,49 @@ ac2f8f8 feat(networth): saveNetWorthSnapshot_ acepta valores del frontend (R3)
 3. **Verificación Playwright**: R1 fire.js y analytics.js con auth real
 4. **Sprint C (P1)**: Accesibilidad WCAG AA — contraste, aria, reduced-motion — sin deploy
 5. **Sprint D (P1)**: Rediseño `calcYield` (saldo promedio, NO balance actual — sobreestima ~7×) — **requiere deploy**
+
+---
+
+# 2ª parte — Sprint A (FX, integridad de cifras)
+
+## Resumen ejecutivo
+
+Ejecución de `/implement Sprint A` vía implementation-engineer. Se verificó que 4 de las 7 tareas ya estaban resueltas (TD-41/42/45/46) y se implementaron las 3 restantes: FX en backend (`getFxRates`, caché 1h), eliminación de toda suma 1:1 silenciosa de divisas en frontend y backend, y 21 tests FX nuevos. TD-02 queda cerrado; se documenta TD-54 como residual (transacciones en divisa extranjera requieren tasa histórica).
+
+## Cambios implementados
+
+| Cambio | Impacto |
+|---|---|
+| `getFxRates_()` en `Quotes.gs` + ruta `getFxRates` en `Code.gs` (USD/EUR→COP, caché 1h CacheService) | Backend puede convertir divisas; cero latencia en caso todo-COP |
+| `computeNetWorth_` convierte con tasa o excluye (`fxExcludedCount`) en cuentas, inversiones, assets, liabilities, ccDebt | Paridad de política FX con frontend; snapshots/PDF correctos tras deploy |
+| `convertToBase()`/`sumInBase()` en `selectors.js`; aplicado a liquidez, activos, pasivos, CC, deudas, XIRR, investmentsSummary | Ninguna ruta FE suma divisas 1:1; posiciones sin tasa se excluyen y flaggean |
+| Selector nuevo `fxGaps()` | UI puede avisar "valor incompleto" (Inversiones ya lo muestra) |
+| Fix `backgroundRefreshPrices` (app.js) | Refresh sin tasas ya no borra las últimas conocidas (degradación offline correcta) |
+| 21 tests FX nuevos | Suite 115 → **136/136** (30 suites) |
+
+## Archivos modificados
+
+`backend/Quotes.gs` · `backend/Code.gs` · `backend/Reports.gs` · `src/store/selectors.js` · `src/core/app.js` · `src/views/investments.js` · `tests/selectors.test.js` · `docs/TechnicalDebt.md` · `docs/Roadmap-Maestro.md` · `PROJECT_HANDOFF.md` · `docs/NEXT_SESSION.md`
+
+## Commits
+
+- `f7e1330` feat(backend): A.2 FX rates — getFxRates + conversión en computeNetWorth_
+- `34383ff` fix(fx): A.3 eliminar suma 1:1 silenciosa en todas las rutas multi-moneda (SW → v0.2.91)
+- `d77e1f5` test(fx): A.7 — suites FX para patrimonio, liquidez, deudas y XIRR
+- `b855818` docs: Sprint A completado — TD-02 cerrado, TD-54 nuevo
+- docs: handoff 2026-06-09 (2ª parte) — este cierre
+
+## Pendiente / no verificado en vivo
+
+- ⚠ **Deploy manual del dueño:** `Quotes.gs` · `Code.gs` · `Reports.gs` — hasta entonces el backend en producción suma 1:1
+- Verificación Playwright tras deploy: `getFxRates` + aviso de exclusión en Inversiones + snapshots nuevo formato
+- TD-54: tx en divisa extranjera (cashflow/presupuestos) — diseño de tasa histórica pendiente
+- Dashboard no consume aún `fxGaps()` (quick win)
+
+## Próximas 5 tareas prioritarias
+
+1. **Deploy Sprint A** (dueño): `Quotes.gs` + `Code.gs` + `Reports.gs` en Apps Script
+2. **Verificación Playwright** tras deploy: getFxRates `{USD,EUR}` · aviso FX en Inversiones · snapshots
+3. **Quick win**: aviso global `fxGaps()` en Dashboard
+4. **Sprint B residual**: B.4 `roundMoney(v, currency)` en acumulados de vista Inversiones
+5. **Sprint C (P1)**: WCAG AA — contraste `--text-tertiary` · aria-label forms · esc() charts · reduced-motion
