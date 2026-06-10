@@ -40,6 +40,7 @@ const PRESETS = [
   { label: 'Nequi',             type: 'digital_wallet', institution: 'Nequi',       currency: 'COP' },
   { label: 'Daviplata',         type: 'digital_wallet', institution: 'Daviplata',   currency: 'COP' },
   { label: 'Global66',          type: 'bank',           institution: 'Global66',    currency: 'USD' },
+  { label: 'RappiCuenta',       type: 'savings',        institution: 'Rappi',       currency: 'COP', interestRate: 9 },
   { label: 'Caja menor',        type: 'cash',           institution: '',            currency: 'COP' },
   { label: 'Visa Bancolombia',  type: 'credit_card',    institution: 'Bancolombia', currency: 'COP' },
   { label: 'MC NuBank',         type: 'credit_card',    institution: 'NuBank',      currency: 'COP' },
@@ -69,27 +70,35 @@ function accountForm(existing) {
   // absoluto para que el usuario ingrese "200000" (lo que debe), no "-200000".
   const balEl   = numberInput({ name: 'balance',   value: existing?.type === 'credit_card' ? Math.abs(existing?.balance ?? 0) : (existing?.balance ?? 0) });
   const instEl  = textInput({ name: 'institution', value: existing?.institution || '', placeholder: 'Opcional' });
-  const ccExtra = el('div');
+  const extra = el('div');
 
-  function paintCcExtra() {
-    ccExtra.innerHTML = '';
-    if (typeEl.value !== 'credit_card') return;
-    ccExtra.appendChild(el('div', { class: 'field-row' }, [
-      field('Cupo total', numberInput({ name: 'creditLimit',  value: existing?.creditLimit  ?? '' })),
-      field('Tasa E.A. %', numberInput({ name: 'interestRate', value: existing?.interestRate ?? '' })),
-    ]));
-    ccExtra.appendChild(el('div', { class: 'field-row' }, [
-      field('Día de corte', numberInput({ name: 'cutoffDay',   value: existing?.cutoffDay   ?? '', placeholder: '5' })),
-      field('Día de pago',  numberInput({ name: 'paymentDay',  value: existing?.paymentDay  ?? '', placeholder: '25' })),
-    ]));
-    ccExtra.appendChild(el('div', { class: 'field-row' }, [
-      field('Pago mínimo ($)',  numberInput({ name: 'minPayment', value: existing?.minPayment ?? '', placeholder: '0' })),
-      field('Total a pagar ($)', numberInput({ name: 'totalDue',  value: existing?.totalDue  ?? '', placeholder: '0' })),
-    ]));
+  // Campos extra según el tipo: tarjeta de crédito (cupo, corte, pago) o
+  // cuenta remunerada savings/bank (tasa EA para estimar el rendimiento — Sprint D).
+  function paintExtra() {
+    extra.innerHTML = '';
+    const t = typeEl.value;
+    if (t === 'credit_card') {
+      extra.appendChild(el('div', { class: 'field-row' }, [
+        field('Cupo total', numberInput({ name: 'creditLimit',  value: existing?.creditLimit  ?? '' })),
+        field('Tasa E.A. %', numberInput({ name: 'interestRate', value: existing?.interestRate ?? '' })),
+      ]));
+      extra.appendChild(el('div', { class: 'field-row' }, [
+        field('Día de corte', numberInput({ name: 'cutoffDay',   value: existing?.cutoffDay   ?? '', placeholder: '5' })),
+        field('Día de pago',  numberInput({ name: 'paymentDay',  value: existing?.paymentDay  ?? '', placeholder: '25' })),
+      ]));
+      extra.appendChild(el('div', { class: 'field-row' }, [
+        field('Pago mínimo ($)',  numberInput({ name: 'minPayment', value: existing?.minPayment ?? '', placeholder: '0' })),
+        field('Total a pagar ($)', numberInput({ name: 'totalDue',  value: existing?.totalDue  ?? '', placeholder: '0' })),
+      ]));
+    } else if (t === 'savings' || t === 'bank') {
+      extra.appendChild(el('div', { class: 'field-row' }, [
+        field('Tasa E.A. % (rendimiento)', numberInput({ name: 'interestRate', value: existing?.interestRate ?? '', placeholder: '0' })),
+      ]));
+    }
   }
 
-  typeEl.addEventListener('change', paintCcExtra);
-  if (existing?.type === 'credit_card') paintCcExtra();
+  typeEl.addEventListener('change', paintExtra);
+  paintExtra();
 
   // Chips de preset (solo en modal "Nueva cuenta")
   const presetsRow = !existing
@@ -101,6 +110,11 @@ function accountForm(existing) {
             curEl.value   = p.currency;
             instEl.value  = p.institution;
             typeEl.dispatchEvent(new Event('change'));
+            // El campo de tasa lo crea paintExtra tras el change; setearlo después.
+            if (p.interestRate != null) {
+              const ir = extra.querySelector('[name="interestRate"]');
+              if (ir) ir.value = p.interestRate;
+            }
           }},
         })
       ))
@@ -111,7 +125,7 @@ function accountForm(existing) {
     field('Nombre', nameEl),
     el('div', { class: 'field-row' }, [field('Tipo', typeEl), field('Moneda', curEl)]),
     el('div', { class: 'field-row' }, [field('Saldo actual', balEl), field('Institución', instEl)]),
-    ccExtra,
+    extra,
   ].filter(Boolean));
 }
 
@@ -146,6 +160,9 @@ export function openAccountModal(existing, { defaults = null } = {}) {
         data.paymentDay   = Number(get('paymentDay')?.value)   || 0;
         data.minPayment   = Number(get('minPayment')?.value)   || 0;
         data.totalDue     = Number(get('totalDue')?.value)     || 0;
+      } else if (data.type === 'savings' || data.type === 'bank') {
+        // Cuenta remunerada: tasa EA para el rendimiento estimado (Sprint D).
+        data.interestRate = Number(get('interestRate')?.value) || 0;
       }
       if (!data.name) { focusFieldError(get('name')); return setFieldError(get('name'), 'El nombre es obligatorio'); }
       return guardedSave(
@@ -158,8 +175,9 @@ export function openAccountModal(existing, { defaults = null } = {}) {
 
 // ---------- Fila de cuenta ----------
 function accountRow(a) {
-  const util   = utilization(a);
-  const isCC   = a.type === 'credit_card';
+  const util    = utilization(a);
+  const isCC    = a.type === 'credit_card';
+  const isYield = (a.type === 'savings' || a.type === 'bank') && Number(a.interestRate) > 0;
   const subParts = [a.institution || '—'];
   if (util !== null) subParts.push(`${util}% utilizado`);
   // CC puede almacenar el saldo como positivo (monto adeudado) o negativo: normalizamos a negativo para display.
@@ -170,7 +188,11 @@ function accountRow(a) {
   return el('div', { class: 'row' }, [
     el('div', { class: 'row__avatar', html: icon(typeIcon(a.type)) }),
     el('div', { class: 'row__main' }, [
-      el('div', { class: 'row__title' }, [a.name, ' ', Badge(typeLabel(a.type), isCC ? 'negative' : 'info')]),
+      el('div', { class: 'row__title' }, [
+        a.name, ' ', Badge(typeLabel(a.type), isCC ? 'negative' : 'info'),
+        isYield ? ' ' : null,
+        isYield ? Badge(`${a.interestRate}% EA`, 'positive') : null,
+      ].filter(Boolean)),
       el('div', { class: 'row__sub', text: subParts.join(' · ') }),
       util !== null ? el('div', { class: 'util-bar' }, [
         el('div', { class: `util-bar__fill${util > 80 ? ' util-bar__fill--danger' : util > 50 ? ' util-bar__fill--warn' : ''}`, style: `width:${util}%` }),
