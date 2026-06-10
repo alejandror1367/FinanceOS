@@ -120,10 +120,11 @@ Ver §5.
 
 ---
 
-### Sprint B — Inversiones: ventas parciales y valoración (P1)
+### Sprint B — Inversiones: ventas parciales y valoración (P1) ✅ COMPLETADO (2026-06-10)
 
 **Objetivo:** cerrar la deuda que dejó la auditoría 2026-06-03 en el flujo de venta y renta fija.
 **Prioridad:** P1 — bug activo en flujo de venta.
+**Estado:** B.1–B.3 ✅ (TD-43/44) · B.4 ✅ `14bb7dc` · B.5 ✅ (suite). Siguiente: Sprint C (WCAG).
 **Riesgo:** bajo-medio (lógica aislada en investments.js, cubierta por tests nuevos).
 **Deploy:** no.
 **Dependencias:** ninguna (puede ir en paralelo con C).
@@ -134,8 +135,8 @@ Ver §5.
 | B.1 | Modal de venta pide **cantidad a vender**; `soldQuantity = min(qtySolicitada, qtyLote)`; lote remanente visible | FIN-003 / TD-43 | `src/views/investments.js:118-124` | M | — |
 | B.2 | `realizedPnL`: prorratear comisión de compra `× (qtyVendida/qtyLote)` y `soldCommission` por lo vendido | FIN-004 / TD-43 | `src/views/investments.js:79-83` | S | — |
 | B.3 | `cdtCurrentValue`: capitalizar sobre capital puro (sin comisión) y topar `days` a vencimiento (`maturityDate`) | FIN-008 / TD-44 | `src/views/investments.js:130-135` | S | — |
-| B.4 | `roundMoney(v, currency)` en acumulados y totales de la vista Inversiones (evitar penny drift) | FIN-009 / TD-21 | `src/views/investments.js:557-568` | S | — |
-| B.5 | Tests: venta parcial, venta total, CDT capitalizado correctamente, P&L con comisión prorrateada | FIN-003/004/008 | `tests/selectors.test.js` | M | — |
+| B.4 ✅ | `roundMoney(v, currency)` en acumulados y totales de la vista Inversiones (evitar penny drift) | FIN-009 / TD-21 | `src/views/investments.js:620-640` | S | ✅ `14bb7dc` (acumulados por sección) |
+| B.5 ✅ | Tests: venta parcial, venta total, CDT capitalizado correctamente, P&L con comisión prorrateada | FIN-003/004/008 | `tests/selectors.test.js` | M | ✅ suites `lotRealizedPnL`, `cdtCurrentValue` |
 
 **Criterio de aceptación:**
 - Venta de 50 de 100 acciones genera lote remanente de 50 con costBasis proporcional.
