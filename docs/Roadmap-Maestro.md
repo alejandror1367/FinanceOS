@@ -257,7 +257,7 @@ Ver §5.
 
 ---
 
-### Sprint G — Backend: performance y robustez de sync (P2) ✅ COMPLETADO (2026-06-10) · ⚠ deploy G.7
+### Sprint G — Backend: performance y robustez de sync (P2) ✅ COMPLETADO Y DESPLEGADO (2026-06-10)
 
 **Objetivo:** quitar O(n) de hot paths y blindar la cola de sync contra condiciones de carrera.
 **Estado:** G.1–G.7 ✅. G.1–G.6 ya estaban implementados en sesiones previas (verificado en código); **G.7 cursor cerrado esta sesión** (`bdde64a`) — antes solo estaba la ventana de 24m; faltaba la paginación por cursor (estaba diferida).
@@ -270,15 +270,15 @@ Ver §5.
 | G.4 ✅ | `isTransient`: errores de negocio/"No autorizado" → dead-letter (no reintenta) | BE-011 / TD-10 | `src/services/syncEngine.js:40` | S | — |
 | G.5 ✅ | `purgeDeleted_`: reconstruye la hoja en bloque (`clearContent`+`setValues`) | BE-007 / TD-28 | `backend/Utils.gs:236` | M | ✅ |
 | G.6 ✅ | `truncateAuditLog_`: archiva entradas > 90 días en bloque | BE-008 / TD-05,28 | `backend/Audit.gs:34` | M | ✅ |
-| G.7 ✅ | Cursor opt-in en `getTransactions` (`{items,nextCursor}`) + ventana 24m en `getBootstrap_` | BE-006 / TD-25 | `backend/Transactions.gs:14`, `Reports.gs:228` | L | ⚠ pendiente |
+| G.7 ✅ | Cursor opt-in en `getTransactions` (`{items,nextCursor}`) + ventana 24m en `getBootstrap_` | BE-006 / TD-25 | `backend/Transactions.gs:14`, `Reports.gs:228` | L | ✅ |
 
 **Criterio de aceptación:**
 - ✅ `adjustBalance_` usa `repoGet_` sobre caché por request (sin O(n) por escritura tras la 1ª lectura).
 - ✅ `truncateAuditLog_` deja solo los 90 días recientes (acción admin `truncateAuditLog`).
 - ✅ `getTransactions` con `paginate=true` devuelve `nextCursor` para la siguiente página.
 
-> **⚠ DEPLOY PENDIENTE (G.7):** subir `backend/Transactions.gs`. Cambio aditivo y retrocompatible
-> (sin `paginate`/`cursor` devuelve el array de siempre); no rompe a `getBootstrap_` ni a los clientes actuales.
+> **✅ DEPLOY HECHO (G.7, 2026-06-10):** `backend/Transactions.gs` en producción. Cambio aditivo y
+> retrocompatible (sin `paginate`/`cursor` devuelve el array de siempre); `getBootstrap_` y clientes actuales intactos.
 
 ---
 
