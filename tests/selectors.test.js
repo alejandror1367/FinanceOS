@@ -6,7 +6,7 @@
 
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { selectors, convertToBase } from '../src/store/selectors.js';
+import { selectors, convertToBase, accountAvgBalance, calcYield, txEffectOnAccount } from '../src/store/selectors.js';
 import { priceService } from '../src/services/priceService.js';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -1501,5 +1501,73 @@ describe('fxGaps (A.3 / FIN-005)', () => {
       ],
     });
     assert.equal(selectors.fxGaps(s).count, 0);
+  });
+});
+
+// ── calcYield / accountAvgBalance (Sprint D / C3) ───────────────────────────────
+
+describe('txEffectOnAccount', () => {
+  test('ingreso suma a su cuenta', () => {
+    assert.equal(txEffectOnAccount({ type: 'income', amount: 100, accountId: 'a1' }, 'a1'), 100);
+  });
+  test('gasto resta de su cuenta', () => {
+    assert.equal(txEffectOnAccount({ type: 'expense', amount: 100, accountId: 'a1' }, 'a1'), -100);
+  });
+  test('transferencia: −monto en origen, +monto en destino', () => {
+    const t = { type: 'transfer', amount: 100, accountId: 'a1', toAccountId: 'a2' };
+    assert.equal(txEffectOnAccount(t, 'a1'), -100);
+    assert.equal(txEffectOnAccount(t, 'a2'), 100);
+  });
+  test('cuenta no involucrada → 0', () => {
+    assert.equal(txEffectOnAccount({ type: 'income', amount: 100, accountId: 'a1' }, 'a9'), 0);
+  });
+});
+
+describe('accountAvgBalance (saldo promedio ponderado por tiempo)', () => {
+  test('saldo constante sin transacciones → promedio = saldo actual', () => {
+    const avg = accountAvgBalance('a1', 1_000_000, [], '2026-01-01', '2026-01-31');
+    assert.equal(avg, 1_000_000);
+  });
+
+  test('depósito intra-período: promedio entre saldo previo y actual', () => {
+    // Hoy = 1.000.000; +500.000 el día 16 → antes valía 500.000.
+    // (500K×15 días + 1M×15 días) / 30 = 750.000
+    const txs = [{ type: 'income', amount: 500_000, date: '2026-01-16', accountId: 'a1' }];
+    const avg = accountAvgBalance('a1', 1_000_000, txs, '2026-01-01', '2026-01-31');
+    assert.equal(Math.round(avg), 750_000);
+  });
+
+  test('retiro intra-período: promedio NO es el saldo actual (bajo)', () => {
+    // Hoy = 100.000; −900.000 el día 16 → antes valía 1.000.000.
+    // (1M×15 + 100K×15) / 30 = 550.000  (≠ 100.000 actual)
+    const txs = [{ type: 'expense', amount: 900_000, date: '2026-01-16', accountId: 'a1' }];
+    const avg = accountAvgBalance('a1', 100_000, txs, '2026-01-01', '2026-01-31');
+    assert.equal(Math.round(avg), 550_000);
+  });
+
+  test('período inválido (to <= from) → saldo actual', () => {
+    assert.equal(accountAvgBalance('a1', 42, [], '2026-01-31', '2026-01-01'), 42);
+  });
+});
+
+describe('calcYield (interés sobre saldo promedio, tasa EA)', () => {
+  test('saldo constante 1 año al 10% EA → 10% del saldo', () => {
+    const y = calcYield({ accountId: 'a1', balanceNow: 1_000_000, transactions: [], annualRatePct: 10, from: '2026-01-01', to: '2027-01-01' });
+    assert.ok(Math.abs(y - 100_000) < 1, `esperado ≈100.000, dio ${y}`);
+  });
+
+  test('tasa 0 → 0', () => {
+    assert.equal(calcYield({ accountId: 'a1', balanceNow: 1_000_000, annualRatePct: 0, from: '2026-01-01', to: '2027-01-01' }), 0);
+  });
+
+  test('período inválido → 0', () => {
+    assert.equal(calcYield({ accountId: 'a1', balanceNow: 1_000_000, annualRatePct: 10, from: '2026-01-01', to: '2026-01-01' }), 0);
+  });
+
+  test('usa saldo promedio, no el actual: interés sobre 550K aunque el saldo de hoy sea 100K', () => {
+    const txs = [{ type: 'expense', amount: 900_000, date: '2026-01-16', accountId: 'a1' }];
+    const y = calcYield({ accountId: 'a1', balanceNow: 100_000, transactions: txs, annualRatePct: 12, from: '2026-01-01', to: '2026-01-31' });
+    const growth = Math.pow(1.12, 30 / 365) - 1;
+    assert.ok(Math.abs(y - 550_000 * growth) < 1, `esperado ≈${550_000 * growth}, dio ${y}`);
   });
 });

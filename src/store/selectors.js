@@ -55,6 +55,65 @@ function sumInBase(items, amountFn, currencyFn, base, fx) {
   }, 0);
 }
 
+// ── Cuentas remuneradas (Sprint D / hallazgo C3) ────────────────────────────
+// Efecto con signo de una transacción sobre el saldo de UNA cuenta concreta.
+// income(+) / expense(−) si es su cuenta; transfer: −monto si es origen, +monto si destino.
+export function txEffectOnAccount(t, accountId) {
+  const amt = Number(t.amount) || 0;
+  if (t.type === 'income'  && t.accountId === accountId) return amt;
+  if (t.type === 'expense' && t.accountId === accountId) return -amt;
+  if (t.type === 'transfer') {
+    if (t.accountId   === accountId) return -amt;
+    if (t.toAccountId === accountId) return amt;
+  }
+  return 0;
+}
+
+const MS_PER_DAY = 86400000;
+function dayFloor(d) { const x = new Date(d); x.setHours(0, 0, 0, 0); return x.getTime(); }
+
+// Saldo PROMEDIO ponderado por tiempo de una cuenta en [from, to].
+// Reconstruye el saldo hacia atrás desde el saldo ACTUAL (balanceNow = saldo hoy)
+// usando las transacciones del período: integra el saldo a lo largo del tiempo en
+// lugar de usar el saldo actual como proxy (que sobreestima si el saldo creció).
+export function accountAvgBalance(accountId, balanceNow, txs, from, to) {
+  const start = dayFloor(from);
+  const end   = dayFloor(to);
+  const totalDays = (end - start) / MS_PER_DAY;
+  if (totalDays <= 0) return Number(balanceNow) || 0;
+
+  // Cambios dentro de (start, end], de más reciente a más antiguo.
+  const within = (txs || [])
+    .map((t) => ({ day: dayFloor(t.date), effect: txEffectOnAccount(t, accountId) }))
+    .filter((t) => t.effect !== 0 && t.day > start && t.day <= end)
+    .sort((a, b) => b.day - a.day);
+
+  let balance  = Number(balanceNow) || 0;
+  let cursor   = end;     // límite superior del segmento con saldo `balance`
+  let weighted = 0;
+  for (const t of within) {
+    weighted += balance * ((cursor - t.day) / MS_PER_DAY); // [t.day, cursor) a `balance`
+    balance  -= t.effect;                                  // saldo previo a esta tx
+    cursor    = t.day;
+  }
+  weighted += balance * ((cursor - start) / MS_PER_DAY);   // [start, cursor) saldo inicial
+  return weighted / totalDays;
+}
+
+// Rendimiento (interés) estimado de una cuenta remunerada entre [from, to].
+// Usa el saldo PROMEDIO ponderado por tiempo y la tasa EFECTIVA ANUAL (EA%):
+// interés = avg × ((1 + EA/100)^(días/365) − 1). Devuelve el monto en la divisa de la cuenta.
+export function calcYield({ accountId, balanceNow, transactions = [], annualRatePct, from, to }) {
+  const rate = Number(annualRatePct) || 0;
+  if (rate <= 0) return 0;
+  const days = (dayFloor(to) - dayFloor(from)) / MS_PER_DAY;
+  if (days <= 0) return 0;
+  const avg = accountAvgBalance(accountId, balanceNow, transactions, from, to);
+  if (avg <= 0) return 0;
+  const growth = Math.pow(1 + rate / 100, days / 365) - 1;
+  return avg * growth;
+}
+
 const MONTH_ABBR = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 function ymKey(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; }
 function lastMonths(n) {
@@ -77,6 +136,20 @@ export const selectors = {
     // sin tasa se EXCLUYEN del total (flag en fxGaps), nunca se suman 1:1.
     const base = s.baseCurrency || 'COP';
     return sumInBase(selectors.liquidAccounts(s), (a) => a.balance, (a) => a.currency, base, priceService.fxRates);
+  },
+
+  // Sprint D (C3): rendimiento estimado PENDIENTE de una cuenta remunerada desde su
+  // último registro (lastYieldDate) o su creación hasta `to` (hoy por defecto).
+  // Usa saldo promedio ponderado por tiempo — NO el saldo actual (que sobreestima).
+  accountYield(s, accountId, to = new Date()) {
+    const a = (s.accounts || []).find((x) => x.id === accountId);
+    if (!a || !(Number(a.interestRate) > 0)) return 0;
+    const from = a.lastYieldDate || a.createdAt;
+    if (!from) return 0;
+    return calcYield({
+      accountId, balanceNow: a.balance, transactions: s.transactions || [],
+      annualRatePct: a.interestRate, from, to,
+    });
   },
 
   investmentsValue(s) {
