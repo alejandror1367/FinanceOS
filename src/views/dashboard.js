@@ -42,6 +42,7 @@ export function renderDashboard() {
     const invReturn   = invSummary.returnPct;
     const score       = selectors.financialScore(s);
     const sm          = scoreMeta(score);
+    const gaps        = selectors.fxGaps(s);
 
     // Trend patrimonio desde snapshots reales.
     const snapsForTrend = [...(s.netWorthSnapshots || [])].sort((a, b) => (a.date < b.date ? -1 : 1));
@@ -317,6 +318,20 @@ export function renderDashboard() {
 
     renderUpcomingCard();
 
+    // ── Banner FX: entidades excluidas de totales por falta de tasa ─────────
+    const fxBanner = (() => {
+      if (!gaps.count) return null;
+      const n   = gaps.count;
+      const cur = gaps.currencies.join(', ');
+      const w   = el('div', { class: 'import-warning', style: { marginBottom: 'var(--space-4)' } });
+      w.appendChild(el('span', { html: icon('bell') }));
+      w.appendChild(el('span', {}, [
+        `${n} entidad${n > 1 ? 'es' : ''} en ${cur} excluida${n > 1 ? 's' : ''} de los totales por falta de tasa de cambio. `,
+        el('a', { href: '#/investments', style: 'color:inherit;text-decoration:underline', text: 'Actualizar precios en Inversiones.' }),
+      ]));
+      return w;
+    })();
+
     // ── Composición ──────────────────────────────────────────────────────────
     mount(root,
       el('div', {}, [
@@ -329,6 +344,7 @@ export function renderDashboard() {
             Button('Nuevo movimiento', { variant: 'primary', iconName: 'plus', onClick: () => openTxModal({ mode: 'create' }) }),
           ]),
         ]),
+        fxBanner,
         kpis,
         el('div', { class: 'grid grid--2 section' }, [netWorthCard, categoryCard]),
         el('div', { class: 'grid grid--2 section' }, [recentCard, el('div', { class: 'stack' }, [goalsCard, upcomingArea])]),
