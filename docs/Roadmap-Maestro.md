@@ -291,12 +291,12 @@ Ver §5.
 |---|---|---|---|---|---|
 | H.1 ✅ | Rotación (n>6) + decimación (n>8) de labels eje X · `font-size` en unidades del viewBox (escala con el ancho) · `height:auto` | FE-005 / TD-40 | `src/components/charts.js:58-105` | M | — |
 | H.2 ✅ | Tablas `sr-only` con valores por serie/segmento (`buildLineSrTable`/`buildDonutSrTable`) | FE-011 / TD-07 | `src/components/charts.js:12,32` | M | — |
-| H.3 ✅ | Bottom-nav móvil prioriza Dashboard·Hoy·Transacciones·Presupuestos·Inversiones; resto vía ☰ y ⌘K | FE-012 | `src/core/routes.js:49-53` | S | — |
+| H.3 ✅ | Bottom-nav móvil = Dashboard·Hoy·Transacciones·Inversiones·Ajustes (preferencia del dueño); resto vía ☰ y ⌘K | FE-012 | `src/core/routes.js:49-53` | S | — |
 
 **Criterio de aceptación:**
 - ✅ En viewport 375px LineChart rota labels (n>6) y decima (n>8) → no solapan.
 - ✅ LineChart y Donut adjuntan `<table class="sr-only">` con valores por serie/segmento.
-- ✅ Bottom-nav móvil expone las 5 rutas más usadas (incluye Presupuestos e Inversiones).
+- ✅ Bottom-nav móvil expone 5 rutas (Dashboard·Hoy·Transacciones·Inversiones·Ajustes).
 
 ---
 
