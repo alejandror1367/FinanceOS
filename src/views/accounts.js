@@ -24,6 +24,12 @@ const TYPES = [
 const typeLabel = (v) => (TYPES.find((t) => t.value === v) || {}).label || v;
 const typeIcon  = (v) => (TYPES.find((t) => t.value === v) || {}).icon  || 'accounts';
 
+// Tipos de cuenta que pueden ser remuneradas (rinden interés EA): ahorro, banco,
+// billetera digital (Nequi/RappiCuenta) y cuenta de inversión (cash del broker).
+// credit_card NO entra: su interestRate es el costo del crédito, no un rendimiento.
+const YIELD_TYPES = ['savings', 'bank', 'digital_wallet', 'investment'];
+const isYieldType = (t) => YIELD_TYPES.includes(t);
+
 // Grupos de visualización — orden y tipos incluidos en cada sección.
 const GROUPS = [
   { key: 'bank',    label: 'Bancos y Ahorro',       types: ['bank', 'savings'] },
@@ -90,7 +96,7 @@ function accountForm(existing) {
         field('Pago mínimo ($)',  numberInput({ name: 'minPayment', value: existing?.minPayment ?? '', placeholder: '0' })),
         field('Total a pagar ($)', numberInput({ name: 'totalDue',  value: existing?.totalDue  ?? '', placeholder: '0' })),
       ]));
-    } else if (t === 'savings' || t === 'bank') {
+    } else if (isYieldType(t)) {
       extra.appendChild(el('div', { class: 'field-row' }, [
         field('Tasa E.A. % (rendimiento)', numberInput({ name: 'interestRate', value: existing?.interestRate ?? '', placeholder: '0' })),
       ]));
@@ -160,7 +166,7 @@ export function openAccountModal(existing, { defaults = null } = {}) {
         data.paymentDay   = Number(get('paymentDay')?.value)   || 0;
         data.minPayment   = Number(get('minPayment')?.value)   || 0;
         data.totalDue     = Number(get('totalDue')?.value)     || 0;
-      } else if (data.type === 'savings' || data.type === 'bank') {
+      } else if (isYieldType(data.type)) {
         // Cuenta remunerada: tasa EA para el rendimiento estimado (Sprint D).
         data.interestRate = Number(get('interestRate')?.value) || 0;
       }
@@ -215,7 +221,14 @@ export function openYieldModal(a) {
     ]),
     el('p', { class: 't-caption text-tertiary', text:
       'Calculado sobre el saldo promedio del período (no el saldo actual). Es una estimación.' }),
-  ]);
+    // Caveat: el saldo de cuentas de inversión se excluye del patrimonio (se cuentan las
+    // posiciones, no el cash del broker), así que este rendimiento sube el saldo y el
+    // flujo de caja, pero no el patrimonio neto a menos que registres ese cash aparte.
+    a.type === 'investment'
+      ? el('p', { class: 't-caption text-negative', text:
+          'Nota: el saldo de cuentas de inversión no se cuenta en el patrimonio (solo las posiciones). El rendimiento se verá en flujo de caja y en el saldo de la cuenta.' })
+      : null,
+  ].filter(Boolean));
 
   openModal({
     title: 'Registrar rendimiento',
@@ -241,7 +254,7 @@ export function openYieldModal(a) {
 function accountRow(a) {
   const util    = utilization(a);
   const isCC    = a.type === 'credit_card';
-  const isYield = (a.type === 'savings' || a.type === 'bank') && Number(a.interestRate) > 0;
+  const isYield = isYieldType(a.type) && Number(a.interestRate) > 0;
   const subParts = [a.institution || '—'];
   if (util !== null) subParts.push(`${util}% utilizado`);
   // CC puede almacenar el saldo como positivo (monto adeudado) o negativo: normalizamos a negativo para display.
