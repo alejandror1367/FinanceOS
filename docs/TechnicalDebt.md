@@ -98,7 +98,7 @@ La deuda se concentra en **tres temas de fondo**: (1) **modelo contable** (el le
 | TD-36 ✅ | Proyección de presupuesto lineal sobre-proyecta días 1–3 | F-13 | **HECHO** (`316911f`): `budgetStats` no proyecta cuando `day ≤ 3`; `projected = consumed` (sin alarma artificial los primeros días del mes). |
 | TD-37 ✅ | Sin validación de solapamiento de presupuestos | F-14 | **HECHO** (`316911f`): `openBudgetModal` verifica antes de guardar que no exista otro presupuesto con la misma (categoryId, period, periodKey). Error inline en el campo categoryId. |
 | TD-38 ✅ | Rentabilidad sin anualización (TWR/IRR) | F-15 | **HECHO** (`c94a5b5`): `selectors.xirr()` (Newton-Raphson), `selectors.cagr()`, `investmentXIRR()`, `investmentCAGR()`, `portfolioXIRR()`. 9 tests. |
-| TD-39 | Recurrentes sin ejecución automática | F-16 / SessionState | Trigger que genere la tx al vencer y avance `nextRunDate`. |
+| TD-39 ✅ | Recurrentes sin ejecución automática | F-16 / SessionState | **HECHO** (`d37a938`): `recurringService.runDueRecurring()` al cargar la app materializa los recurrentes vencidos (catch-up con tope) como tx con id determinista `rec_{id}_{fecha}` (idempotente FE/BE) y avanza `nextRunDate`. Client-side, sin deploy. +13 tests. |
 | TD-40 | Theming con hex crudos; sin tokens de densidad; charts no responsive en altura; `font-size` SVG fijo; doble implementación FE/BE de la misma matemática | DS-MF1–7 / MF-3 / F-17 / GAS-MF1–6 | Higiene incremental del DS y del backend (caché, lotes, lecturas dirigidas). |
 
 ---
