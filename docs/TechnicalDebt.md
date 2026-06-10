@@ -56,7 +56,7 @@ La deuda se concentra en **tres temas de fondo**: (1) **modelo contable** (el le
 | ID | Problema | Origen | Impacto | Esfuerzo | Recomendación |
 |----|----------|--------|---------|----------|---------------|
 | TD-10 ✅ | **Head-of-line blocking + operación atascada** en `syncEngine.flush` (error de negocio bloquea la cola para siempre) | I-2 / F-10 | Sincronización puede **congelarse** indefinidamente; cliente/servidor divergen | M | **HECHO** (`9a1cf3c`): `isTransient()` distingue error de red (reintentar) de negocio/4xx (a *dead-letter* inmediato); tras `MAX_ATTEMPTS` también va a dead-letter y la cola sigue. `syncQueue.markDead/requeue/discard`; Ajustes expone "Cambios sin sincronizar" con Reintentar/Descartar. |
-| TD-11 | **Bug: estado de sync siempre `'idle'`** (`pending>0 ? 'idle' : 'idle'`) | I-3 | La píldora nunca muestra "pendiente" | S | Corregir ternario a `'pending'`/`'error'`. **Quick win (1 línea).** |
+| TD-11 ✅ | **Bug: estado de sync siempre `'idle'`** (`pending>0 ? 'idle' : 'idle'`) | I-3 | La píldora nunca muestra "pendiente" | S | **HECHO** (verificado I.4): `syncEngine.js` usa `state = failed>0 ? 'error' : pending>0 ? 'pending' : 'idle'`; `SyncPill` (shell.js) deriva offline/syncing/pending/error/synced. |
 | TD-12 | **Dos métodos de *bucketing* de meses** (`sameMonth` por `Date` local vs `slice` string) | F-4 | `monthlyExpense` discrepa de `budgetConsumed` y del backend en bordes de mes | S | Reescribir `sameMonth` con comparación `YYYY-MM` string. **Quick win (1 línea).** |
 | TD-13 ✅ | **`pullAll` (clear+replace) vs cola pendiente** | F-8 | `refresh()` manual borra creates pendientes / reaparecen deletes | S–M | **HECHO** (`bccc956`): `refresh()` hace `flush()` de la cola antes de `pullData()`; lo pendiente se recupera en la reconciliación tras el pull. |
 | TD-14 ✅ | **No-atomicidad entre escritura local y encolado** (`db.put` + `enqueue` separados) | F-9 | Si el proceso muere entre ambas, dato local **sin** sync → divergencia permanente | M | **HECHO** (`bccc956`): nuevo `db.transact()` escribe dato + op de cola en una sola transacción IndexedDB atómica; `syncQueue.makeRecord()` comparte la forma del registro. |
@@ -164,7 +164,7 @@ La deuda se concentra en **tres temas de fondo**: (1) **modelo contable** (el le
 
 | ID | Problema | Origen | Impacto | Esf | Estado |
 |----|----------|--------|---------|-----|--------|
-| TD-54 | **Transacciones en divisa extranjera suman 1:1** en `monthlyIncome/Expense`, `cashflow` y presupuestos — convertir bien exige tasa histórica a la fecha de la tx, no la actual | Sprint A residual (FIN-005) | Flujo de caja/presupuestos distorsionados si hay tx en USD/EUR | M | Pendiente — requiere diseño propio (fuente de tasas históricas). Mitigación: `fxGaps()`/`hasMixedCurrencies` permiten flaggear en UI. Quick win asociado: Dashboard aún no consume `fxGaps` para aviso global (Inversiones sí tiene aviso propio). |
+| TD-54 | **Transacciones en divisa extranjera suman 1:1** en `monthlyIncome/Expense`, `cashflow` y presupuestos — convertir bien exige tasa histórica a la fecha de la tx, no la actual | Sprint A residual (FIN-005) | Flujo de caja/presupuestos distorsionados si hay tx en USD/EUR | M | **Pendiente** — requiere diseño propio (fuente de tasas históricas). Mitigación en UI ✅: `fxGaps()` ya alimenta el **banner global del Dashboard** (`1223eee`) e Inversiones tiene su propio aviso; `hasMixedCurrencies` disponible. Falta solo la conversión por tasa histórica. |
 
 ---
 

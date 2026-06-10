@@ -300,28 +300,22 @@ Ver §5.
 
 ---
 
-### Sprint I — QA en vivo + pulido v1.0 (P2/P3)
+### Sprint I — QA en vivo + pulido v1.0 (P2/P3) 🟡 CASI COMPLETO (2026-06-10) · falta solo I.1 (QA en vivo)
 
 **Objetivo:** completar QA automatizado y cerrar P3 de presupuestos y documentación.
-**Prioridad:** P2/P3.
-**Riesgo:** bajo.
-**Deploy:** no (excepto docs).
-**Dependencias:** conveniente hacerlo tras los sprints A–H para auditar el estado real.
-**Esfuerzo estimado:** ~1 día.
+**Estado:** I.2–I.5 ✅ (I.2/I.3 ya estaban hechos; I.4/I.5 esta sesión). **I.1 (Playwright en vivo) pendiente — requiere login OAuth del dueño.**
 
 | # | Tarea | ID origen | Archivo | Esf | Deploy |
 |---|---|---|---|---|---|
-| I.1 | Re-lanzar Playwright: 15 rutas, responsive 375px, dark/light, sin errores JS/red | QA (pendiente) | — | M | — |
-| I.2 | Proyección de presupuesto suavizada: no proyectar cuando `day ≤ 3` del mes | TD-36 | `src/views/budgets.js` / `src/store/selectors.js` | S | — |
-| I.3 | Validar solapamiento de presupuestos: `(categoryId, period, periodKey)` único antes de guardar | TD-37 | `src/views/budgets.js` | S | — |
-| I.4 | Integrar cualquier TD abierto nuevo en `docs/TechnicalDebt.md` | housekeeping | `docs/TechnicalDebt.md` | S | — |
-| I.5 | Actualizar `PROJECT_HANDOFF.md` y demás docs a estado v1.0 | docs | `docs/` | S | — |
+| I.1 🔴 | Re-lanzar Playwright: 15 rutas, responsive 375px, dark/light, sin errores JS/red | QA (pendiente) | — | M | — |
+| I.2 ✅ | Proyección de presupuesto: no proyecta cuando `day ≤ 3` (`projected = day>3 ? (consumed/day)*diasMes : consumed`) | TD-36 | `src/store/selectors.js:424-432` | S | — |
+| I.3 ✅ | Solapamiento de presupuestos: `(categoryId, period, periodKey)` único, error inline | TD-37 | `src/views/budgets.js:105-113` | S | — |
+| I.4 ✅ | Housekeeping `TechnicalDebt.md`: TD-11 marcado resuelto (SyncPill); TD-54 nota de mitigación actualizada (banner fxGaps) | housekeeping | `docs/TechnicalDebt.md` | S | — |
+| I.5 ✅ | `PROJECT_HANDOFF.md` + roadmap + checklist v1.0 al estado real | docs | `docs/` | S | — |
 
 **Criterio de aceptación:**
-- Playwright: 15/15 rutas sin errores JS, 375px responsive, dark/light OK.
-- No existe bug P0/P1 abierto.
-
-**Nota:** TD-36 y TD-37 están marcados ✅ en TechnicalDebt.md. Verificar en git log antes de re-implementar.
+- 🔴 Playwright 15/15 sin errores JS, 375px, dark/light — **pendiente (I.1)**.
+- ✅ No hay bug P0/P1 abierto en el código (los únicos abiertos son TD-54 P2 y verificaciones en vivo).
 
 ---
 
@@ -353,22 +347,24 @@ Ver §5.
 
 ## 5. Criterios de "listo para v1.0"
 
-- [ ] Patrimonio neto: frontend = backend ± 0 (incluido FX, comisión, lotes vendidos, CC) — FIN-001 / Sprint A
-- [ ] FX rates poblados en backend; ninguna suma de divisas 1:1 silenciosa — TD-02 / Sprint A
-- [ ] Retención en fuente aplicada al P&L realizado (no decorativa) — FIN-002 / Sprint A
-- [ ] Ventas parciales correctas; P&L realizado fiable con comisión prorrateada — FIN-003/004 / Sprint B
-- [ ] CDT valorado sobre capital puro, topado en vencimiento — FIN-008 / Sprint B
-- [ ] Sin resurrección de soft-deletes ni doble conteo de saldo — BE-001/002 / Sprint A
-- [ ] WCAG 2.2 AA: contraste ≥ 4.5:1, nombres accesibles, reduced-motion, progressbars — Sprint C
-- [ ] `calcYield` con fórmula correcta (saldo promedio del período) — Sprint D
-- [ ] Snowball/Avalanche con amortización real mes a mes — FIN-007 / Sprint E
-- [ ] `getTransactions` paginado; cold-start aceptable con histórico grande — BE-006 / Sprint G
-- [ ] `iss`/`exp` validados en el backend — SEC-002 / R5 (ya hecho)
-- [ ] Tests ≥ 120 (cubrir FX, ventas parciales, amortización, cuentas remuneradas)
-- [ ] QA en vivo (Playwright) sin errores JS en las 15 rutas, responsive y temas OK — Sprint I
-- [ ] Sin bugs P0/P1 abiertos
-- [ ] `TechnicalDebt.md` al día (todos los TD resueltos marcados ✅)
-- [ ] `PROJECT_HANDOFF.md` sincronizado con el estado real del repo
+- [x] Patrimonio neto: frontend = backend ± 0 (incluido FX, comisión, lotes vendidos, CC) — FIN-001 / Sprint A ✅ desplegado
+- [x] FX rates poblados en backend; ninguna suma de divisas 1:1 silenciosa — TD-02 / Sprint A ✅ desplegado
+- [x] Retención en fuente aplicada al P&L realizado (no decorativa) — FIN-002 / Sprint A
+- [x] Ventas parciales correctas; P&L realizado fiable con comisión prorrateada — FIN-003/004 / Sprint B
+- [x] CDT valorado sobre capital puro, topado en vencimiento — FIN-008 / Sprint B
+- [x] Sin resurrección de soft-deletes ni doble conteo de saldo — BE-001/002 / Sprint A
+- [x] WCAG 2.2 AA: contraste ≥ 4.5:1, nombres accesibles, reduced-motion, progressbars — Sprint C
+- [x] `calcYield` con fórmula correcta (saldo promedio del período) — Sprint D ✅ desplegado
+- [x] Snowball/Avalanche con amortización real mes a mes — FIN-007 / Sprint E
+- [x] `getTransactions` paginado; cold-start aceptable con histórico grande — BE-006 / Sprint G ✅ desplegado
+- [x] `iss`/`exp` validados en el backend — SEC-002 / R5
+- [x] Tests ≥ 120 (cubrir FX, ventas parciales, amortización, cuentas remuneradas) — **155/155**
+- [ ] QA en vivo (Playwright) sin errores JS en las 15 rutas, responsive y temas OK — **Sprint I.1 pendiente (requiere login)**
+- [x] Sin bugs P0/P1 abiertos en el código (único abierto: TD-54 P2 — tx divisa extranjera en cashflow/presupuestos)
+- [x] `TechnicalDebt.md` al día (todos los TD resueltos marcados ✅) — I.4
+- [x] `PROJECT_HANDOFF.md` sincronizado con el estado real del repo — I.5
+
+> **Estado v1.0:** todos los criterios cumplidos salvo **I.1 (QA en vivo con Playwright)** y el **Sprint F (Import/Export)**, que no es bloqueante para el núcleo financiero. Falta también la conversión por tasa histórica de TD-54 (P2).
 
 ---
 
@@ -383,7 +379,7 @@ Todos los siguientes IDs están marcados ✅ en `docs/TechnicalDebt.md`:
 **TD P3 resueltos:** TD-36, TD-37, TD-38.
 
 **Aún abiertos (P3, baja prioridad):** TD-33, TD-34, TD-35, TD-39.
-**Abiertos con trabajo parcial:** TD-02 (FX parcialmente implementado en FE; falta paridad completa con BE), TD-03 (doble conteo cuentas inversión en totalAssets — sin resolver), TD-05 (AuditLog crece sin límite — G.6 lo resuelve), TD-07 (charts sin tabla sr-only — H.2 lo resuelve).
+**Abiertos con trabajo parcial:** TD-02 (FX: FE+BE convierten/excluyen ✅ desplegado; resta solo TD-54 = tasa histórica en cashflow/presupuestos), TD-03 (doble conteo cuentas inversión en totalAssets — sin resolver). **Resueltos esta tanda:** TD-05/G.6 (truncado AuditLog ✅), TD-07/H.2 (tablas sr-only en charts ✅), TD-11/I.4 (estado de sync ✅), TD-25/G.7 (paginación cursor ✅ desplegado).
 
 ---
 
