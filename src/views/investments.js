@@ -630,11 +630,17 @@ export function renderInvestments() {
         if (v === null || c === null) { fxExcludedCount++; return; }
         totalValue += v; totalCost += c;
       });
-      return { ...sec, groups, totalValue, totalCost, gain: totalValue - totalCost, ret: totalCost ? (totalValue - totalCost) / totalCost * 100 : 0 };
+      // FIN-009 (TD-21): redondear el acumulado de cada sección al cerrarlo, antes de
+      // mostrarlo (distribución, head, tabla) y de sumarlo al total. Garantiza que
+      // "suma de secciones == total" sin penny drift. Los valores por lote no se tocan.
+      totalValue = roundMoney(totalValue, baseCur);
+      totalCost  = roundMoney(totalCost,  baseCur);
+      const gain = roundMoney(totalValue - totalCost, baseCur);
+      return { ...sec, groups, totalValue, totalCost, gain, ret: totalCost ? gain / totalCost * 100 : 0 };
     }).filter((s) => s.groups.length);
 
-    // FIN-009 (TD-21): redondear totales del portafolio para evitar errores de punto flotante.
-    // Solo los acumulados finales se redondean; los valores intermedios por lote no se tocan.
+    // FIN-009 (TD-21): el total es la suma de las secciones ya redondeadas → reconciliación
+    // exacta entre las filas de sección y la fila "Total portafolio" de la tabla resumen.
     const pTotal = roundMoney(secStats.reduce((s, x) => s + x.totalValue, 0), baseCur);
     const cTotal = roundMoney(secStats.reduce((s, x) => s + x.totalCost, 0), baseCur);
     const gTotal = roundMoney(pTotal - cTotal, baseCur);
