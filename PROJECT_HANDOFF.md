@@ -685,24 +685,23 @@ commit: e6b3c77 · rama: main · SW: v0.2.43 · config.version: 0.2.43 · tests:
 
 > Leer esto antes que cualquier otra sección. Máximo 100 líneas. Fuente de verdad para retomar de inmediato.
 
-**HEAD:** `d77e1f5` · **SW/config.version:** `v0.2.91` · **Tests:** 136/136 (30 suites) · **Rama:** main · **Sync:** local adelantado (push pendiente)
+**HEAD:** `2281376` · **SW/config.version:** `v0.2.91` · **Tests:** 136/136 (30 suites) · **Rama:** main · **Sync:** up to date
 
-> **Sesión 2026-06-09 (2ª parte):** **Sprint A ✅ completado** — FX backend (`getFxRates`, caché 1h) · `computeNetWorth_` convierte/excluye divisas · FE sin suma 1:1 en ninguna ruta (`convertToBase`/`sumInBase`/`fxGaps`) · 21 tests FX nuevos. ⚠ **Deploy pendiente: `Quotes.gs`, `Code.gs`, `Reports.gs`.**
+> **Sesión 2026-06-09 (2ª parte):** **Sprint A ✅ completado y desplegado** — FX backend (`getFxRates`, caché 1h) · `computeNetWorth_` convierte/excluye divisas · FE sin suma 1:1 en ninguna ruta (`convertToBase`/`sumInBase`/`fxGaps`) · 21 tests FX nuevos. Deploy Sprint A: **`Quotes.gs` · `Code.gs` · `Reports.gs` ✅ desplegados 2026-06-10**.
 > **Sesión 2026-06-09 (1ª parte):** R2 ✅ · R3 ✅ · R4 ✅ · R5-Seguridad ✅ · fixes snapshot (valores en vivo, idempotencia fecha) · `Roadmap-Maestro.md` creado como fuente única de planificación.
 
 > **MCP:** `.mcp.json` versionado con **playwright** + **context7** (scope de proyecto).
 > Tras `git pull`: **aprobar** ambos y **reiniciar Claude Code** (las tools MCP se fijan al arrancar).
 
 ### Estado actual real
-- **App en producción:** https://alejandror1367.github.io/FinanceOS/ (PWA, OAuth activo) — local en v0.2.91 sin push
-- **Backend Apps Script:** 🟡 **Deploy pendiente Sprint A** — `Quotes.gs` · `Code.gs` · `Reports.gs` (FX). Resto al día (2026-06-09).
+- **App en producción:** https://alejandror1367.github.io/FinanceOS/ (PWA, OAuth activo) · v0.2.91
+- **Backend Apps Script:** ✅ **Al día** — Sprint A desplegado 2026-06-10 (`Quotes.gs` · `Code.gs` · `Reports.gs`). FX completo.
 - **Tests:** **136/136** en `tests/selectors.test.js` — 30 suites
 - **Roadmap activo:** `docs/Roadmap-Maestro.md` ← FUENTE ÚNICA. Reemplaza todos los roadmaps anteriores.
 - **Plan Opus (R0–R8):** R0–R5 ✅ · **Sprint A ✅** — **Sprint B (ventas parciales: B.4 roundMoney + verificación) o Sprint C (WCAG) es el siguiente**.
 
-### Deploy — ⚠ PENDIENTE (Sprint A FX)
-`Quotes.gs` (getFxRates_, caché 1h) · `Code.gs` (ruta getFxRates) · `Reports.gs` (computeNetWorth_ convierte/excluye divisas).
-Hasta el deploy, el backend en producción sigue sumando divisas 1:1 en computeNetWorth_ (el FE ya no).
+### Deploy — ✅ Sprint A desplegado (2026-06-10)
+`Quotes.gs` (getFxRates_, caché 1h) · `Code.gs` (ruta getFxRates) · `Reports.gs` (computeNetWorth_ convierte/excluye divisas) — **en producción**.
 
 ### Arquitectura actual
 ```
@@ -722,14 +721,13 @@ Flujo: `Views → Services → Store → Views` (never direct to net/IndexedDB f
 - Seguridad: `logAccessDenied_` rate-limit · `iss`/`exp` validados · `importMaxChars` configurable
 
 ### Bugs abiertos
-- 🟡 Verificación en vivo snapshots nuevo formato (priceService values) — pendiente Playwright
-- 🟡 Verificación en vivo FX: aviso de exclusión en Inversiones + `getFxRates` responde — tras deploy
+- 🟡 Verificación en vivo snapshots nuevo formato (priceService values) — pendiente Playwright con login
+- 🟡 Verificación en vivo FX: aviso de exclusión en Inversiones + `getFxRates` responde — pendiente Playwright con login (deploy ✅ hecho)
 - 🟡 TD-54: tx en divisa extranjera suman 1:1 en cashflow/presupuestos (necesita tasa histórica — diseño propio)
 
 ### Pendientes en orden — ROADMAP-MAESTRO (Sprints A–J)
 > Detalle completo: `docs/Roadmap-Maestro.md`.
-0. **Deploy manual Sprint A** ← ACCIÓN DEL DUEÑO: `Quotes.gs` + `Code.gs` + `Reports.gs`
-1. ~~Sprint A — Integridad cifras P0~~ ✅ 2026-06-09 (commits f7e1330 · 34383ff · d77e1f5)
+1. ~~Sprint A — Integridad cifras P0~~ ✅ 2026-06-09 · ~~Deploy Sprint A~~ ✅ 2026-06-10
 2. **Sprint B — Inversiones ventas parciales P0**: B.1–B.3 ya hechos (TD-43/44 ✅); queda B.4 roundMoney + B.5 verificación tests
 3. **Sprint C — Accesibilidad WCAG AA P1**: todo S, sin deploy — contraste · aria · reduced-motion · progressbar
 4. **Sprint D — Cuentas remuneradas P1**: rediseñar `calcYield` (saldo promedio, NO balance actual) · deploy
@@ -739,7 +737,6 @@ Flujo: `Views → Services → Store → Views` (never direct to net/IndexedDB f
 8. **Sprint H — Charts responsive P3** · **Sprint I — QA + v1.0** · **Sprint J — Avanzado + opcionales**
 
 ### Riesgos abiertos
-- FX backend en producción aún suma 1:1 hasta deploy de Sprint A (FE ya corregido)
 - TD-54: cashflow/presupuestos con tx en divisa extranjera suman 1:1 (tasa histórica pendiente de diseño)
 - `calcYield` sobreestima hasta ~7× → rediseño obligatorio antes de Sprint D
 - `analyzePortfolio` tomaría LockService → congela cola de sync

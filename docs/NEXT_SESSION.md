@@ -1,6 +1,6 @@
 # Prompt de continuación — FinanceOS
-**Generado:** 2026-06-09 (2ª parte — Sprint A FX completado)
-**HEAD:** `b855818` · **SW:** `v0.2.91` · **Tests:** 136/136 (30 suites)
+**Generado:** 2026-06-10 (Deploy Sprint A confirmado)
+**HEAD:** `2281376` · **SW:** `v0.2.91` · **Tests:** 136/136 (30 suites)
 
 ---
 
@@ -13,7 +13,7 @@ Tras git pull deben APROBARSE y REINICIARSE Claude Code: las tools MCP se fijan 
 PROYECTO: FinanceOS — PWA financiera personal y privada de Alejo.
 Repo: https://github.com/alejandror1367/FinanceOS (rama main).
 Prod: https://alejandror1367.github.io/FinanceOS/
-HEAD: b855818 · SW v0.2.91 · Tests 136/136 (30 suites)
+HEAD: 2281376 · SW v0.2.91 · Tests 136/136 (30 suites)
 
 INVARIANTES (ver CLAUDE.md): JS ES Modules sin build step · sin frameworks/bundlers ·
 cero deps npm en runtime · frontend abstraído tras src/services/ · Apps Script +
@@ -32,13 +32,13 @@ HECHO EN SPRINT A (2026-06-09, 2ª parte):
 - A.1/A.4/A.5/A.6 ya estaban hechas (TD-45/41/42/46) — verificado, no re-implementadas.
 - TD-02 cerrado · TD-54 nuevo documentado.
 
-⚠ ACCIÓN MANUAL DEL DUEÑO — DEPLOY PENDIENTE:
-Quotes.gs · Code.gs · Reports.gs (Apps Script). Hasta el deploy, el backend en
-producción sigue sumando divisas 1:1 en computeNetWorth_ (el frontend ya no).
+✅ DEPLOY SPRINT A COMPLETADO (2026-06-10):
+Quotes.gs · Code.gs · Reports.gs desplegados por el dueño. Backend ya convierte/excluye
+divisas con getFxRates_ (caché 1h). FE y BE alineados — nunca suman 1:1.
 
 PENDIENTES EN ORDEN:
 
-1. Deploy manual Sprint A (dueño) → verificar con Playwright:
+1. Verificación en vivo FX (Playwright con login):
    - getFxRates responde {success:true, data:{USD,EUR}}.
    - Vista Inversiones muestra aviso "N posiciones excluidas por falta de tasa" si aplica.
    - Snapshots nuevo formato (valores priceService) — verificación pendiente de antes.
