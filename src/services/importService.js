@@ -25,21 +25,40 @@ function readAsBuffer(file) {
   });
 }
 
-function applyProfile(profile, headers, rows) {
+// F.2: clave de deduplicación date|monto|descripción-normalizada. La descripción
+// reduce falsos positivos (dos compras distintas el mismo día por el mismo valor
+// ya no se marcan como duplicadas entre sí).
+function normDesc(s) {
+  return String(s || '').toLowerCase().replace(/[^a-z0-9áéíóúñ]/g, '').slice(0, 16);
+}
+export function dupKey(item) {
+  return `${item.date}|${Math.abs(item.amount || 0).toFixed(0)}|${normDesc(item.description)}`;
+}
+
+// Exportada para tests (F.1). F.4: filtra filas sin monto válido (0/NaN) — evita
+// transacciones basura de $0 (p. ej. filas de broker sin movimiento de caja) y las
+// cuenta en `skipped` para mostrarlo en el preview. Calcula period desde los items.
+export function applyProfile(profile, headers, rows) {
   const items = [];
+  let skipped = 0;
   for (const row of rows) {
     if (row.every((c) => !String(c).trim())) continue;
     try {
       const item = profile.mapRow(headers, row);
-      if (item && item.date) items.push(item);
+      if (!item) continue;
+      // F.4: filas sin fecha o sin monto válido no son importables → contar y omitir.
+      if (!item.date || !(Number(item.amount) > 0)) { skipped++; continue; }
+      items.push(item);
     } catch (_) { /* fila malformada, se ignora */ }
   }
+  const dates = items.map((i) => i.date).sort();
   return {
     bank: profile,
     type: profile.type || 'transactions',
     currency: profile.currency || 'COP',
     items,
-    period: null,
+    skipped,
+    period: dates.length ? { from: dates[0], to: dates[dates.length - 1] } : null,
   };
 }
 
@@ -79,9 +98,9 @@ export const importService = {
     if (isPdf) {
       onProgress?.('pdf');
       const buffer = await readAsBuffer(file);
-      const { isTextBased } = await parsePdf(buffer);
-      // PDFs requieren Claude — lanzar UnknownFormatError para mostrar el prompt
-      if (!isTextBased) throw new UnknownFormatError([]);
+      await parsePdf(buffer); // valida que el PDF abre (error claro si está corrupto/offline)
+      // TODO PDF pasa por el flujo del prompt de Claude (no hay parseo nativo de PDF):
+      // la vista muestra las instrucciones para convertirlo a FinanceOS CSV.
       throw new UnknownFormatError([]);
     }
 

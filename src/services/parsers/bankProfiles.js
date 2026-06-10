@@ -46,6 +46,41 @@ function getter(headers, row) {
 }
 
 export const BANK_PROFILES = [
+  // ⚠ ORDEN IMPORTA: financeos va PRIMERO. Su matchHeaders es el más específico
+  // (fecha+monto+tipo+categoria); si Bancolombia se evalúa antes, captura el CSV
+  // del prompt de Claude (tiene fecha+monto+descripcion) y se pierden tipo/categoría.
+  {
+    id: 'financeos',
+    name: 'FinanceOS Import',
+    color: 'var(--accent)',
+    textColor: '#fff',
+    currency: 'COP',
+    matchFilename: /financeos/i,
+    matchHeaders(h) {
+      const n = h.map(norm);
+      return n.includes('fecha') && n.includes('monto') && n.includes('tipo') && n.includes('categoria');
+    },
+    mapRow(headers, row) {
+      const get = getter(headers, row);
+      const monto = parseMoney(get('monto'));
+      const tipo = norm(get('tipo', 'type'));
+      let type = 'expense';
+      if (tipo.includes('ingreso') || tipo === 'income') type = 'income';
+      else if (tipo.includes('transfer')) type = 'transfer';
+      else if (tipo.includes('gasto') || tipo === 'expense') type = 'expense';
+      return {
+        date: toIso(get('fecha', 'date')),
+        description: get('descripcion', 'description', 'descripción'),
+        amount: Math.abs(monto),
+        // signedAmount conserva el signo original: permite convertir transferencias sin
+        // toAccountId en gasto (saliente) o ingreso (entrante) al importar (IMP-2).
+        signedAmount: monto,
+        type,
+        categoryName: get('categoria', 'category') || '',
+        balance: parseMoney(get('saldo')) || undefined,
+      };
+    },
+  },
   {
     id: 'bancolombia',
     name: 'Bancolombia',
@@ -136,11 +171,13 @@ export const BANK_PROFILES = [
       const sent = parseMoney(get('sent', 'enviado', 'amount_sent', 'monto_enviado', 'amount', 'monto', 'valor'));
       const amount = received || sent;
       const currency = (get('currency_received', 'currency', 'moneda') || 'COP').toUpperCase().trim() || 'COP';
+      // IMP-2: 'transfer' exige toAccountId en el backend (que el extracto no trae) y
+      // moriría en dead-letter al sincronizar. Dinero recibido → income; enviado → expense.
       return {
         date: toIso(get('date', 'fecha', 'created_at', 'created')),
         description: get('type', 'tipo', 'description', 'descripci') || 'Transferencia Global66',
         amount: Math.abs(amount),
-        type: 'transfer',
+        type: received ? 'income' : 'expense',
         currency,
       };
     },
@@ -192,35 +229,6 @@ export const BANK_PROFILES = [
         description: get('descripci', 'concepto', 'description') || 'RappiPay',
         amount: Math.abs(amount),
         type: amount < 0 ? 'expense' : 'income',
-      };
-    },
-  },
-  {
-    id: 'financeos',
-    name: 'FinanceOS Import',
-    color: 'var(--accent)',
-    textColor: '#fff',
-    currency: 'COP',
-    matchFilename: /financeos/i,
-    matchHeaders(h) {
-      const n = h.map(norm);
-      return n.includes('fecha') && n.includes('monto') && n.includes('tipo') && n.includes('categoria');
-    },
-    mapRow(headers, row) {
-      const get = getter(headers, row);
-      const monto = parseMoney(get('monto'));
-      const tipo = norm(get('tipo', 'type'));
-      let type = 'expense';
-      if (tipo.includes('ingreso') || tipo === 'income') type = 'income';
-      else if (tipo.includes('transfer')) type = 'transfer';
-      else if (tipo.includes('gasto') || tipo === 'expense') type = 'expense';
-      return {
-        date: toIso(get('fecha', 'date')),
-        description: get('descripcion', 'description', 'descripción'),
-        amount: Math.abs(monto),
-        type,
-        categoryName: get('categoria', 'category') || '',
-        balance: parseMoney(get('saldo')) || undefined,
       };
     },
   },

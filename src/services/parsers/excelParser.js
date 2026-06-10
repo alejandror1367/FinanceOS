@@ -4,8 +4,13 @@ let xlsxLib = null;
 
 async function loadXLSX() {
   if (xlsxLib) return xlsxLib;
-  // esm.sh convierte el paquete npm a ESM — más confiable que cdn.sheetjs.com
-  xlsxLib = await import('https://esm.sh/xlsx');
+  try {
+    // esm.sh convierte el paquete npm a ESM — más confiable que cdn.sheetjs.com
+    xlsxLib = await import('https://esm.sh/xlsx');
+  } catch (_) {
+    // Trade-off offline-first conocido: la librería viene de CDN. CSV sí funciona sin red.
+    throw new Error('No se pudo cargar el lector de Excel (requiere conexión a internet). El formato CSV funciona sin conexión.');
+  }
   return xlsxLib;
 }
 

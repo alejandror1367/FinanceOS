@@ -13,9 +13,21 @@ export function downloadFile(filename, content, mime = 'text/plain') {
 }
 
 // rows: array de objetos. columns opcional (array de claves).
+// EXP-1: las columnas son la UNIÓN de claves de TODAS las filas (orden de primera
+// aparición) — antes solo se usaba la primera fila y se perdían campos presentes en
+// filas posteriores (p. ej. toAccountId de transferencias), violando exportabilidad total.
 export function toCSV(rows, columns) {
   if (!rows || !rows.length) return '';
-  const cols = columns || Object.keys(rows[0]);
+  let cols = columns;
+  if (!cols) {
+    const seen = new Set();
+    cols = [];
+    for (const r of rows) {
+      for (const k of Object.keys(r)) {
+        if (!seen.has(k)) { seen.add(k); cols.push(k); }
+      }
+    }
+  }
   const esc = (v) => {
     const s = v == null ? '' : String(v);
     return /[",\n;]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;

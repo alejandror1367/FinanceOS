@@ -5,7 +5,12 @@ let pdfjs = null;
 
 async function loadPdfJs() {
   if (pdfjs) return pdfjs;
-  pdfjs = await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.mjs');
+  try {
+    pdfjs = await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.mjs');
+  } catch (_) {
+    // Trade-off offline-first conocido: PDF.js viene de CDN. CSV sí funciona sin red.
+    throw new Error('No se pudo cargar el lector de PDF (requiere conexión a internet). El formato CSV funciona sin conexión.');
+  }
   pdfjs.GlobalWorkerOptions.workerSrc =
     'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.mjs';
   return pdfjs;
