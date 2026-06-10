@@ -13,12 +13,41 @@
 // se pasa, devuelve todas las transacciones (compatibilidad con clientes sin actualizar).
 function listTransactions_(p) {
   var rows = repoReadAll_('Transactions');
-  // Orden descendente por fecha.
-  rows.sort(function (a, b) { return (a.date < b.date) ? 1 : (a.date > b.date ? -1 : 0); });
+  // Orden descendente por fecha, con desempate estable por id (necesario para que el
+  // cursor de paginación recorra las filas en un orden determinista sin saltos/repeticiones).
+  rows.sort(function (a, b) {
+    if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+    return (String(a.id || '') < String(b.id || '')) ? 1 : -1;
+  });
   if (p && p.since) {
     var since = String(p.since).slice(0, 10); // normalizar a YYYY-MM-DD
     rows = rows.filter(function (r) { return String(r.date || '').slice(0, 10) >= since; });
   }
+
+  // BE-006 (G.7/TD-25): paginación por cursor OPT-IN. Si se pasa `paginate` (o `cursor`),
+  // devuelve un sobre { items, nextCursor } en vez del array; sin esos parámetros el
+  // contrato original (array) queda intacto, por lo que getBootstrap_ y los clientes
+  // actuales no se ven afectados. El cursor es opaco: "date|id" de la última fila servida.
+  if (p && (p.paginate === 'true' || p.paginate === true || p.cursor)) {
+    var pageSize = Math.max(1, Number(p.limit) || 100);
+    if (p.cursor) {
+      var parts = String(p.cursor).split('|');
+      var cDate = parts[0], cId = parts[1] || '';
+      rows = rows.filter(function (r) {
+        var d = String(r.date || '');
+        if (d !== cDate) return d < cDate;          // estrictamente más antigua que el cursor
+        return String(r.id || '') < cId;            // mismo día → id menor (orden desc estable)
+      });
+    }
+    var page = rows.slice(0, pageSize);
+    var nextCursor = null;
+    if (rows.length > pageSize && page.length) {
+      var last = page[page.length - 1];
+      nextCursor = String(last.date || '') + '|' + String(last.id || '');
+    }
+    return { items: page, nextCursor: nextCursor };
+  }
+
   if (p && p.limit) return rows.slice(0, Number(p.limit) || rows.length);
   return rows;
 }
