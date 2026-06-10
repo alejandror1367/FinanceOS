@@ -209,31 +209,26 @@ Ver §5.
 
 ---
 
-### Sprint E — Deudas y Metas (P1/P2)
+### Sprint E — Deudas y Metas (P1/P2) ✅ COMPLETADO (2026-06-10) · sin deploy
 
 **Objetivo:** estrategias de deuda y forecasts de metas financieramente realistas.
 **Prioridad:** P1 (avgRate en divisas incorrecta), P2 (amortización, forecasts).
-**Riesgo:** bajo-medio.
-**Deploy:** no.
-**Dependencias:** ninguna.
-**Esfuerzo estimado:** ~1.5–2 días.
+**Estado:** E.1–E.6 ✅. E.1/E.2/E.4/E.5 ya estaban hechos en sesiones previas; E.3 (extraído a selector `goalSavingsSplit`) y E.6 (tests sameMonth + reparto) cerrados esta sesión (`ee27d5b`).
 
 | # | Tarea | ID origen | Archivo | Esf | Deploy |
 |---|---|---|---|---|---|
-| E.1 | `avgRate`: convertir balances a base (COP) antes de ponderar tasas multi-moneda | FIN-006 / TD-02 | `src/store/selectors.js:215-216` | S | — |
-| E.2 | `amortize()`: soportar `minPayment` como % del saldo; simular bola de nieve Snowball/Avalanche encadenada | FIN-007 / TD-23 | `src/views/debts.js:26-40,297-302` | M | — |
-| E.3 | `goalForecast`: repartir `monthlySavingsAvg` entre metas activas (cada meta recibe `avg / n`) | FIN-011 / TD-52 | `src/views/goals.js:205,51-59` | M | — |
-| E.4 | `monthlySavingsAvg`: promediar solo meses con actividad (`income > 0 || expense > 0`) | FIN-012 / TD-53 | `src/store/selectors.js:118-122` | S | — |
-| E.5 | `sameMonth`: normalizar `ref` string con `slice(0,7)` para evitar comparación mixta Date/string | FIN-010 / TD-12 | `src/store/selectors.js:17-18` | S | — |
-| E.6 | Tests: amortización con % de saldo, amortización encadenada Snowball, reparto de metas en N activas, savingsAvg con meses vacíos | FIN-006/007/011/012 | `tests/selectors.test.js` | M | — |
+| E.1 ✅ | `avgRate`: pondera tasas sobre saldos convertidos a base (COP) — multi-moneda | FIN-006 / TD-02 | `src/store/selectors.js:debtStats` | S | — |
+| E.2 ✅ | `amortize()` con `paymentPct`/`paymentFloor` + `chainedPayoff` Snowball/Avalanche | FIN-007 / TD-23 | `src/store/selectors.js` | M | — |
+| E.3 ✅ | Reparto del ahorro entre metas activas → selector `goalSavingsSplit` (`avg / N`) | FIN-011 / TD-52 | `src/store/selectors.js` · `src/views/goals.js` | M | — |
+| E.4 ✅ | `monthlySavingsAvg`: promedia solo meses con actividad (`income>0 || expense>0`) | FIN-012 / TD-53 | `src/store/selectors.js` | S | — |
+| E.5 ✅ | `sameMonth`: normaliza `ref` string con `slice(0,7)` (exportado para test) | FIN-010 / TD-12 | `src/store/selectors.js:15` | S | — |
+| E.6 ✅ | Tests: amortización %, chained Snowball, reparto N metas, savingsAvg meses vacíos, sameMonth | FIN-006/007/011/012/010 | `tests/selectors.test.js` | M | — |
 
 **Criterio de aceptación:**
-- "Fecha libre de deudas" Snowball correcta con dos deudas encadenadas.
-- Dos metas activas reciben la mitad del ahorro mensual cada una.
-- `sameMonth('2026-06', new Date('2026-06-15'))` retorna `true`.
-- `node --test` verde.
-
-**Nota:** TD-52 y TD-53 están marcados ✅ en TechnicalDebt.md. Verificar en git log antes de re-implementar.
+- ✅ "Fecha libre de deudas" Snowball correcta con dos deudas encadenadas (suite `chainedPayoff`).
+- ✅ Dos metas activas reciben la mitad del ahorro mensual cada una (`goalSavingsSplit` → 600K/2 = 300K).
+- ✅ `sameMonth('2026-06', new Date(2026,5,15))` retorna `true`.
+- ✅ `node --test` verde (155/155).
 
 ---
 
