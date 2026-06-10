@@ -35,11 +35,20 @@ export function renderSettings() {
     options: [{ value: 'system', label: 'Sistema' }, { value: 'light', label: 'Claro' }, { value: 'dark', label: 'Oscuro' }],
     onChange: (v) => { theme.setMode(v); toast('Tema actualizado', { type: 'info' }); },
   });
-  themeControl.style.width = '260px';
+  // FE-013: el segmented (.seg width:100%) va en su propia línea bajo la etiqueta.
+  // Antes, con width fijo 260px e inline en una fila de media columna, ahogaba
+  // .row__main y el título "Tema" se truncaba a "T…" (.row-list fuerza ellipsis).
+  themeControl.style.maxWidth = '320px';
 
   const appearanceCard = Card({
     title: 'Apariencia',
-    body: el('div', { class: 'row-list' }, [settingRow('Tema', 'Claro, oscuro o según tu sistema', themeControl)]),
+    body: el('div', { class: 'stack' }, [
+      el('div', {}, [
+        el('div', { class: 'row__title', text: 'Tema' }),
+        el('div', { class: 'row__sub', text: 'Claro, oscuro o según tu sistema' }),
+      ]),
+      themeControl,
+    ]),
   });
 
   // Datos y sincronización
