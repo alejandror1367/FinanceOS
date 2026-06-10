@@ -8,3 +8,8 @@ audit-*.png
 *.key
 .clasp.json
 settings.local.json
+
+# Codex (config local del agente, no se versiona)
+.agents/
+.codex/
+AGENTS.md
