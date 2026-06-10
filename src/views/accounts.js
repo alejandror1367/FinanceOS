@@ -6,7 +6,7 @@ import { icon } from '../utils/icons.js';
 import { store } from '../store/store.js';
 import { selectors } from '../store/selectors.js';
 import { dataService } from '../services/dataService.js';
-import { formatMoney } from '../utils/format.js';
+import { formatMoney, formatDate } from '../utils/format.js';
 import { Button, Badge, EmptyState, KpiCard } from '../components/ui.js';
 import { openModal, confirmDialog } from '../components/modal.js';
 import { field, textInput, numberInput, select, setFieldError, focusFieldError } from '../components/forms.js';
@@ -173,6 +173,70 @@ export function openAccountModal(existing, { defaults = null } = {}) {
   });
 }
 
+// ---------- Registrar rendimiento (cuentas remuneradas, Sprint D) ----------
+function previewRow(label, value) {
+  return el('div', { class: 'row' }, [
+    el('div', { class: 'row__main' }, [el('div', { class: 'row__title', text: label })]),
+    el('div', { class: 'row__amount tabular', text: value }),
+  ]);
+}
+
+// D.5: el rendimiento se registra como UNA transacción de ingreso sobre la cuenta —
+// sube el saldo una sola vez (fuente única, sin doble conteo con la liquidez).
+// D.4: preview → confirmar → tx ingreso + lastYieldDate. Idempotencia por período:
+// tras registrar, lastYieldDate = hoy, así un segundo intento el mismo período
+// estima $0 y se bloquea antes de abrir el modal.
+export function openYieldModal(a) {
+  const s   = store.get();
+  const now = new Date();
+  const toISO   = now.toISOString().slice(0, 10);
+  const fromISO = String(a.lastYieldDate || a.createdAt || toISO).slice(0, 10);
+  const amount  = Math.round(selectors.accountYield(s, a.id, now));
+
+  if (amount <= 0) {
+    toast('No hay rendimiento para registrar en este período', { type: 'info' });
+    return;
+  }
+
+  // Categoría de ingreso para rendimientos si existe; si no, sin categoría.
+  const yieldCat = (s.categories || []).find(
+    (c) => c.type === 'income' && /rendi|inter[eé]s|inver/i.test(c.name || '')
+  );
+
+  const body = el('div', { class: 'stack' }, [
+    el('p', { class: 't-body text-secondary', text:
+      `Se registrará el rendimiento estimado de "${a.name}" como un ingreso en la cuenta.` }),
+    el('div', { class: 'card card--pad-sm' }, [
+      el('div', { class: 'row-list' }, [
+        previewRow('Período', `${formatDate(fromISO, 'short')} → ${formatDate(toISO, 'short')}`),
+        previewRow('Tasa', `${a.interestRate}% E.A.`),
+        previewRow('Rendimiento estimado', formatMoney(amount, a.currency)),
+      ]),
+    ]),
+    el('p', { class: 't-caption text-tertiary', text:
+      'Calculado sobre el saldo promedio del período (no el saldo actual). Es una estimación.' }),
+  ]);
+
+  openModal({
+    title: 'Registrar rendimiento',
+    body,
+    submitLabel: 'Registrar',
+    onSubmit: () => guardedSave(async () => {
+      await dataService.create('transactions', {
+        type: 'income',
+        amount,
+        date: toISO,
+        accountId: a.id,
+        categoryId: yieldCat?.id || '',
+        currency: a.currency || 'COP',
+        description: `Rendimiento ${a.name}`,
+      });
+      // No tocar balance aquí: la tx de ingreso ya lo ajusta (fuente única).
+      await dataService.update('accounts', a.id, { lastYieldDate: toISO });
+    }, 'Rendimiento registrado'),
+  });
+}
+
 // ---------- Fila de cuenta ----------
 function accountRow(a) {
   const util    = utilization(a);
@@ -200,6 +264,8 @@ function accountRow(a) {
     ].filter(Boolean)),
     el('div', { class: amtCls, text: formatMoney(displayBal, a.currency) }),
     el('div', { class: 'row__actions' }, [
+      isYield ? el('button', { class: 'icon-btn', 'aria-label': 'Registrar rendimiento', title: 'Registrar rendimiento',
+        on: { click: () => openYieldModal(a) }, html: icon('budgets') }) : null,
       el('button', { class: 'icon-btn', 'aria-label': 'Editar', title: 'Editar',
         on: { click: () => openAccountModal(a) }, html: icon('edit') }),
       el('button', { class: 'icon-btn', 'aria-label': 'Archivar', title: 'Archivar',
