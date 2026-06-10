@@ -685,9 +685,9 @@ commit: e6b3c77 · rama: main · SW: v0.2.43 · config.version: 0.2.43 · tests:
 
 > Leer esto antes que cualquier otra sección. Máximo 100 líneas. Fuente de verdad para retomar de inmediato.
 
-**HEAD:** `14bb7dc` · **SW/config.version:** `v0.2.93` · **Tests:** 136/136 (30 suites) · **Rama:** main · **Sync:** local adelantado (push pendiente)
+**HEAD:** `66f7b5a` · **SW/config.version:** `v0.2.95` · **Tests:** 136/136 (30 suites) · **Rama:** main · **Sync:** local adelantado (push pendiente)
 
-> **Sesión 2026-06-10:** **Sprint A desplegado ✅** (FX en producción) · **Quick win banner FX** en Dashboard (`fxGaps`, `1223eee`) · **Sprint B ✅ cerrado** — B.4 `roundMoney` en acumulados por sección de Inversiones (`14bb7dc`, reconciliación exacta sección↔total).
+> **Sesión 2026-06-10:** **Sprint A desplegado ✅** (FX en producción) · **Quick win banner FX** en Dashboard (`fxGaps`, `1223eee`) · **Sprint B ✅** — B.4 `roundMoney` acumulados por sección (`14bb7dc`) · **Sprint C ✅ (WCAG AA)** — C.4 reduced-motion universal (`c8be635`) + C.10 label "Tema" sin truncar (`66f7b5a`); C.1–C.3/C.5–C.9 ya estaban hechos.
 > **Sesión 2026-06-09 (2ª parte):** **Sprint A ✅ completado y desplegado** — FX backend (`getFxRates`, caché 1h) · `computeNetWorth_` convierte/excluye divisas · FE sin suma 1:1 en ninguna ruta (`convertToBase`/`sumInBase`/`fxGaps`) · 21 tests FX nuevos. Deploy Sprint A: **`Quotes.gs` · `Code.gs` · `Reports.gs` ✅ desplegados 2026-06-10**.
 > **Sesión 2026-06-09 (1ª parte):** R2 ✅ · R3 ✅ · R4 ✅ · R5-Seguridad ✅ · fixes snapshot (valores en vivo, idempotencia fecha) · `Roadmap-Maestro.md` creado como fuente única de planificación.
 
@@ -699,7 +699,7 @@ commit: e6b3c77 · rama: main · SW: v0.2.43 · config.version: 0.2.43 · tests:
 - **Backend Apps Script:** ✅ **Al día** — Sprint A desplegado 2026-06-10 (`Quotes.gs` · `Code.gs` · `Reports.gs`). FX completo.
 - **Tests:** **136/136** en `tests/selectors.test.js` — 30 suites
 - **Roadmap activo:** `docs/Roadmap-Maestro.md` ← FUENTE ÚNICA. Reemplaza todos los roadmaps anteriores.
-- **Plan Opus (R0–R8):** R0–R5 ✅ · **Sprint A ✅** · **Sprint B ✅** (B.4 roundMoney acumulados por sección `14bb7dc`) — **Sprint C (WCAG) es el siguiente**.
+- **Plan Opus (R0–R8):** R0–R5 ✅ · **Sprint A ✅** · **Sprint B ✅** · **Sprint C ✅ (WCAG AA)** — **Sprint D (cuentas remuneradas, `calcYield`, requiere deploy) es el siguiente**.
 
 ### Deploy — ✅ Sprint A desplegado (2026-06-10)
 `Quotes.gs` (getFxRates_, caché 1h) · `Code.gs` (ruta getFxRates) · `Reports.gs` (computeNetWorth_ convierte/excluye divisas) — **en producción**.
@@ -730,8 +730,8 @@ Flujo: `Views → Services → Store → Views` (never direct to net/IndexedDB f
 > Detalle completo: `docs/Roadmap-Maestro.md`.
 1. ~~Sprint A — Integridad cifras P0~~ ✅ 2026-06-09 · ~~Deploy Sprint A~~ ✅ 2026-06-10
 2. ~~Sprint B — Inversiones ventas parciales~~ ✅ 2026-06-10 (B.1–B.5: TD-43/44 + B.4 `14bb7dc` + suite)
-3. **Sprint C — Accesibilidad WCAG AA P1** ← SIGUIENTE: todo S, sin deploy — contraste · aria · reduced-motion · progressbar
-4. **Sprint D — Cuentas remuneradas P1**: rediseñar `calcYield` (saldo promedio, NO balance actual) · deploy
+3. ~~Sprint C — Accesibilidad WCAG AA~~ ✅ 2026-06-10 (C.4 `c8be635` + C.10 `66f7b5a`; resto previo)
+4. **Sprint D — Cuentas remuneradas P1** ← SIGUIENTE: rediseñar `calcYield` (saldo promedio, NO balance actual) · ⚠ deploy `.gs` (D.2)
 5. **Sprint E — Deudas y Metas P2**: avgRate multi-moneda · amortize % · goalForecast repartido
 6. **Sprint F — Import/Export P2**: fixtures primero · dupKey · export por período
 7. **Sprint G — Backend perf P3**: O(1) en adjustBalance_ · paginación · purgeDeleted_ en bloque

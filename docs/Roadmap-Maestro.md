@@ -147,27 +147,27 @@ Ver §5.
 
 ---
 
-### Sprint C — Accesibilidad y Design System (WCAG 2.2 AA) (P1/P2)
+### Sprint C — Accesibilidad y Design System (WCAG 2.2 AA) (P1/P2) ✅ COMPLETADO (2026-06-10)
 
 **Objetivo:** conformidad AA y limpieza de DS. Casi todo esfuerzo S, sin deploy.
 **Prioridad:** P1 (contraste, nombres accesibles) / P2 (higiene DS).
 **Riesgo:** muy bajo.
 **Deploy:** no.
 **Dependencias:** ninguna (puede ir en paralelo con B).
-**Esfuerzo estimado:** ~1 día.
+**Estado:** C.1–C.10 ✅. C.1/C.2/C.3/C.5/C.6/C.7/C.8/C.9 ya estaban hechos en sesiones previas; C.4 y C.10 cerrados esta sesión (`c8be635`, `66f7b5a`).
 
 | # | Tarea | ID origen | Archivo | Esf | Deploy |
 |---|---|---|---|---|---|
-| C.1 | Subir luminancia de `--text-tertiary` (dark + light) hasta ≥ 4.5:1 | FE-002 / TD-40 | `src/styles/themes.css:37,91` | S | — |
-| C.2 | Quitar `aria-label` técnico de `textInput`/`select` (restaurar nombre visible al lector de pantalla) | FE-003 / TD-49 | `src/components/forms.js:20,37` | S | — |
-| C.3 | Escapar `&<>"` en `<title>` y `aria-label` de charts (`esc()` de dom.js) | FE-001 / TD-48 | `src/components/charts.js:52,70,76,77` | S | — |
-| C.4 | `@media (prefers-reduced-motion: reduce)` que anule duraciones de keyframes | FE-004 / TD-40 | `src/styles/tokens.css:143-148` | S | — |
-| C.5 | `ProgressBar`: añadir `aria-valuemin`, `aria-valuemax`, `aria-label` | FE-007 / TD-40 | `src/components/ui.js:92` | S | — |
-| C.6 | `confirmDialog`: fallback de foco al botón submit o al contenedor si no hay input | FE-006 | `src/components/modal.js:81-96` | S | — |
-| C.7 | Reemplazar literales `10px`/`11px` por `var(--fs-micro)` en components.css | FE-009 / TD-40 | `src/styles/components.css:349,351,384,439,455` | S | — |
-| C.8 | `.preset-chip:hover` → usar `var(--accent-contrast)` (quitar hex crudo) | FE-010 / TD-40 | `src/styles/components.css:497` | S | — |
-| C.9 | `select`: añadir `padding-right` suficiente para que la flecha nativa no solape texto largo | FE-008 / TD-40 | `src/styles/components.css:233-236` | S | — |
-| C.10 | Fix truncamiento de label "Apariencia" en vista Ajustes (aparece como "T...") | FE-013 | `src/views/settings.js` | S | — |
+| C.1 ✅ | Subir luminancia de `--text-tertiary` (dark + light) hasta ≥ 4.5:1 | FE-002 / TD-40 | `src/styles/themes.css:37,91` | S | ✅ previo |
+| C.2 ✅ | Quitar `aria-label` técnico de `textInput`/`select` (restaurar nombre visible al lector de pantalla) | FE-003 / TD-49 | `src/components/forms.js` | S | ✅ `b78eff6` |
+| C.3 ✅ | Escapar `&<>"` en `<title>` y `aria-label` de charts (`esc()` de dom.js) | FE-001 / TD-48 | `src/components/charts.js` | S | ✅ `b78eff6` |
+| C.4 ✅ | `@media (prefers-reduced-motion: reduce)` que anule duraciones de keyframes (regla universal WAI para keyframes con duración literal) | FE-004 / TD-40 | `src/styles/tokens.css:143-157` | S | ✅ `c8be635` |
+| C.5 ✅ | `ProgressBar`: añadir `aria-valuemin`, `aria-valuemax`, `aria-label` | FE-007 / TD-40 | `src/components/ui.js:106` | S | ✅ previo |
+| C.6 ✅ | `confirmDialog`: fallback de foco al botón submit o al contenedor si no hay input | FE-006 | `src/components/modal.js:80-90` | S | ✅ previo |
+| C.7 ✅ | Reemplazar literales `10px`/`11px` por `var(--fs-micro)` en components.css | FE-009 / TD-40 | `src/styles/components.css` | S | ✅ previo (sin font-size px) |
+| C.8 ✅ | `.preset-chip:hover` → usar `var(--accent-contrast)` (quitar hex crudo) | FE-010 / TD-40 | `src/styles/components.css:564` | S | ✅ previo |
+| C.9 ✅ | `select`: añadir `padding-right` suficiente para que la flecha nativa no solape texto largo | FE-008 / TD-40 | `src/styles/components.css:282-283` | S | ✅ previo |
+| C.10 ✅ | Fix truncamiento de label "Tema"/"Apariencia" en Ajustes (aparecía como "T…") | FE-013 | `src/views/settings.js:32-47` | S | ✅ `66f7b5a` |
 
 **Criterio de aceptación:**
 - `--text-tertiary` en dark y light pasa contraste 4.5:1 (verificable con DevTools).
