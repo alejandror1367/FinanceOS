@@ -232,28 +232,33 @@ Ver §5.
 
 ---
 
-### Sprint F — Import/Export mejorado (P2)
+### Sprint F — Import/Export mejorado (P2) ✅ COMPLETADO (2026-06-10) · sin deploy · F.5 diferido
 
 **Objetivo:** robustez del módulo crítico de integridad y exportabilidad total.
-**Prioridad:** P2.
-**Riesgo:** medio (riesgo de regresión en parsers — por eso F.1 es obligatorio antes de tocar dedup).
-**Deploy:** no.
-**Dependencias:** F.1 (fixtures) debe completarse antes de F.2 (dedup).
-**Esfuerzo estimado:** ~1.5–2 días.
+**Estado:** auditoría completa del módulo + F.1–F.4/F.6 ✅ (`30d9c9b`, `b85427f`). La auditoría destapó y corrigió 4 bugs P0/P1 no listados (ver abajo). **F.5 diferido** (sin extracto RappiCuenta de muestra — sería adivinar el formato; el filename `/rappi/i` ya matchea el perfil RappiPay).
 
 | # | Tarea | ID origen | Archivo | Esf | Deploy |
 |---|---|---|---|---|---|
-| F.1 | **Fixtures de regresión** con extractos reales (Bancolombia, Nu, Nequi, Global66, RappiPay, XTB) ANTES de tocar dedup | Opus Sprint 6 | `tests/` | M | — |
-| F.2 | `dupKey` → `date|amount|descNorm` para reducir falsos positivos en deduplicación | Opus Sprint 6 | `src/views/import.js` | S | — |
-| F.3 | Resumen de calidad tras importación: N/M sin categoría; alerta si > 30% sin clasificar | Opus Sprint 6 | `src/views/import.js` | S | — |
-| F.4 | Validar montos cero/negativos antes del preview (mostrar error inline) | Opus Sprint 6 | `src/services/importService.js` | S | — |
-| F.5 | Perfil `RappiCuenta` en `bankProfiles.js` | Opus Sprint 6 | `src/services/parsers/bankProfiles.js` | S | — |
-| F.6 | Export: selector de período (desde/hasta) + indicador de volumen de registros | Opus Sprint 6 | `src/views/exports.js`, `src/utils/export.js` | M | — |
+| F.1 ✅ | Fixtures de regresión SINTÉTICOS de los 6 perfiles (24 tests: detect+map+applyProfile+dupKey+toCSV) | Opus Sprint 6 | `tests/import.test.js` | M | — |
+| F.2 ✅ | `dupKey` = `date\|amount\|descNorm(16)` en importService (testeable) | Opus Sprint 6 | `src/services/importService.js` | S | — |
+| F.3 ✅ | Pantalla final con resumen de calidad: filas fallidas + % categoría automática (alerta >30%) | Opus Sprint 6 | `src/views/import.js` | S | — |
+| F.4 ✅ | `applyProfile` filtra filas sin fecha/monto válido (`skipped` visible en el meta) | Opus Sprint 6 | `src/services/importService.js` | S | — |
+| F.5 🔵 | Perfil `RappiCuenta` — DIFERIDO hasta tener extracto de muestra real | Opus Sprint 6 | `bankProfiles.js` | S | — |
+| F.6 ✅ | Card "Transacciones por período": desde/hasta + contador en vivo + export CSV del rango | Opus Sprint 6 | `src/views/exports.js` | M | — |
+
+**Bugs corregidos por la auditoría (no estaban en el roadmap):**
+- **IMP-1/IMP-3 (P0):** todo INGRESO importado iba sin `categoryId` (y el match por nombre ignoraba `kind`) → el backend lo rechazaba → dead-letter silencioso. Fix: `resolveCategoryId` kind-aware con fallback.
+- **IMP-2 (P0):** transferencias importadas sin `toAccountId` (Global66 mapeaba todo a transfer) → rechazo backend garantizado. Fix: conversión por signo + perfil Global66 a income/expense.
+- **ORDEN de perfiles (P1):** el CSV del prompt de Claude se detectaba como Bancolombia (perdía tipo/categoría) salvo filename "financeos". Fix: financeos primero.
+- **EXP-1 (P1):** `toCSV` solo usaba las claves de la primera fila → columnas perdidas (p. ej. `toAccountId`) en TODO export. Fix: unión de claves.
+- **IMP-4 (P1):** import XTB creaba N gastos de $0 en la primera cuenta. Fix: filtro F.4.
 
 **Criterio de aceptación:**
-- Los fixtures de los 6 bancos soportados parsean sin regresiones respecto al comportamiento actual.
-- Importar un extracto con monto cero muestra error claro sin llegar al preview.
-- Export con rango de fechas incluye solo transacciones del período.
+- ✅ Los 6 perfiles parsean los fixtures sin regresiones (24/24).
+- ✅ Filas con monto cero se omiten antes del preview y se reportan ("N filas sin monto omitidas").
+- ✅ Export con rango de fechas incluye solo transacciones del período (contador en vivo).
+
+**Pendientes del módulo (futuro):** restore del backup JSON (hay export, no import del respaldo) · XTB→posiciones de inversión reales (riesgo doble conteo, decisión aparte) · F.5 con muestra real.
 
 ---
 

@@ -57,7 +57,7 @@ Centraliza: patrimonio neto, presupuestos, flujo de caja, inversiones, metas, de
 | TD-39 recurrentes automáticos | ✅ `recurringService` materializa vencidos al cargar — `d37a938` |
 | App-lock J.4 + J.4b | ✅ PIN (PBKDF2) + huella/Face ID (WebAuthn) — `53083b3` · `57ac36c` |
 | Cuentas remuneradas ampliadas | ✅ `YIELD_TYPES`: savings · bank · digital_wallet · investment — `461c156` |
-| Pendiente | Sprint F (Import/Export) · J.3 (Groq) · J.5 (2º email) · I.1 (QA login) · TD-54 |
+| Pendiente | Sprint F (Import/Export) · J.3 (Groq) · J.5 (2º email) · I.1 (QA login) · deploy backend TD-54 |
 
 ---
 
@@ -507,13 +507,14 @@ HEAD pasó de `75eacca` a **`b870d6c`**. SW `v0.2.10 → v0.2.13`. Tests `33 →
 ```
 Rama:    main
 Remote:  https://github.com/alejandror1367/FinanceOS.git
-HEAD:    461c156  feat(accounts): cuentas remuneradas también en billeteras digitales e inversión
+HEAD:    4d0387e  docs: handoff 2026-06-10 — Sprints B-I, TD-39, app-lock PIN+huella, v1.0 15/16
 SW:      v0.2.105 (sincronizado con config.version)
-Status:  limpio · pusheado
+Status:  origin/main sincronizado · worktree con cambios locales
 ```
 
 ### Commits recientes
 ```
+4d0387e docs: handoff 2026-06-10 — Sprints B-I, TD-39, app-lock PIN+huella, v1.0 15/16
 461c156 feat(accounts): cuentas remuneradas también en billeteras digitales e inversión
 0398281 docs: J.4b desbloqueo biométrico WebAuthn — roadmap y handoff al día
 57ac36c feat(security): desbloqueo biométrico con WebAuthn (J.4b · huella/Face ID)
@@ -521,7 +522,6 @@ ad4b37c docs: J.4 app-lock + TD-39 recurrentes — roadmap y handoff al día
 53083b3 feat(security): app-lock local opcional con PIN (J.4 / N5)
 6864d6d docs: TD-39 marcado resuelto (ejecución automática de recurrentes)
 d37a938 feat(recurring): ejecución automática de recurrentes vencidos (TD-39)
-b422c86 docs: Sprint I (QA + v1.0) — I.4 housekeeping TD + I.5 docs al estado v1.0
 ```
 
 ---
@@ -679,7 +679,7 @@ Transacciones completas — agrupación fecha, filtros mes/categoría, totales, 
 
 **Estado actual HEAD:**
 ```
-commit: e6b3c77 · rama: main · SW: v0.2.43 · config.version: 0.2.43 · tests: 54/54
+commit: 4d0387e · rama: main · SW: v0.2.105 · config.version: 0.2.105 · tests: 155/155 selectors + 13/13 recurring
 ```
 
 **Toda la deuda P0/P1/P2 + Sprints 5 y 6 completados. Quedan Sprints 7–9 del roadmap (ver §18 y NEXT_SESSION.md).**
@@ -690,9 +690,10 @@ commit: e6b3c77 · rama: main · SW: v0.2.43 · config.version: 0.2.43 · tests:
 
 > Leer esto antes que cualquier otra sección. Máximo 100 líneas. Fuente de verdad para retomar de inmediato.
 
-**HEAD:** `461c156` · **SW/config.version:** `v0.2.105` · **Tests:** 155/155 selectors (35 suites) + 13/13 recurring · **Rama:** main · **Sync:** up to date
+**HEAD:** `b85427f` · **SW/config.version:** `v0.2.108` · **Tests:** 168/168 selectors + 13/13 recurring + 24/24 import = **205** · **Rama:** main · **Sync:** local adelantado (push pendiente)
 
-> **Sesión 2026-06-10:** **Sprint A ✅ desplegado** (FX) · **banner FX** Dashboard (`1223eee`) · **Sprint B ✅** (`14bb7dc`) · **Sprint C ✅ WCAG AA** (`c8be635`, `66f7b5a`) · **Sprint D ✅ desplegado** cuentas remuneradas (`4ec3836`, `9cc4fd6`, `28ebde0`, `1f05f94`) · **Sprint E ✅** Deudas y Metas (`ee27d5b`) · **Sprint G ✅ desplegado** backend perf — G.1–G.6 ya hechos, G.7 cursor opt-in en `getTransactions` (`bdde64a`, deploy ✅) · **Sprint H ✅** charts/a11y — H.1/H.2 ya hechos, H.3 bottom-nav (`82b913a`, ajuste `5ba0151`) · **Sprint I 🟡** QA+v1.0 — I.2–I.5 ✅; I.1 pendiente login · **TD-39 ✅** recurrentes automáticos (`d37a938`) · **J.4 ✅** app-lock PIN (`53083b3`).
+> **Sesión 2026-06-10 (2ª parte):** **TD-54 ✅** conversión histórica FX en tx (Codex, revisado: `transactionAmountBase` FE+BE, schema +3 columnas, +escritor en `dataService.create` que sella la tasa spot al crear — gap detectado en revisión) — ⚠ **deploy pendiente: `Config.gs`+`Transactions.gs`+`Reports.gs`+`setupDatabase()`** · **Sprint F ✅** auditoría completa Import/Export + F.1–F.4/F.6 (`30d9c9b`, `b85427f`): 24 fixtures, dupKey con descripción, 5 bugs P0/P1 corregidos (ingresos/transferencias importados morían en dead-letter; CSV de Claude detectado como Bancolombia; toCSV perdía columnas; XTB creaba $0). F.5 diferido (sin muestra).
+> **Sesión 2026-06-10 (1ª parte):** **Sprint A ✅ desplegado** (FX) · **banner FX** Dashboard (`1223eee`) · **Sprint B ✅** (`14bb7dc`) · **Sprint C ✅ WCAG AA** · **Sprint D ✅ desplegado** cuentas remuneradas · **Sprint E ✅** (`ee27d5b`) · **Sprint G ✅ desplegado** (G.7 cursor `bdde64a`) · **Sprint H ✅** bottom-nav · **Sprint I 🟡** I.2–I.5 ✅ · **TD-39 ✅** recurrentes (`d37a938`) · **J.4/J.4b ✅** app-lock PIN+huella (`53083b3`, `57ac36c`).
 > **Sesión 2026-06-09 (2ª parte):** **Sprint A ✅ completado y desplegado** — FX backend (`getFxRates`, caché 1h) · `computeNetWorth_` convierte/excluye divisas · FE sin suma 1:1 en ninguna ruta (`convertToBase`/`sumInBase`/`fxGaps`) · 21 tests FX nuevos. Deploy Sprint A: **`Quotes.gs` · `Code.gs` · `Reports.gs` ✅ desplegados 2026-06-10**.
 > **Sesión 2026-06-09 (1ª parte):** R2 ✅ · R3 ✅ · R4 ✅ · R5-Seguridad ✅ · fixes snapshot (valores en vivo, idempotencia fecha) · `Roadmap-Maestro.md` creado como fuente única de planificación.
 
@@ -700,14 +701,15 @@ commit: e6b3c77 · rama: main · SW: v0.2.43 · config.version: 0.2.43 · tests:
 > Tras `git pull`: **aprobar** ambos y **reiniciar Claude Code** (las tools MCP se fijan al arrancar).
 
 ### Estado actual real
-- **App en producción:** https://alejandror1367.github.io/FinanceOS/ (PWA, OAuth activo) · v0.2.105
-- **Backend Apps Script:** ✅ **Al día** — Sprint A, D y G (G.7: `Transactions.gs` cursor opt-in) desplegados 2026-06-10.
-- **Tests:** **155/155** en `tests/selectors.test.js` — 35 suites
+- **App en producción:** https://alejandror1367.github.io/FinanceOS/ (PWA, OAuth activo) · local v0.2.108
+- **Backend Apps Script:** 🟡 Sprint A/D/G desplegados ✅; **TD-54 pendiente: `Config.gs` + `Transactions.gs` + `Reports.gs` + `setupDatabase()`** (columnas amountBase/fxRateToBase/fxRateDate).
+- **Tests:** **205** — 168 selectors + 13 recurring + 24 import (`node --test tests/selectors.test.js tests/recurring.test.js tests/import.test.js`)
 - **Roadmap activo:** `docs/Roadmap-Maestro.md` ← FUENTE ÚNICA. Reemplaza todos los roadmaps anteriores.
-- **Plan Opus (R0–R8):** R0–R5 ✅ · **Sprint A/B/C/D/E/G/H ✅** · **Sprint I 🟡** (I.2–I.5 ✅, falta I.1 QA en vivo) — **Sprint F (Import/Export) es el único pendiente de núcleo; I.1 y J opcionales/pendientes de login**.
+- **Plan Opus (R0–R8):** R0–R5 ✅ · **Sprints A–H ✅ (todos)** · **Sprint I 🟡** (falta I.1 QA login) · **J 🟡** (faltan J.3 Groq, J.5 2º email) · **TD-54 ✅** (falta deploy).
 
-### Deploy — ✅ Sprint A + D + G (2026-06-10)
-`Quotes.gs` · `Code.gs` · `Reports.gs` (FX) · `Config.gs` (`lastYieldDate`, `setupDatabase()`) · `Transactions.gs` (G.7 cursor) — **todo en producción**.
+### Deploy — ✅ A + D + G en producción · 🔴 TD-54 pendiente
+Desplegado: `Quotes.gs` · `Code.gs` · `Reports.gs` (FX) · `Config.gs` (`lastYieldDate`) · `Transactions.gs` (G.7 cursor).
+🔴 **TD-54 PENDIENTE:** subir `Config.gs` + `Transactions.gs` + `Reports.gs` y ejecutar `setupDatabase()` (3 columnas nuevas en Transactions). Hasta entonces el backend ignora amountBase/fxRateToBase (no rompe; el FE ya excluye y flaggea).
 
 ### Arquitectura actual
 ```
@@ -729,7 +731,7 @@ Flujo: `Views → Services → Store → Views` (never direct to net/IndexedDB f
 ### Bugs abiertos
 - 🟡 Verificación en vivo snapshots nuevo formato (priceService values) — pendiente Playwright con login
 - 🟡 Verificación en vivo FX: aviso de exclusión en Inversiones + `getFxRates` responde — pendiente Playwright con login (deploy ✅ hecho)
-- 🟡 TD-54: tx en divisa extranjera suman 1:1 en cashflow/presupuestos (necesita tasa histórica — diseño propio)
+- 🟡 TD-54: fix implementado en worktree (amountBase/fxRateToBase histórico; sin tasa se excluye y se reporta en fxGaps). Pendiente deploy backend + `setupDatabase()`.
 - 🟡 Verificación en vivo app-lock J.4/J.4b (overlay PIN + huella) — pendiente login; PBKDF2 y WebAuthn (UVPA disponible) validados en navegador
 - 🟡 Verificación en vivo recurrentes TD-39 (materialización al cargar) — pendiente login; lógica pura con 13 tests
 
@@ -743,15 +745,16 @@ Flujo: `Views → Services → Store → Views` (never direct to net/IndexedDB f
 6. ~~Sprint G — Backend perf~~ ✅ 2026-06-10 (G.1–G.6 previo · G.7 cursor `bdde64a` · deploy ✅)
 7. ~~Sprint H — Charts responsive~~ ✅ 2026-06-10 (H.3 bottom-nav `82b913a`; H.1/H.2 previo)
 8. ~~Sprint I — QA + v1.0~~ 🟡 2026-06-10 (I.2–I.5 ✅; **I.1 Playwright en vivo pendiente de login**)
-9. **Sprint F — Import/Export P2** ← SIGUIENTE (sin deploy): fixtures primero · dupKey · export por período
-10. **Sprint J — Avanzado + opcionales**: XIRR/CAGR ✅ · J.2 roundMoney ✅ · **J.4 app-lock PIN ✅** (`53083b3`) · **J.4b huella WebAuthn ✅** (`57ac36c`) · TD-39 recurrentes ✅ (`d37a938`) · pendientes: J.3 Groq · J.5 2º email
-- **TD-39 ✅** ejecución automática de recurrentes (`d37a938`)
+9. ~~Sprint F — Import/Export~~ ✅ 2026-06-10 (auditoría + F.1–F.4/F.6 `30d9c9b`/`b85427f`; F.5 diferido sin muestra)
+10. ~~TD-54 — FX histórica en tx~~ ✅ 2026-06-10 (Codex + escritor `0e5841f`) · 🔴 **falta deploy: `Config.gs`+`Transactions.gs`+`Reports.gs`+`setupDatabase()`**
+11. **Sprint J — restantes**: J.3 narrativa Groq · J.5 2º email en `allowedEmails` (XIRR/CAGR ✅ · J.2 ✅ · J.4 PIN ✅ `53083b3` · J.4b huella ✅ `57ac36c` · TD-39 ✅ `d37a938`)
+12. **I.1 — QA Playwright en vivo** (requiere login) + verificaciones acumuladas
 
 ### Riesgos abiertos
-- TD-54: cashflow/presupuestos con tx en divisa extranjera suman 1:1 (tasa histórica pendiente de diseño)
-- `calcYield` sobreestima hasta ~7× → rediseño obligatorio antes de Sprint D
-- `analyzePortfolio` tomaría LockService → congela cola de sync
-- Sesión de facto perpetua sin app-lock; 2º email en `allowedEmails` con acceso total
+- 🔴 TD-54 sin deploy: backend ignora `amountBase`/`fxRateToBase` hasta subir los 3 `.gs` + `setupDatabase()` (no rompe; FE ya excluye y flaggea)
+- `analyzePortfolio` (J.3, si se hace) NO debe tomar LockService → congelaría la cola de sync
+- 2º email en `allowedEmails` con acceso total (J.5 pendiente de decisión del dueño)
+- Import/Export pendientes de futuro: restore del backup JSON · XTB→posiciones (doble conteo)
 
 ### Decisiones arquitectónicas importantes
 - `totalLiabilities` excluye `type=credit_card` (FIN-014) — también en `computeNetWorth_`
@@ -789,7 +792,7 @@ tests/selectors.test.js            — 155/155 (35 suites) · tests/recurring.te
 - Label "Tema" truncado a "T…" en Ajustes (C.10, `66f7b5a`)
 - Comentario de `bottomNavOrder` desincronizado del array (H.3)
 
-**Bugs pendientes:** TD-54 (tx divisa extranjera 1:1 en cashflow/presupuestos — necesita tasa histórica) · verificaciones en vivo con login (ver §18).
+**Bugs pendientes:** verificaciones en vivo con login (ver §18). TD-54 está corregido en worktree; falta deploy backend + `setupDatabase()`.
 
 **Mejoras financieras:**
 - `calcYield` sobre **saldo promedio ponderado por tiempo** (no balance actual que sobreestima ~7×) + `accountAvgBalance` + `txEffectOnAccount` (D.1, `4ec3836`)
@@ -818,7 +821,7 @@ tests/selectors.test.js            — 155/155 (35 suites) · tests/recurring.te
 - Cursor de paginación **aditivo**: sin `paginate` el contrato array se mantiene intacto
 
 **Riesgos mitigados:** FX 1:1 en backend (deploy A) · `calcYield` sobreestimando (D) · sesión perpetua sin barrera local (J.4/J.4b).
-**Riesgos pendientes:** TD-54 · 2º email en `allowedEmails` (J.5) · verificaciones en vivo.
+**Riesgos pendientes:** deploy backend TD-54 · 2º email en `allowedEmails` (J.5) · verificaciones en vivo.
 
 **Archivos modificados (código):** `selectors.js` · `dashboard.js` · `investments.js` · `accounts.js` · `goals.js` · `settings.js` · `routes.js` · `app.js` · `applock.js` (nuevo) · `recurringService.js` (nuevo) · `tokens.css` · `components.css` · `backend/Config.gs` · `backend/Transactions.gs` · `tests/selectors.test.js` (+19) · `tests/recurring.test.js` (nuevo, 13)
 
@@ -827,7 +830,7 @@ tests/selectors.test.js            — 155/155 (35 suites) · tests/recurring.te
 ## Estado posterior a la sesión 2026-06-10
 
 **Completado ✅:** Sprints A (desplegado) · B · C · D (desplegado) · E · G (desplegado) · H · I.2–I.5 · TD-39 · J.1/J.2/J.4/J.4b · banner fxGaps · YIELD_TYPES ampliado. Checklist v1.0: 15/16.
-**Parcialmente 🟡:** Sprint I (falta I.1 QA en vivo) · Sprint J (faltan J.3 Groq y J.5 2º email) · TD-02 (resta TD-54).
+**Parcialmente 🟡:** Sprint I (falta I.1 QA en vivo) · Sprint J (faltan J.3 Groq y J.5 2º email) · TD-54 (falta deploy backend).
 **Pendiente 🔴:** Sprint F Import/Export (sin empezar; F.1 fixtures requiere decisión: sintéticos vs extractos reales anonimizados) · verificaciones en vivo con login (snapshots, FX, modal rendimiento, app-lock, recurrentes, bottom-nav 375px).
 
 ---
@@ -1554,7 +1557,7 @@ Tras git pull deben APROBARSE y REINICIARSE Claude Code: las tools MCP se fijan 
 PROYECTO: FinanceOS — PWA financiera personal y privada de Alejo.
 Repo: https://github.com/alejandror1367/FinanceOS (rama main).
 Prod: https://alejandror1367.github.io/FinanceOS/
-HEAD: 461c156 · SW v0.2.105 · Tests 155/155 selectors + 13/13 recurring
+HEAD: 4d0387e · SW v0.2.105 · Tests 155/155 selectors + 13/13 recurring
 
 INVARIANTES (ver CLAUDE.md): JS ES Modules sin build step · sin frameworks/bundlers ·
 cero deps npm en runtime · frontend abstraído tras src/services/ · Apps Script +
@@ -1603,8 +1606,9 @@ PENDIENTES EN ORDEN:
 5. J.3 — Narrativa Groq de portafolio (OPCIONAL): sin script lock · % relativos sin
    montos COP · anti prompt-injection · caché CacheService · disclaimer.
 
-6. TD-54 — tx en divisa extranjera 1:1 en cashflow/presupuestos: requiere diseño de
-   tasa histórica a fecha de tx (mitigado en UI con banner fxGaps).
+6. TD-54 — implementado en worktree: tx en divisa extranjera usa `amountBase` o
+   `fxRateToBase` histórico; sin tasa se excluye y `fxGaps()` lo reporta. Pendiente
+   deploy backend (`Config.gs`/`Transactions.gs`/`Reports.gs`) + `setupDatabase()`.
 
 CAVEATS:
 - Patrón de esta sesión: MUCHAS tareas del roadmap ya estaban hechas de sesiones
@@ -1625,4 +1629,4 @@ Empezar con: git log --oneline -5 · git status · node --test tests/selectors.t
 
 ---
 
-*Actualizado el 2026-06-10 por Claude (handoff): Sprints B-I + TD-39 + app-lock PIN/huella. HEAD 461c156 · v0.2.105 · 155/155 + 13/13 tests.*
+*Actualizado el 2026-06-10 por Claude (handoff): Sprints B-I + TD-39 + app-lock PIN/huella. HEAD 4d0387e · v0.2.105 · 155/155 + 13/13 tests.*

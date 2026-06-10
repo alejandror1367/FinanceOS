@@ -1,6 +1,6 @@
 # Prompt de continuación — FinanceOS
 **Generado:** 2026-06-10 (sesión maratónica: Sprints B–I + TD-39 + app-lock)
-**HEAD:** `461c156` · **SW:** `v0.2.105` · **Tests:** 155/155 selectors (35 suites) + 13/13 recurring
+**HEAD:** `4d0387e` · **SW:** `v0.2.105` · **Tests:** 155/155 selectors (35 suites) + 13/13 recurring
 
 ---
 
@@ -13,7 +13,7 @@ Tras git pull deben APROBARSE y REINICIARSE Claude Code: las tools MCP se fijan 
 PROYECTO: FinanceOS — PWA financiera personal y privada de Alejo.
 Repo: https://github.com/alejandror1367/FinanceOS (rama main).
 Prod: https://alejandror1367.github.io/FinanceOS/
-HEAD: 461c156 · SW v0.2.105 · Tests 155/155 selectors + 13/13 recurring
+HEAD: 4d0387e · SW v0.2.105 · Tests 155/155 selectors + 13/13 recurring
 
 INVARIANTES (ver CLAUDE.md): JS ES Modules sin build step · sin frameworks/bundlers ·
 cero deps npm en runtime · frontend abstraído tras src/services/ · Apps Script +
@@ -62,8 +62,9 @@ PENDIENTES EN ORDEN:
 5. J.3 — Narrativa Groq de portafolio (OPCIONAL): sin script lock · % relativos sin
    montos COP · anti prompt-injection · caché CacheService · disclaimer.
 
-6. TD-54 — tx en divisa extranjera 1:1 en cashflow/presupuestos: requiere diseño de
-   tasa histórica a fecha de tx (mitigado en UI con banner fxGaps).
+6. TD-54 — implementado en worktree: tx en divisa extranjera usa `amountBase` o
+   `fxRateToBase` histórico; sin tasa se excluye y `fxGaps()` lo reporta. Pendiente
+   deploy backend (`Config.gs`/`Transactions.gs`/`Reports.gs`) + `setupDatabase()`.
 
 CAVEATS:
 - Patrón de esta sesión: MUCHAS tareas del roadmap ya estaban hechas de sesiones
