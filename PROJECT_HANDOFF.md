@@ -702,14 +702,13 @@ commit: 4d0387e · rama: main · SW: v0.2.105 · config.version: 0.2.105 · test
 
 ### Estado actual real
 - **App en producción:** https://alejandror1367.github.io/FinanceOS/ (PWA, OAuth activo) · local v0.2.108
-- **Backend Apps Script:** 🟡 Sprint A/D/G desplegados ✅; **TD-54 pendiente: `Config.gs` + `Transactions.gs` + `Reports.gs` + `setupDatabase()`** (columnas amountBase/fxRateToBase/fxRateDate).
+- **Backend Apps Script:** ✅ **Al día** — Sprint A/D/G y TD-54 (`Config.gs`+`Transactions.gs`+`Reports.gs`+`setupDatabase()`, columnas amountBase/fxRateToBase/fxRateDate) desplegados 2026-06-10.
 - **Tests:** **205** — 168 selectors + 13 recurring + 24 import (`node --test tests/selectors.test.js tests/recurring.test.js tests/import.test.js`)
 - **Roadmap activo:** `docs/Roadmap-Maestro.md` ← FUENTE ÚNICA. Reemplaza todos los roadmaps anteriores.
 - **Plan Opus (R0–R8):** R0–R5 ✅ · **Sprints A–H ✅ (todos)** · **Sprint I 🟡** (falta I.1 QA login) · **J 🟡** (faltan J.3 Groq, J.5 2º email) · **TD-54 ✅** (falta deploy).
 
-### Deploy — ✅ A + D + G en producción · 🔴 TD-54 pendiente
-Desplegado: `Quotes.gs` · `Code.gs` · `Reports.gs` (FX) · `Config.gs` (`lastYieldDate`) · `Transactions.gs` (G.7 cursor).
-🔴 **TD-54 PENDIENTE:** subir `Config.gs` + `Transactions.gs` + `Reports.gs` y ejecutar `setupDatabase()` (3 columnas nuevas en Transactions). Hasta entonces el backend ignora amountBase/fxRateToBase (no rompe; el FE ya excluye y flaggea).
+### Deploy — ✅ Todo en producción (2026-06-10)
+`Quotes.gs` · `Code.gs` · `Reports.gs` (FX + TD-54) · `Config.gs` (`lastYieldDate` + columnas FX) · `Transactions.gs` (G.7 cursor + TD-54). `setupDatabase()` ejecutado para `amountBase`/`fxRateToBase`/`fxRateDate`.
 
 ### Arquitectura actual
 ```
@@ -746,12 +745,11 @@ Flujo: `Views → Services → Store → Views` (never direct to net/IndexedDB f
 7. ~~Sprint H — Charts responsive~~ ✅ 2026-06-10 (H.3 bottom-nav `82b913a`; H.1/H.2 previo)
 8. ~~Sprint I — QA + v1.0~~ 🟡 2026-06-10 (I.2–I.5 ✅; **I.1 Playwright en vivo pendiente de login**)
 9. ~~Sprint F — Import/Export~~ ✅ 2026-06-10 (auditoría + F.1–F.4/F.6 `30d9c9b`/`b85427f`; F.5 diferido sin muestra)
-10. ~~TD-54 — FX histórica en tx~~ ✅ 2026-06-10 (Codex + escritor `0e5841f`) · 🔴 **falta deploy: `Config.gs`+`Transactions.gs`+`Reports.gs`+`setupDatabase()`**
+10. ~~TD-54 — FX histórica en tx~~ ✅ 2026-06-10 (Codex + escritor `0e5841f` · deploy ✅)
 11. **Sprint J — restantes**: J.3 narrativa Groq · J.5 2º email en `allowedEmails` (XIRR/CAGR ✅ · J.2 ✅ · J.4 PIN ✅ `53083b3` · J.4b huella ✅ `57ac36c` · TD-39 ✅ `d37a938`)
 12. **I.1 — QA Playwright en vivo** (requiere login) + verificaciones acumuladas
 
 ### Riesgos abiertos
-- 🔴 TD-54 sin deploy: backend ignora `amountBase`/`fxRateToBase` hasta subir los 3 `.gs` + `setupDatabase()` (no rompe; FE ya excluye y flaggea)
 - `analyzePortfolio` (J.3, si se hace) NO debe tomar LockService → congelaría la cola de sync
 - 2º email en `allowedEmails` con acceso total (J.5 pendiente de decisión del dueño)
 - Import/Export pendientes de futuro: restore del backup JSON · XTB→posiciones (doble conteo)
