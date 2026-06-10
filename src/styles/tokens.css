@@ -146,4 +146,13 @@
     --dur-base: 0ms;
     --dur-slow: 0ms;
   }
+  /* FE-004 (WCAG 2.3.3): anular también animaciones/transiciones con duración
+     LITERAL que no usan los tokens --dur-* (keyframes pulse 1.2s / shimmer 1.4s /
+     spin .8s y transiciones .18s/.3s). Patrón universal recomendado por WAI. */
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
