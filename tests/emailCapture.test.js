@@ -319,6 +319,8 @@ describe('reglas recomendadas del example.json', () => {
     assert.equal(ecResolveCategory_('DL*DIDI RIDES CO', rules, fallback), CAT.transporte);
     assert.equal(ecResolveCategory_('PAYU*NETFLIX V', rules, fallback), CAT.suscripciones);
     assert.equal(ecResolveCategory_('S.C.A.R.E.', rules, fallback), CAT.otros); // sin regla → fallback
+    assert.equal(ecResolveCategory_('ELECTRIFICADORA DE SAN', rules, fallback), '01KSZZSA11MAFWVMQFJHP9FCZG'); // Servicios
+    assert.equal(ecResolveCategory_('UNE TELCO UNE PAGO EXP', rules, fallback), '01KSZZSA11MAFWVMQFJHP9FCZG'); // Servicios
   });
 
   test('el orden desambigua: específico gana sobre genérico', () => {
