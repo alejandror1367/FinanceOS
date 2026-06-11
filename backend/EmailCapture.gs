@@ -30,7 +30,7 @@ var EMAIL_CAPTURE = {
   // Ventana de búsqueda: idempotencia por id permite re-escanear sin duplicar.
   // in:anywhere incluye Spam: los correos de bancos REENVIADOS (filtro o manual)
   // suelen fallar SPF y caer ahí; sin esto se perderían en silencio.
-  query: 'in:anywhere newer_than:7d (from:noreply@rappicard.co OR from:alertasynotificaciones@an.notificacionesbancolombia.com OR "Realizaste una compra con tu RappiCard" OR "Bancolombia: Compraste")',
+  query: 'in:anywhere newer_than:7d (from:noreply@rappicard.co OR from:alertasynotificaciones@an.notificacionesbancolombia.com OR from:no-reply@sender.global66.com OR "Realizaste una compra con tu RappiCard" OR "Bancolombia: Compraste" OR "compra con tu Smart Card")',
   labelProcessed: 'FinanceOS/procesado',
   labelReview: 'FinanceOS/revisar',
   maxMessagesPerRun: 50,
@@ -108,9 +108,34 @@ function ecParseBancolombia_(body) {
   };
 }
 
+// Global66 Smart Card (débito — no-reply@sender.global66.com). La moneda es la del
+// COMERCIO (COP/USD/EUR); se devuelve para que la tx se cree en esa divisa.
+//  "Tarjeta Virtual: **** **** **** 7292 / Monto: $ 66.873,00 COP /
+//   Comercio: MERCADOPAGO / Fecha: 01/06/2026 / Hora: 15:29"
+function ecParseGlobal66_(body) {
+  var text = String(body || '').replace(/\s+/g, ' ');
+  if (!/compra con tu Smart Card/i.test(text)) return null;
+  var card = text.match(/Tarjeta[^:]*:\s*(?:\*+\s*)+(\d{4})/i);
+  var amount = text.match(/Monto:\s*\$?\s*([\d.,]+)\s*([A-Z]{3})/i);
+  var merchant = text.match(/Comercio:\s*(.+?)\s*Fecha:/i);
+  var date = text.match(/Fecha:\s*(\d{1,2})\/(\d{1,2})\/(\d{4})/i);
+  var hour = text.match(/Hora:\s*(\d{1,2}:\d{2})/i);
+  if (!card || !amount || !merchant || !date) return null;
+  var dd = ('0' + date[1]).slice(-2), mm = ('0' + date[2]).slice(-2);
+  var hhmm = hour ? (hour[1].length === 4 ? '0' + hour[1] : hour[1]) : '00:00';
+  return {
+    bank: 'global66',
+    amount: ecParseAmountCo_(amount[1]),
+    currency: amount[2].toUpperCase(),
+    last4: card[1],
+    merchant: ecCleanMerchant_(merchant[1]),
+    dateIso: date[3] + '-' + mm + '-' + dd + 'T' + hhmm + ':00',
+  };
+}
+
 // Detección + parse. Devuelve null si el correo no es una alerta de compra conocida.
 function ecParseAlert_(body) {
-  var parsed = ecParseRappiCard_(body) || ecParseBancolombia_(body);
+  var parsed = ecParseRappiCard_(body) || ecParseBancolombia_(body) || ecParseGlobal66_(body);
   if (!parsed) return null;
   if (!(parsed.amount > 0)) return null; // monto cero/negativo o no numérico: a revisión
   return parsed;
@@ -123,6 +148,7 @@ function ecParseAlert_(body) {
 function ecLooksLikeCardPurchase_(body) {
   var text = String(body || '').replace(/\s+/g, ' ');
   if (/Realizaste una compra con tu RappiCard/i.test(text)) return true;
+  if (/compra con tu Smart Card/i.test(text)) return true; // Global66 débito (sí nos interesa)
   return /Compraste/i.test(text) && /T\.?\s?Cred/i.test(text);
 }
 
@@ -166,6 +192,7 @@ function emailCaptureRun_() {
 
   var labelOk = GmailApp.getUserLabelByName(EMAIL_CAPTURE.labelProcessed) || GmailApp.createLabel(EMAIL_CAPTURE.labelProcessed);
   var labelRev = GmailApp.getUserLabelByName(EMAIL_CAPTURE.labelReview) || GmailApp.createLabel(EMAIL_CAPTURE.labelReview);
+  var fxRates = null; // lazy: solo se piden si aparece una compra en divisa extranjera
 
   var threads = GmailApp.search(EMAIL_CAPTURE.query, 0, EMAIL_CAPTURE.maxMessagesPerRun);
   for (var t = 0; t < threads.length; t++) {
@@ -201,16 +228,32 @@ function emailCaptureRun_() {
           logAudit_('review', 'EmailCapture', msg.getId(), 'Tarjeta *' + parsed.last4 + ' sin cuenta en ' + EMAIL_CAPTURE.keys.cardMap);
           continue;
         }
-        createTransaction_({
+        // TD-54: tx en divisa extranjera (Global66 notifica en la moneda del comercio).
+        // Sellar la tasa spot al crear — mismo contrato que dataService.create en el FE;
+        // sin tasa disponible se crea igual y fxGaps() la reporta hasta que se complete.
+        var currency = parsed.currency || APP.baseCurrency;
+        var txData = {
           id: txId,
           type: 'expense',
           date: parsed.dateIso,
           amount: parsed.amount,
-          currency: APP.baseCurrency,
+          currency: currency,
           accountId: accountId,
           categoryId: ecResolveCategory_(parsed.merchant, cfg.rules, cfg.fallbackCategory),
           description: parsed.merchant,
-        });
+        };
+        if (currency !== APP.baseCurrency) {
+          if (fxRates === null) {
+            try { fxRates = getFxRates_(); } catch (e) { fxRates = {}; }
+          }
+          var rate = fxRates[currency];
+          if (rate > 0) {
+            txData.fxRateToBase = rate;
+            txData.amountBase = Math.round(parsed.amount * rate * 100) / 100;
+            txData.fxRateDate = parsed.dateIso.slice(0, 10);
+          }
+        }
+        createTransaction_(txData);
         summary.created++; threadOk = true;
       } catch (err) {
         // Un correo malo no tumba el batch (p. ej. fallbackcategoryid sin configurar).

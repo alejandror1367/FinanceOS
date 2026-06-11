@@ -6,9 +6,10 @@
   "emailcapture.cardmap": {
     "8967": "01KT5W64F506QSW0YF41B7Y75X",
     "0808": "01KT2VBAPXXPFKB9S6FJQ7QYN5",
-    "3147": "01KT2VBAPXXPFKB9S6FJQ7QYN5"
+    "3147": "01KT2VBAPXXPFKB9S6FJQ7QYN5",
+    "7292": "01KT3YF12WD3VCS5MXMKTVGK3E"
   },
-  "_cardmap_leyenda": "8967=RappiCard · 0808 y 3147=Amex Bancolombia",
+  "_cardmap_leyenda": "8967=RappiCard · 0808 y 3147=Amex Bancolombia · 7292=Global66 Smart Card (débito — descuenta de la cuenta Global66)",
 
   "emailcapture.fallbackcategoryid": "01KTG03AFZMDVMRCMFXYG8E7TQ",
   "_fallback_leyenda": "Otros — para comercios que no matchean ninguna regla",

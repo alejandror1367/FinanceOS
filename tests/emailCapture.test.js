@@ -18,8 +18,8 @@ const gsSource = readFileSync(join(root, 'backend', 'EmailCapture.gs'), 'utf8');
 // El .gs declara funciones globales (estilo Apps Script); las extraemos evaluando
 // el archivo dentro de un scope de función. Las funciones de captura referencian
 // GmailApp/repoReadAll_ solo al INVOCARSE, no al definirse, así que el eval es seguro.
-const { ecParseAmountCo_, ecParseRappiCard_, ecParseBancolombia_, ecParseAlert_, ecResolveCategory_, ecLooksLikeCardPurchase_ } =
-  new Function(`${gsSource}; return { ecParseAmountCo_, ecParseRappiCard_, ecParseBancolombia_, ecParseAlert_, ecResolveCategory_, ecLooksLikeCardPurchase_ };`)();
+const { ecParseAmountCo_, ecParseRappiCard_, ecParseBancolombia_, ecParseGlobal66_, ecParseAlert_, ecResolveCategory_, ecLooksLikeCardPurchase_ } =
+  new Function(`${gsSource}; return { ecParseAmountCo_, ecParseRappiCard_, ecParseBancolombia_, ecParseGlobal66_, ecParseAlert_, ecResolveCategory_, ecLooksLikeCardPurchase_ };`)();
 
 const fixtureFile = readFileSync(join(root, 'tests', 'fixtures', 'email', 'AMEXBANCOLOMBIA-RAPPICARD-COMPRAS-EJEMPLOS.TXT'), 'utf8');
 
@@ -174,6 +174,71 @@ describe('ecParseAlert_ — fixtures reales (4 RappiCard + 4 Bancolombia)', () =
   });
 });
 
+// ── Global66 Smart Card (débito, moneda del comercio) ───────────────────────────
+
+const G66_SAMPLE = `Hola
+
+Acá está el detalle de la compra con tu Smart Card:
+
+Tarjeta Virtual: **** **** **** 7292
+
+Monto: $ 66.873,00 COP
+
+Comercio: ELECTRIFICADORA DE SAN
+Fecha: 06/06/2026
+
+Hora: 15:44
+
+Saludos
+
+Equipo Global66`;
+
+describe('ecParseGlobal66_', () => {
+  test('parsea monto, moneda, tarjeta, comercio y fecha+hora', () => {
+    const p = ecParseGlobal66_(G66_SAMPLE);
+    assert.ok(p);
+    assert.equal(p.bank, 'global66');
+    assert.equal(p.amount, 66873);
+    assert.equal(p.currency, 'COP');
+    assert.equal(p.last4, '7292');
+    assert.equal(p.merchant, 'ELECTRIFICADORA DE SAN');
+    assert.equal(p.dateIso, '2026-06-06T15:44:00');
+  });
+  test('compra en USD conserva la moneda del comercio', () => {
+    const p = ecParseGlobal66_(G66_SAMPLE.replace('$ 66.873,00 COP', '$ 25,99 USD'));
+    assert.equal(p.amount, 25.99);
+    assert.equal(p.currency, 'USD');
+  });
+  test('compra en EUR conserva la moneda', () => {
+    const p = ecParseGlobal66_(G66_SAMPLE.replace('$ 66.873,00 COP', '$ 110,50 EUR'));
+    assert.equal(p.amount, 110.5);
+    assert.equal(p.currency, 'EUR');
+  });
+  test('los 3 fixtures reales del dueño parsean', () => {
+    const g66File = readFileSync(join(root, 'tests', 'fixtures', 'email', 'GLOBAL66-COMPRAS-EJEMPLOS.txt'), 'utf8');
+    const blocks = g66File.split(/#\d/).slice(1);
+    assert.equal(blocks.length, 3);
+    const expected = [
+      { amount: 66873, merchant: 'ELECTRIFICADORA DE SAN', dateIso: '2026-06-06T15:44:00' },
+      { amount: 111000, merchant: 'MERCADOPAGO', dateIso: '2026-06-01T15:29:00' },
+      { amount: 60314, merchant: 'UNE TELCO UNE PAGO EXP', dateIso: '2026-05-06T19:37:00' },
+    ];
+    blocks.forEach((b, i) => {
+      const p = ecParseAlert_(b);
+      assert.ok(p, `bloque Global66 #${i + 1} no parseó`);
+      assert.equal(p.bank, 'global66');
+      assert.equal(p.last4, '7292');
+      assert.equal(p.currency, 'COP');
+      assert.equal(p.amount, expected[i].amount);
+      assert.equal(p.merchant, expected[i].merchant);
+      assert.equal(p.dateIso, expected[i].dateIso);
+    });
+  });
+  test('correo ajeno → null', () => {
+    assert.equal(ecParseGlobal66_('Tu transferencia Global66 fue exitosa'), null);
+  });
+});
+
 // ── ecLooksLikeCardPurchase_ (filtro: solo compras con TC; el resto se ignora) ──
 
 describe('ecLooksLikeCardPurchase_', () => {
@@ -181,6 +246,9 @@ describe('ecLooksLikeCardPurchase_', () => {
     assert.equal(ecLooksLikeCardPurchase_(RAPPI_SAMPLE), true);
     assert.equal(ecLooksLikeCardPurchase_(BCOL_V1), true);
     assert.equal(ecLooksLikeCardPurchase_(BCOL_V2), true);
+  });
+  test('Global66 Smart Card (débito) → true (excepción intencional: sí se captura)', () => {
+    assert.equal(ecLooksLikeCardPurchase_(G66_SAMPLE), true);
   });
   test('notificaciones de cuenta Bancolombia (transferencias, pagos, recepciones) → false (se ignoran en silencio)', () => {
     assert.equal(ecLooksLikeCardPurchase_('Bancolombia: Transferiste COP500.000,00 desde tu cuenta de ahorros *1234 a NEQUI, el 05/06/2026 a las 10:00.'), false);
