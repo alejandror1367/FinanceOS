@@ -507,21 +507,21 @@ HEAD pasó de `75eacca` a **`b870d6c`**. SW `v0.2.10 → v0.2.13`. Tests `33 →
 ```
 Rama:    main
 Remote:  https://github.com/alejandror1367/FinanceOS.git
-HEAD:    4d0387e  docs: handoff 2026-06-10 — Sprints B-I, TD-39, app-lock PIN+huella, v1.0 15/16
-SW:      v0.2.105 (sincronizado con config.version)
-Status:  origin/main sincronizado · worktree con cambios locales
+HEAD:    b1c3b7e  chore: carpeta gitignored para extractos reales de desarrollo
+SW:      v0.2.110 (sincronizado con config.version)
+Status:  origin/main sincronizado · worktree limpio
 ```
 
 ### Commits recientes
 ```
-4d0387e docs: handoff 2026-06-10 — Sprints B-I, TD-39, app-lock PIN+huella, v1.0 15/16
-461c156 feat(accounts): cuentas remuneradas también en billeteras digitales e inversión
-0398281 docs: J.4b desbloqueo biométrico WebAuthn — roadmap y handoff al día
-57ac36c feat(security): desbloqueo biométrico con WebAuthn (J.4b · huella/Face ID)
-ad4b37c docs: J.4 app-lock + TD-39 recurrentes — roadmap y handoff al día
-53083b3 feat(security): app-lock local opcional con PIN (J.4 / N5)
-6864d6d docs: TD-39 marcado resuelto (ejecución automática de recurrentes)
-d37a938 feat(recurring): ejecución automática de recurrentes vencidos (TD-39)
+b1c3b7e chore: carpeta gitignored para extractos reales de desarrollo (datos personales)
+1063ce7 docs(roadmap): Sprint K operativo en produccion — K.8 verificado en vivo
+ce31e08 fix(email-capture): K.8 en vivo — comercio sin guiones y fechas en hora local
+94e5e08 fix(email-capture): buscar tambien en spam, no resucitar tx borradas, diagnostico
+a2c5105 feat(email-capture): reglas de categorizacion completas para las 20 categorias
+7be1aac fix(email-capture): ignorar notificaciones que no son compras con tarjeta de credito
+1056f3f feat(email-capture): Sprint K nucleo — compras con tarjeta desde Gmail (K.1-K.6)
+8655293 fix(responsive): TD-55/56 — overflow horizontal a 375px
 ```
 
 ---
@@ -610,18 +610,15 @@ grep "version" src/core/config.js   # debe coincidir con sw.js VERSION (v0.2.80)
 | R4 Alertas portafolio | ✅ | `bdf03f6` `4a92a49` `b0ca32d` |
 | R5 Seguridad | ✅ desplegado | `60a8637` `2164d52` |
 
-**Orden recomendado (Roadmap-Maestro Sprints A–J):**
-1. **Sprint A — Integridad cifras P0** ← SIGUIENTE: FX backend (Quotes.gs) · soft-delete guard (Utils.gs) · withholdingRate (selectors.js) · deploy
-2. **Sprint B — Ventas parciales P0**: modal cantidad · prorrateo comisión · cdtCurrentValue tope — sin deploy
-3. **Sprint C — Accesibilidad P1**: todo S, sin deploy — contraste · aria · reduced-motion
-4. **Sprint D — Cuentas remuneradas P1**: rediseñar `calcYield` — deploy
-5. **Sprint E — Deudas y Metas P2**: avgRate · amortize % · goalForecast
-6. **Sprint F — Import/Export P2**: fixtures primero · dupKey · export período
-7. **Sprint G–J**: backend perf · charts · QA · avanzado (P3/opcionales)
+**Estado 2026-06-11: Sprints A–I ✅ · F ✅ · K ✅ · v1.0 16/16 ✅. Orden actual:**
+1. **Perfiles PDF de extractos** ← SIGUIENTE (pedido del dueño): Nu + RappiCard + Amex
+   Bancolombia. Password en PDF.js (`getDocument({password})`) + campo en `#/import` +
+   perfil de texto por banco. PDFs reales en `tests/fixtures/import/private/` (gitignored).
+   De paso cierra F.5 (RappiCuenta) y K.7 (dedup email vs extracto).
+2. **J.3 — narrativa Groq de portafolio** (P3, opcional): sin ScriptLock · % relativos · caché.
 
 **Verificaciones pendientes en vivo:**
-- Snapshots nuevo formato (valores de priceService) — Playwright
-- Flujo venta parcial/total en UI Inversiones
+- K.7: importar el próximo extracto y confirmar que el dupKey no duplica compras ya capturadas por email
 
 **Hecho (ya no son pendientes):** backend de saldos + `getBootstrap` desplegados y verificados;
 bypass de auditoría eliminado; auditoría funcional 2026-06-02 (`docs/Audit-Funcional-2026-06-02.md`).
@@ -679,10 +676,10 @@ Transacciones completas — agrupación fecha, filtros mes/categoría, totales, 
 
 **Estado actual HEAD:**
 ```
-commit: 4d0387e · rama: main · SW: v0.2.105 · config.version: 0.2.105 · tests: 155/155 selectors + 13/13 recurring
+commit: b1c3b7e · rama: main · SW: v0.2.110 · config.version: 0.2.110 · tests: 240 (168 selectors + 13 recurring + 24 import + 25 emailCapture + 10 dismiss)
 ```
 
-**Toda la deuda P0/P1/P2 + Sprints 5 y 6 completados. Quedan Sprints 7–9 del roadmap (ver §18 y NEXT_SESSION.md).**
+**v1.0 criterios 16/16 ✅ · Sprints A–I, F y K completos. Próximo: perfiles PDF de extractos (ver §18 y NEXT_SESSION.md).**
 
 ---
 
@@ -690,8 +687,24 @@ commit: 4d0387e · rama: main · SW: v0.2.105 · config.version: 0.2.105 · test
 
 > Leer esto antes que cualquier otra sección. Máximo 100 líneas. Fuente de verdad para retomar de inmediato.
 
-**HEAD:** `b85427f` · **SW/config.version:** `v0.2.108` · **Tests:** 168/168 selectors + 13/13 recurring + 24/24 import = **205** · **Rama:** main · **Sync:** local adelantado (push pendiente)
+**HEAD:** `b1c3b7e` · **SW/config.version:** `v0.2.110` · **Tests:** 168 selectors + 13 recurring + 24 import + 25 emailCapture + 10 dismiss = **240** · **Rama:** main · **Sync:** ✅ todo pusheado
 
+> **Sesión 2026-06-11:** **SPRINT K ✅ COMPLETO Y EN PRODUCCIÓN** — captura automática de
+> compras con tarjeta desde Gmail: `backend/EmailCapture.gs` (parsers RappiCard +
+> Bancolombia sin IA, trigger 15 min, idempotencia `gm_{messageId}`, etiquetas
+> procesado/revisar, config en hoja Settings), acción `runEmailCapture`, 21 reglas
+> comercio→categoría (`EmailCapture.settings.example.json`). **K.8 verificado en vivo:**
+> tx real creada en cuenta RappiCard + categoría Suscripciones, idempotente, notificaciones
+> de cuenta ignoradas. Fixes derivados: `coerce_` en `Utils.gs` devuelve **hora local**
+> (UTC desplazaba compras nocturnas al día siguiente) · `ecCleanMerchant_` · búsqueda
+> `in:anywhere` (spam) · no resucitar tx borradas. Deploy del dueño ✅ (3 .gs + trigger +
+> Settings). Queda K.7 (dedup vs extracto). **Pendiente NUEVO: perfiles PDF de extractos**
+> (Nu, RappiCard, Amex Bancolombia — PDFs con contraseña al menos Nu/Rappi).
+> **Sesión 2026-06-10 (3ª parte):** **J.5 ✅** (2º email = cuenta alternativa del dueño,
+> documentado en `Config.gs`) · **verificaciones en vivo A–H ✅** (JWT prueba + IndexedDB +
+> sesión real; limpieza verificada) · **I.1 ✅ PASS** (64 combinaciones, 0 errores) ·
+> **TD-55/56 ✅** (overflow 375px) · **fix precache SW** (`cache: 'reload'` — Pages
+> max-age=600 congelaba assets viejos en el SW nuevo) · **v1.0: 16/16 criterios ✅**.
 > **Sesión 2026-06-10 (2ª parte):** **TD-54 ✅** conversión histórica FX en tx (Codex, revisado: `transactionAmountBase` FE+BE, schema +3 columnas, +escritor en `dataService.create` que sella la tasa spot al crear — gap detectado en revisión) — ⚠ **deploy pendiente: `Config.gs`+`Transactions.gs`+`Reports.gs`+`setupDatabase()`** · **Sprint F ✅** auditoría completa Import/Export + F.1–F.4/F.6 (`30d9c9b`, `b85427f`): 24 fixtures, dupKey con descripción, 5 bugs P0/P1 corregidos (ingresos/transferencias importados morían en dead-letter; CSV de Claude detectado como Bancolombia; toCSV perdía columnas; XTB creaba $0). F.5 diferido (sin muestra).
 > **Sesión 2026-06-10 (1ª parte):** **Sprint A ✅ desplegado** (FX) · **banner FX** Dashboard (`1223eee`) · **Sprint B ✅** (`14bb7dc`) · **Sprint C ✅ WCAG AA** · **Sprint D ✅ desplegado** cuentas remuneradas · **Sprint E ✅** (`ee27d5b`) · **Sprint G ✅ desplegado** (G.7 cursor `bdde64a`) · **Sprint H ✅** bottom-nav · **Sprint I 🟡** I.2–I.5 ✅ · **TD-39 ✅** recurrentes (`d37a938`) · **J.4/J.4b ✅** app-lock PIN+huella (`53083b3`, `57ac36c`).
 > **Sesión 2026-06-09 (2ª parte):** **Sprint A ✅ completado y desplegado** — FX backend (`getFxRates`, caché 1h) · `computeNetWorth_` convierte/excluye divisas · FE sin suma 1:1 en ninguna ruta (`convertToBase`/`sumInBase`/`fxGaps`) · 21 tests FX nuevos. Deploy Sprint A: **`Quotes.gs` · `Code.gs` · `Reports.gs` ✅ desplegados 2026-06-10**.
@@ -701,14 +714,14 @@ commit: 4d0387e · rama: main · SW: v0.2.105 · config.version: 0.2.105 · test
 > Tras `git pull`: **aprobar** ambos y **reiniciar Claude Code** (las tools MCP se fijan al arrancar).
 
 ### Estado actual real
-- **App en producción:** https://alejandror1367.github.io/FinanceOS/ (PWA, OAuth activo) · local v0.2.108
-- **Backend Apps Script:** ✅ **Al día** — Sprint A/D/G y TD-54 (`Config.gs`+`Transactions.gs`+`Reports.gs`+`setupDatabase()`, columnas amountBase/fxRateToBase/fxRateDate) desplegados 2026-06-10.
-- **Tests:** **205** — 168 selectors + 13 recurring + 24 import (`node --test tests/selectors.test.js tests/recurring.test.js tests/import.test.js`)
+- **App en producción:** https://alejandror1367.github.io/FinanceOS/ (PWA, OAuth activo) · v0.2.110 (SW con precache `cache: 'reload'`)
+- **Backend Apps Script:** ✅ **Al día** — Sprint A/D/G, TD-54 y **Sprint K** (`EmailCapture.gs` + `Code.gs` + `Utils.gs` coerce_ hora local) desplegados 2026-06-11. Trigger `processEmailCapture` cada 15 min ACTIVO.
+- **Tests:** **240** — 168 selectors + 13 recurring + 24 import + 25 emailCapture + 10 dismiss (correr por archivos explícitos, no modo directorio)
 - **Roadmap activo:** `docs/Roadmap-Maestro.md` ← FUENTE ÚNICA. Reemplaza todos los roadmaps anteriores.
 - **Plan Opus (R0–R8):** R0–R5 ✅ · **Sprints A–I ✅ (todos, incl. I.1 QA en vivo PASS)** · **J 🟡** (falta J.3 Groq · J.5 ✅ documentado 2026-06-10) · **TD-54 ✅ desplegado** · **v1.0: criterios 16/16 ✅**.
 
-### Deploy — ✅ Todo en producción (2026-06-10)
-`Quotes.gs` · `Code.gs` · `Reports.gs` (FX + TD-54) · `Config.gs` (`lastYieldDate` + columnas FX) · `Transactions.gs` (G.7 cursor + TD-54). `setupDatabase()` ejecutado para `amountBase`/`fxRateToBase`/`fxRateDate`.
+### Deploy — ✅ Todo en producción (2026-06-11)
+`Quotes.gs` · `Code.gs` (+`runEmailCapture`) · `Reports.gs` (FX + TD-54) · `Config.gs` (`lastYieldDate` + columnas FX) · `Transactions.gs` (G.7 cursor + TD-54) · **`EmailCapture.gs`** (Sprint K) · **`Utils.gs`** (`coerce_` hora local). `setupDatabase()` ejecutado · `setupEmailCapture()` ejecutado (etiquetas + Settings + trigger 15 min) · scope Gmail autorizado · Settings rellenos (cardmap: 8967→RappiCard, 0808/3147→Amex · 21 reglas · fallback Otros).
 
 ### Arquitectura actual
 ```
@@ -725,6 +738,7 @@ Flujo: `Views → Services → Store → Views` (never direct to net/IndexedDB f
 - Analítica: flujo de caja 3 series + selector 3/6/12m · 7 insights (cobertura, racha, concentración)
 - Exportaciones · Command Palette (⌘K) · Validación inline · Import con Groq (truncado a 50K chars)
 - **Simulador FIRE** · **DismissService** (pagos vencidos "Visto")
+- **Captura automática de compras desde Gmail (Sprint K):** RappiCard + Amex Bancolombia, trigger 15 min, comercio como descripción, categorización por reglas editables en Settings
 - Seguridad: `logAccessDenied_` rate-limit · `iss`/`exp` validados · `importMaxChars` configurable
 
 ### Bugs abiertos
@@ -743,12 +757,15 @@ Flujo: `Views → Services → Store → Views` (never direct to net/IndexedDB f
 8. ~~Sprint I — QA + v1.0~~ ✅ 2026-06-10 (I.1 PASS en vivo con sesión real: 64 combinaciones, 0 errores JS/red)
 9. ~~Sprint F — Import/Export~~ ✅ 2026-06-10 (auditoría + F.1–F.4/F.6 `30d9c9b`/`b85427f`; F.5 diferido sin muestra)
 10. ~~TD-54 — FX histórica en tx~~ ✅ 2026-06-10 (Codex + escritor `0e5841f` · deploy ✅)
-11. **Sprint J — restante**: J.3 narrativa Groq (J.5 ✅ 2º email confirmado del dueño y documentado en `Config.gs` 2026-06-10 · XIRR/CAGR ✅ · J.2 ✅ · J.4 PIN ✅ `53083b3` · J.4b huella ✅ `57ac36c` · TD-39 ✅ `d37a938`)
-12. ~~I.1 — QA Playwright en vivo + verificaciones acumuladas~~ ✅ 2026-06-10 (sesión real del dueño vía GIS silent refresh en el browser Playwright; reportes A–H PASS + I.1 PASS; TD-55/56 registrados)
+11. ~~Sprint K — captura Gmail~~ ✅ 2026-06-11 (K.1–K.6 + K.8 verificado en vivo; deploy completo; **queda K.7**: verificar dedup con el próximo extracto importado)
+12. **PRÓXIMO — Perfiles PDF de extractos** (pedido del dueño 2026-06-11): Nu, RappiCard y Amex Bancolombia envían extractos en PDF. Nu/Rappi **con contraseña** (Amex por confirmar) → `pdfParser.js` necesita soporte de password (PDF.js `getDocument({password})`) + campo en `#/import` + perfiles de texto por banco. El dueño subirá PDFs reales a `tests/fixtures/import/private/` (**gitignored** — jamás commitear); de ahí salen perfiles + fixtures sintéticos commiteables. Cierra también F.5 (perfil RappiCuenta) y K.7.
+13. **Sprint J — restante**: J.3 narrativa Groq (J.5 ✅ 2º email confirmado del dueño y documentado en `Config.gs` 2026-06-10 · XIRR/CAGR ✅ · J.2 ✅ · J.4 PIN ✅ `53083b3` · J.4b huella ✅ `57ac36c` · TD-39 ✅ `d37a938`)
+14. ~~I.1 — QA Playwright en vivo + verificaciones acumuladas~~ ✅ 2026-06-10 (sesión real del dueño vía GIS silent refresh en el browser Playwright; reportes A–H PASS + I.1 PASS; TD-55/56 registrados)
 
 ### Riesgos abiertos
 - `analyzePortfolio` (J.3, si se hace) NO debe tomar LockService → congelaría la cola de sync
-- ~~2º email en `allowedEmails`~~ — J.5 ✅ resuelto: ambos correos son de Alejo (cuenta alternativa), documentado en `Config.gs` (2026-06-10)
+- Sprint K: si un banco cambia la plantilla del correo, las compras caen a `FinanceOS/revisar` (no se pierden, pero hay que actualizar el regex en `EmailCapture.gs`)
+- K.7 sin verificar: el próximo import de extracto podría duplicar compras ya capturadas por email si el dupKey no matchea (descripción del extracto ≠ comercio del correo)
 - Import/Export pendientes de futuro: restore del backup JSON · XTB→posiciones (doble conteo)
 
 ### Decisiones arquitectónicas importantes
@@ -768,10 +785,51 @@ src/store/selectors.js             — Lógica financiera pura (calcYield, goalS
 src/core/applock.js                — App-lock: PIN PBKDF2 + huella WebAuthn (J.4/J.4b)
 src/services/recurringService.js   — Ejecución automática de recurrentes (TD-39, 13 tests)
 src/views/accounts.js              — YIELD_TYPES · modal "Registrar rendimiento" (Sprint D)
+backend/EmailCapture.gs            — ★ Sprint K: parsers correos + trigger + setupEmailCapture (desplegado)
+backend/EmailCapture.settings.example.json — valores listos para la hoja Settings (cardmap/reglas)
 backend/Transactions.gs            — cursor opt-in getTransactions (G.7, desplegado)
 backend/Config.gs                  — Schema Accounts.lastYieldDate · APP.importMaxChars
-tests/selectors.test.js            — 155/155 (35 suites) · tests/recurring.test.js — 13/13
+backend/Utils.gs                   — coerce_ devuelve fechas en hora LOCAL (no UTC) — desplegado
+tests/emailCapture.test.js         — 25/25: parsers contra fixtures reales del dueño
+tests/fixtures/import/private/     — GITIGNORED: extractos PDF reales (jamás commitear)
 ```
+
+---
+
+## Cambios realizados en sesión 2026-06-10/11 (noche — J.5 + QA en vivo + Sprint K)
+
+**Auditorías/QA realizadas:**
+- Verificaciones en vivo A–H (Playwright, prod): snapshots 6 campos · banner FX · modal rendimiento · app-lock PIN/huella · recurrentes TD-39 · bottom-nav 375px · import robusto — todas PASS, limpieza verificada (0 residuos `qa_test_`, syncQueue 0, token real restaurado)
+- I.1 QA con sesión OAuth real (GIS silent refresh): 16 rutas × desktop/375px × light/dark = 64 combinaciones, 0 errores JS/red → **v1.0 criterios 16/16 ✅**
+
+**Bugs corregidos:**
+- TD-55: `.row__actions` desbordaba a 375px en budgets/goals (wrap en `.card > .row-flex.between:first-child`) — `8655293`
+- TD-56: `.topbar__title` no encogía y empujaba acciones fuera del viewport (min-width 0 + elipsis + gap móvil) — `8655293`
+- **Precache del SW servía assets viejos**: `cache.addAll` pasaba por HTTP cache (Pages max-age=600) y congelaba CSS de hasta 10 min en la versión nueva → `Request(..., {cache:'reload'})` — `14dd401`
+- **`coerce_` devolvía fechas UTC**: compra 19:46 Bogotá salía T00:46Z del día siguiente → selectors la agrupaban mal; ahora hora local del script — `ce31e08` (desplegado)
+
+**Mejoras backend (Sprint K — NUEVO MÓDULO, desplegado):**
+- `EmailCapture.gs`: parsers RappiCard/Bancolombia (regex, sin IA) · trigger 15 min con ScriptLock compartido · idempotencia `gm_{messageId}` (no resucita borradas) · etiquetas `FinanceOS/procesado`/`revisar` · filtro solo-compras-TC (notificaciones de cuenta ignoradas) · búsqueda `in:anywhere` (spam) · `ecCleanMerchant_` · config en Settings (cardmap/reglas/fallback/enabled) · `setupEmailCapture()` idempotente · acción `runEmailCapture` — `1056f3f`..`ce31e08`
+- 21 reglas comercio→categoría para las 20 categorías (`EmailCapture.settings.example.json` + `docs/emailcapture-rules-cell.txt`) — `a2c5105`
+- K.8 verificado en vivo: tx `gm_19eb51450d1107ee` (Amazon Prime Video, $27.700,73) en cuenta RappiCard + categoría Suscripciones; 2ª corrida skipped=1
+
+**Decisiones arquitectónicas:**
+- J.5 cerrado: 2º email (`alejandrorr1367@gmail.com`) = cuenta alternativa del dueño, acceso total intencional; documentado en `Config.gs` — `1ca46c1`
+- El script de captura vive en `alejandrorr1367@gmail.com`; RappiCard llega por filtro de reenvío, Bancolombia directo (email predeterminado cambiado en el banco)
+- Todas las fechas tipo d/ts del backend son **hora local Bogotá** (sin Z) — coherente con el TZ del spreadsheet
+- Extractos PDF reales → `tests/fixtures/import/private/` (gitignored); solo fixtures sintéticos al repo
+
+**Riesgos pendientes:** K.7 (dedup email vs extracto) · plantillas de correo de bancos pueden cambiar (caen a revisar, no se pierden)
+
+**Archivos modificados (código):** `backend/EmailCapture.gs` (nuevo) · `backend/Code.gs` · `backend/Utils.gs` · `backend/Config.gs` (comentario J.5) · `src/styles/components.css` · `src/styles/layout.css` · `sw.js` (precache reload) · `tests/emailCapture.test.js` (nuevo, 25) · `backend/EmailCapture.settings.example.json` (nuevo)
+
+**Commits relevantes:** `1ca46c1` `e3f11e3` `8655293` `14dd401` `6e99997` `036ec9d` `abc6a7a` `d6afef8` `1056f3f` `7be1aac` `a2c5105` `94e5e08` `ce31e08` `1063ce7` `b1c3b7e`
+
+## Estado posterior a la sesión 2026-06-11
+
+**Completado ✅:** v1.0 criterios 16/16 · Sprint K (deploy completo + K.8 en vivo) · J.5 · I.1 · verificaciones A–H · TD-55/56 · fix precache SW · fix fechas UTC→local.
+**Parcialmente 🟡:** K.7 (verificar dedup en el próximo import de extracto).
+**Pendiente 🔴:** Perfiles PDF de extractos (Nu + RappiCard + Amex Bancolombia; password al menos Nu/Rappi — soporte en `pdfParser.js` + campo en `#/import`) · J.3 narrativa Groq (opcional).
 
 ---
 
@@ -1552,76 +1610,77 @@ Tras git pull deben APROBARSE y REINICIARSE Claude Code: las tools MCP se fijan 
 PROYECTO: FinanceOS — PWA financiera personal y privada de Alejo.
 Repo: https://github.com/alejandror1367/FinanceOS (rama main).
 Prod: https://alejandror1367.github.io/FinanceOS/
-HEAD: 4d0387e · SW v0.2.105 · Tests 155/155 selectors + 13/13 recurring
+HEAD: b1c3b7e · SW v0.2.110 · Tests 240 (selectors+recurring+import+emailCapture+dismiss)
 
 INVARIANTES (ver CLAUDE.md): JS ES Modules sin build step · sin frameworks/bundlers ·
 cero deps npm en runtime · frontend abstraído tras src/services/ · Apps Script +
 Google Sheets (13 hojas) + GitHub Pages + OAuth de Google · offline-first.
 
 ROADMAP ACTIVO: docs/Roadmap-Maestro.md ← fuente única.
-Sprints A–E, G, H ✅ · I 🟡 (falta I.1) · F 🔴 sin empezar · J 🟡 (faltan J.3/J.5).
-Backend AL DÍA: Sprint A (FX) + D (lastYieldDate) + G (cursor) desplegados.
+ESTADO: v1.0 criterios 16/16 ✅ · Sprints A–I ✅ · F ✅ · K ✅ (en producción) ·
+J 🟡 (solo falta J.3 Groq, opcional). Backend AL DÍA (deploy 2026-06-11).
 
-HECHO EN SESIÓN 2026-06-10 (todo pusheado y desplegado):
-- Sprint A deploy confirmado · banner fxGaps en Dashboard (1223eee).
-- B.4 roundMoney por sección en Inversiones (14bb7dc).
-- C.4 reduced-motion universal + C.10 label Tema (c8be635, 66f7b5a).
-- Sprint D completo: calcYield sobre SALDO PROMEDIO ponderado por tiempo (4ec3836),
-  lastYieldDate en schema (9cc4fd6, setupDatabase ejecutado), badge %EA + preset
-  RappiCuenta (28ebde0), modal Registrar rendimiento — 1 tx income, idempotente
-  por lastYieldDate (1f05f94). YIELD_TYPES ampliado a digital_wallet+investment (461c156).
-- E.3 goalSavingsSplit selector + tests sameMonth (ee27d5b).
-- G.7 cursor opt-in en getTransactions {items,nextCursor}, retrocompatible (bdde64a).
-- H.3 bottom-nav final: dashboard·today·transactions·investments·settings (5ba0151).
-- I.2-I.5: housekeeping TD (TD-11 ✅) + checklist v1.0 15/16 (b422c86).
-- TD-39: recurringService — materializa recurrentes vencidos al cargar, ids
-  deterministas rec_{id}_{fecha} idempotentes, catch-up con tope (d37a938, 13 tests).
-- J.4 app-lock PIN (PBKDF2 150k iter, overlay, auto-lock 5min, 5 intentos→signOut)
-  + J.4b huella/Face ID via WebAuthn con PIN de respaldo (53083b3, 57ac36c).
+HECHO EN SESIÓN 2026-06-10/11 (todo pusheado y desplegado):
+- J.5 ✅: 2º email = cuenta alternativa del dueño, documentado en Config.gs (1ca46c1).
+- Verificaciones en vivo A–H ✅ + I.1 QA con sesión real ✅ (64 combinaciones, 0 errores).
+- TD-55/56 ✅: overflow 375px (8655293) + fix precache SW cache:'reload' (14dd401 —
+  Pages max-age=600 congelaba assets viejos en el SW nuevo).
+- SPRINT K ✅ COMPLETO: captura automática de compras con tarjeta desde Gmail.
+  backend/EmailCapture.gs: parsers RappiCard + Bancolombia (regex, sin IA), trigger
+  processEmailCapture cada 15 min (ScriptLock compartido con doPost), idempotencia
+  gm_{messageId} (no resucita borradas), etiquetas FinanceOS/procesado|revisar,
+  solo compras T.Cred (notificaciones de cuenta/débito ignoradas), in:anywhere (spam),
+  config editable en hoja Settings (cardmap 8967→RappiCard, 0808/3147→Amex · 21 reglas
+  comercio→categoría · fallback Otros). Acción runEmailCapture (POST). K.8 verificado
+  en vivo: tx real en cuenta RappiCard, categoría por regla, 2ª corrida idempotente.
+- Utils.gs coerce_: fechas d/ts ahora en HORA LOCAL Bogotá (no UTC) — con toISOString
+  una compra de las 19:46 caía al día siguiente al agrupar por date.slice(0,10).
+- Setup del dueño: script en alejandrorr1367@gmail.com · RappiCard llega por filtro
+  de reenvío · Bancolombia llega directo (cambió el email predeterminado en el banco).
 
 PENDIENTES EN ORDEN:
 
-1. Sprint F — Import/Export (P2, sin deploy, SIN EMPEZAR):
-   ⚠ F.1 fixtures de regresión OBLIGATORIO antes de F.2 (dedup).
-   Decisión abierta del dueño: fixtures sintéticos vs extractos reales anonimizados.
-   F.2 dupKey date|amount|descNorm · F.3 resumen calidad post-import (>30% sin
-   categoría = alerta) · F.4 validar montos cero/negativos antes del preview ·
-   F.5 perfil RappiCuenta en bankProfiles.js · F.6 export por período desde/hasta.
+1. PERFILES PDF DE EXTRACTOS (pedido del dueño, PRÓXIMA SESIÓN):
+   Nu, RappiCard y Amex Bancolombia mandan extractos en PDF. Nu y RappiCard CON
+   CONTRASEÑA (Amex por confirmar). Trabajo:
+   a) pdfParser.js: soporte password — PDF.js getDocument({ data, password }) +
+      reintento si PasswordException; campo de contraseña en #/import.
+   b) El dueño sube PDFs reales a tests/fixtures/import/private/ (GITIGNORED —
+      JAMÁS commitearlos: datos personales, repo público). Leerlos con la tool Read,
+      aprender el layout y escribir perfil de texto por banco (determinista, sin Groq).
+   c) Fixtures SINTÉTICOS commiteables + tests de regresión (patrón Sprint F).
+   d) De paso cierra F.5 (perfil RappiCuenta) y K.7 (ver punto 2).
 
-2. I.1 — QA Playwright en vivo (requiere LOGIN del dueño en el browser Playwright):
-   15 rutas · 375px · dark/light · 0 errores JS/red. Único criterio v1.0 sin marcar.
+2. K.7 — al importar el primer extracto real: verificar que el dupKey
+   (date|amount|descNorm) no duplique compras ya capturadas por email (la descripción
+   del extracto puede diferir del comercio del correo → puede requerir matching extra).
 
-3. Verificaciones en vivo acumuladas (mismo login): snapshots formato nuevo · avisos
-   FX en Inversiones · modal Registrar rendimiento · app-lock PIN/huella · recurrentes
-   automáticos · bottom-nav 375px.
-
-4. J.5 — 2º email en allowedEmails (alejandrorr1367@gmail.com): confirmar identidad
-   con el dueño, documentar o eliminar (backend/Config.gs, requiere deploy si cambia).
-
-5. J.3 — Narrativa Groq de portafolio (OPCIONAL): sin script lock · % relativos sin
+3. J.3 — Narrativa Groq de portafolio (OPCIONAL): sin script lock · % relativos sin
    montos COP · anti prompt-injection · caché CacheService · disclaimer.
 
-6. TD-54 — implementado en worktree: tx en divisa extranjera usa `amountBase` o
-   `fxRateToBase` histórico; sin tasa se excluye y `fxGaps()` lo reporta. Pendiente
-   deploy backend (`Config.gs`/`Transactions.gs`/`Reports.gs`) + `setupDatabase()`.
-
 CAVEATS:
-- Patrón de esta sesión: MUCHAS tareas del roadmap ya estaban hechas de sesiones
-  previas — SIEMPRE verificar código real antes de re-implementar.
-- node --test tests/ (modo directorio) falla por quirk de Node 24/Windows; correr
-  archivos explícitos: node --test tests/selectors.test.js tests/recurring.test.js.
-- accountYield es type-agnostic; YIELD_TYPES vive en accounts.js (no en selectors).
-- El saldo de cuentas investment NO cuenta en patrimonio (solo posiciones) — el modal
-  de rendimiento lo avisa.
+- Sprint K: si un banco cambia la plantilla del correo, las compras caen a la etiqueta
+  FinanceOS/revisar con AuditLog — no se pierden; actualizar regex en EmailCapture.gs.
+- tests/emailCapture.test.js evalúa el .gs directo en Node (new Function) — los parsers
+  son puros; no romper esa pureza (nada de GmailApp fuera de las funciones de captura).
+- Browser Playwright MCP: el perfil persistente CONSERVA la sesión Google del dueño y
+  GIS renueva el id_token solo → QA autenticado posible SIN login manual (solo lectura
+  estricta). Si el browser queda bloqueado por un agente muerto: matar procesos chrome
+  con ms-playwright-mcp en el CommandLine.
+- node --test tests/ (modo directorio) falla por quirk Node 24/Windows; correr archivos
+  explícitos: node --test tests/selectors.test.js tests/recurring.test.js
+  tests/import.test.js tests/emailCapture.test.js tests/dismissService.test.js.
+- Fechas backend: TODAS las d/ts llegan en hora local Bogotá sin Z (coerce_).
 - Cursor G.7: solo se activa con paginate=true|cursor; sin params, contrato array intacto.
 
-FORMA DE TRABAJO: fases pequeñas y verificables · explicar qué/por qué · correr
-node --test tests/selectors.test.js tras cada cambio de selector (155/155 base) ·
-commits atómicos · hook auto-bumpa SW + config.version al commitear src/.
-Para mensajes multilínea en PowerShell: git commit -F archivo temporal.
+FORMA DE TRABAJO: fases pequeñas y verificables · explicar qué/por qué · correr los
+tests tras cada cambio (240 base) · commits atómicos · hook auto-bumpa SW +
+config.version al commitear src/ (NO al tocar solo backend/ o sw.js — bump manual).
+Para mensajes multilínea en PowerShell: git commit con here-string @'...'@.
 Empezar con: git log --oneline -5 · git status · node --test tests/selectors.test.js.
 ```
 
 ---
 
-*Actualizado el 2026-06-10 por Claude (handoff): Sprints B-I + TD-39 + app-lock PIN/huella. HEAD 4d0387e · v0.2.105 · 155/155 + 13/13 tests.*
+*Actualizado el 2026-06-11 por Claude (handoff): J.5 + QA en vivo I.1 + TD-55/56 + Sprint K (captura Gmail) completo y en producción. HEAD b1c3b7e · v0.2.110 · 240 tests.*
+
