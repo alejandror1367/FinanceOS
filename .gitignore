@@ -13,3 +13,6 @@ settings.local.json
 .agents/
 .codex/
 AGENTS.md
+
+# Extractos reales para desarrollo local - NUNCA se commitean (datos personales)
+tests/fixtures/import/private/
