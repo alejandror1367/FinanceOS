@@ -16,13 +16,30 @@ async function loadPdfJs() {
   return pdfjs;
 }
 
+// L.1: el PDF exige contraseña (extractos de Nu, RappiCuenta/RappiCard). La vista
+// la pide y reintenta; la contraseña vive solo en memoria durante el parse.
+export class PdfPasswordError extends Error {
+  constructor(incorrect) {
+    super(incorrect ? 'Contraseña incorrecta.' : 'Este PDF está protegido con contraseña.');
+    this.name = 'PdfPasswordError';
+    this.incorrect = !!incorrect;
+  }
+}
+
 // Extrae texto y determina si el PDF tiene contenido seleccionable.
 // Usa buffer.slice(0) para no dejar el ArrayBuffer original en estado "detached".
-export async function parsePdf(buffer) {
+export async function parsePdf(buffer, password) {
   const lib = await loadPdfJs();
   // Copia defensiva: PDF.js transfiere el ArrayBuffer internamente
   const data = new Uint8Array(buffer.slice(0));
-  const pdf = await lib.getDocument({ data }).promise;
+  let pdf;
+  try {
+    pdf = await lib.getDocument({ data, password: password || undefined }).promise;
+  } catch (err) {
+    // PasswordException.code: 1 = falta contraseña, 2 = contraseña incorrecta.
+    if (err && err.name === 'PasswordException') throw new PdfPasswordError(err.code === 2);
+    throw err;
+  }
 
   const pageTexts = [];
   for (let i = 1; i <= Math.min(pdf.numPages, 50); i++) {

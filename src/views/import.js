@@ -5,7 +5,7 @@ import { el } from '../utils/dom.js';
 import { icon } from '../utils/icons.js';
 import { store } from '../store/store.js';
 import { dataService } from '../services/dataService.js';
-import { importService, UnknownFormatError, dupKey } from '../services/importService.js';
+import { importService, UnknownFormatError, PdfPasswordError, dupKey } from '../services/importService.js';
 import { formatMoney, formatDate } from '../utils/format.js';
 import { Button, Badge } from '../components/ui.js';
 import { toast } from '../services/toast.js';
@@ -48,6 +48,7 @@ export function renderImport() {
     else if (state.phase === 'preview')   body = buildPreview();
     else if (state.phase === 'importing') body = buildImporting();
     else if (state.phase === 'unknown')   body = buildUnknown();
+    else if (state.phase === 'password')  body = buildPassword();
     else                                  body = buildDone();
 
     const header = el('div', { class: 'view-header' }, [
@@ -57,7 +58,8 @@ export function renderImport() {
   }
 
   // ---------- onFile ----------
-  function onFile(file) {
+  // password (L.1): reintento tras PdfPasswordError; solo vive en memoria.
+  function onFile(file, password) {
     if (!file) return;
     state.file = file;
     state.phase = 'analyzing';
@@ -67,7 +69,7 @@ export function renderImport() {
     importService.processFile(file, (step) => {
       state.progress = step;
       render();
-    }).then((result) => {
+    }, password ? { password } : undefined).then((result) => {
       if (!result) return;
       state.result = result;
       state.selected = new Set(result.items.map((_, i) => i));
@@ -90,12 +92,43 @@ export function renderImport() {
       if (err instanceof UnknownFormatError) {
         state.phase = 'unknown';
         state.unknownHeaders = err.headers;
+      } else if (err instanceof PdfPasswordError) {
+        state.phase = 'password';
+        state.pwIncorrect = err.incorrect;
       } else {
         state.phase = 'idle';
         toast(err.message || 'Error al procesar el archivo.', { type: 'negative' });
       }
       render();
     });
+  }
+
+  // ---------- Password (L.1: PDF protegido) ----------
+  function buildPassword() {
+    const wrap = el('div', { class: 'import-wrap' });
+    const card = el('div', { class: 'card card--pad' });
+    card.appendChild(el('h3', { style: 'margin:0 0 8px;font-size:var(--fs-h3)' }, ['PDF protegido']));
+    card.appendChild(el('p', { style: 'margin:0 0 12px;color:var(--text-secondary);font-size:var(--fs-caption)' }, [
+      `${state.file?.name || ''} requiere contraseña (la que usa tu banco para los extractos). `,
+      'Se usa solo para abrir el archivo en tu dispositivo — no se guarda ni se envía a ningún servidor.',
+    ]));
+    if (state.pwIncorrect) {
+      card.appendChild(el('p', { class: 't-caption text-negative', style: 'margin:0 0 8px' }, ['Contraseña incorrecta. Inténtalo de nuevo.']));
+    }
+    const input = el('input', {
+      type: 'password', class: 'input', placeholder: 'Contraseña del PDF',
+      autocomplete: 'off', 'aria-label': 'Contraseña del PDF',
+    });
+    const unlock = () => { const v = input.value.trim(); if (v) onFile(state.file, v); };
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') unlock(); });
+    card.appendChild(input);
+    const row = el('div', { class: 'import-footer', style: 'margin-top:12px' });
+    row.appendChild(Button('Cancelar', { variant: 'ghost', onClick: () => { state.phase = 'idle'; state.file = null; state.pwIncorrect = false; render(); } }));
+    row.appendChild(Button('Desbloquear', { onClick: unlock }));
+    card.appendChild(row);
+    wrap.appendChild(card);
+    setTimeout(() => input.focus(), 50);
+    return wrap;
   }
 
   // ---------- Idle ----------

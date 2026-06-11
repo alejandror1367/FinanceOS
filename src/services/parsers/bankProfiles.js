@@ -234,6 +234,62 @@ export const BANK_PROFILES = [
   },
 ];
 
+// ───────────────── Perfiles de PDF (texto extraído por pdfParser) ─────────────────
+// Sprint L: parseo determinista del TEXTO del PDF (sin IA). Cada perfil expone
+// detect(text, filename) y parse(text) → { items, skipped } con el mismo shape de
+// item que mapRow. El servicio completa bank/currency/period (ver importService).
+
+const MESES_ES = { ene: '01', feb: '02', mar: '03', abr: '04', may: '05', jun: '06', jul: '07', ago: '08', sep: '09', oct: '10', nov: '11', dic: '12' };
+
+// "11 May 2026" → "2026-05-11" (mes en español abreviado, con o sin punto).
+export function toIsoEs(dd, mes, yyyy) {
+  const m = MESES_ES[norm(mes).replace('.', '').slice(0, 3)];
+  if (!m) return null;
+  return `${yyyy}-${m}-${String(dd).padStart(2, '0')}`;
+}
+
+export const PDF_PROFILES = [
+  {
+    // L.2 / F.5 — RappiCuenta (cuenta de ahorros RappiPay). Tabla:
+    //   "Detalles de movimientos ... / Fecha Descripción Valor /
+    //    11 May 2026     Redención Cashback     +$8,007.87"
+    // ⚠ Montos en formato US (',' miles · '.' decimales) — parseMoney lo soporta.
+    id: 'rappicuenta',
+    name: 'RappiCuenta',
+    color: '#FF441B',
+    textColor: '#fff',
+    currency: 'COP',
+    detect(text) {
+      return /Extracto de tu RappiCuenta/i.test(text);
+    },
+    parse(text) {
+      const items = [];
+      let skipped = 0;
+      for (const line of String(text).split('\n')) {
+        const m = line.match(/^\s*(\d{1,2})\s+([a-zA-Záéíóú]{3,5})\.?\s+(\d{4})\s{2,}(.+?)\s{2,}([+-]?)\s?\$\s?([\d.,]+)\s*$/);
+        if (!m) continue;
+        const date = toIsoEs(m[1], m[2], m[3]);
+        const amount = parseMoney(m[6]);
+        if (!date || !(amount > 0)) { skipped++; continue; }
+        items.push({
+          date,
+          description: m[4].trim(),
+          amount: Math.abs(amount),
+          type: m[5] === '-' ? 'expense' : 'income',
+        });
+      }
+      return { items, skipped };
+    },
+  },
+];
+
+export function detectPdfBank(text, filename) {
+  for (const p of PDF_PROFILES) {
+    if (p.detect && p.detect(text, String(filename || ''))) return p;
+  }
+  return null;
+}
+
 export function detectBank(headers, filename) {
   const name = String(filename || '').toLowerCase();
   for (const p of BANK_PROFILES) {

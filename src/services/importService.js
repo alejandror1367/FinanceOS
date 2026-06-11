@@ -4,8 +4,10 @@
 
 import { parseCSV } from './parsers/csvParser.js';
 import { parseExcel } from './parsers/excelParser.js';
-import { parsePdf } from './parsers/pdfParser.js';
-import { BANK_PROFILES, detectBank } from './parsers/bankProfiles.js';
+import { parsePdf, PdfPasswordError } from './parsers/pdfParser.js';
+import { BANK_PROFILES, detectBank, detectPdfBank } from './parsers/bankProfiles.js';
+
+export { PdfPasswordError };
 
 function readAsText(file) {
   return new Promise((res, rej) => {
@@ -70,8 +72,24 @@ export class UnknownFormatError extends Error {
   }
 }
 
+// Sprint L: completa el resultado de un perfil PDF al mismo shape de applyProfile.
+export function finishPdfResult(profile, parsed) {
+  const items = parsed.items.filter((i) => i.date && Number(i.amount) > 0);
+  const skipped = (parsed.skipped || 0) + (parsed.items.length - items.length);
+  const dates = items.map((i) => i.date).sort();
+  return {
+    bank: profile,
+    type: profile.type || 'transactions',
+    currency: profile.currency || 'COP',
+    items,
+    skipped,
+    period: dates.length ? { from: dates[0], to: dates[dates.length - 1] } : null,
+  };
+}
+
 export const importService = {
-  async processFile(file, onProgress) {
+  // opts.password: contraseña del PDF (L.1) — solo en memoria, nunca se persiste.
+  async processFile(file, onProgress, opts) {
     onProgress?.('reading');
 
     const ext = file.name.split('.').pop().toLowerCase();
@@ -98,9 +116,12 @@ export const importService = {
     if (isPdf) {
       onProgress?.('pdf');
       const buffer = await readAsBuffer(file);
-      await parsePdf(buffer); // valida que el PDF abre (error claro si está corrupto/offline)
-      // TODO PDF pasa por el flujo del prompt de Claude (no hay parseo nativo de PDF):
-      // la vista muestra las instrucciones para convertirlo a FinanceOS CSV.
+      // Lanza PdfPasswordError si está protegido → la vista pide la contraseña y reintenta.
+      const { text } = await parsePdf(buffer, opts?.password);
+      // Sprint L: perfiles nativos sobre el texto del PDF (RappiCuenta; Nu/Amex en L.3/L.4).
+      const profile = detectPdfBank(text, file.name);
+      if (profile) return finishPdfResult(profile, profile.parse(text));
+      // Sin perfil → flujo del prompt de Claude (instrucciones en la vista).
       throw new UnknownFormatError([]);
     }
 

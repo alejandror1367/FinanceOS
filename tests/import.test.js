@@ -9,10 +9,15 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { parseCSV } from '../src/services/parsers/csvParser.js';
-import { detectBank, BANK_PROFILES, toIso, parseMoney } from '../src/services/parsers/bankProfiles.js';
-import { applyProfile, dupKey } from '../src/services/importService.js';
+import { detectBank, detectPdfBank, BANK_PROFILES, PDF_PROFILES, toIso, toIsoEs, parseMoney } from '../src/services/parsers/bankProfiles.js';
+import { applyProfile, finishPdfResult, dupKey } from '../src/services/importService.js';
 import { toCSV } from '../src/utils/export.js';
+
+const __root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 function run(fixture, filename) {
   const { headers, rows } = parseCSV(fixture);
@@ -230,5 +235,61 @@ describe('toCSV', () => {
   test('escapa comas y comillas', () => {
     const csv = toCSV([{ a: 'hola, "mundo"' }]);
     assert.ok(csv.includes('"hola, ""mundo"""'));
+  });
+});
+
+// ── Sprint L.2: perfil PDF RappiCuenta (texto extraído por pdfParser) ───────────
+
+const FIX_RAPPICUENTA_PDF = `Periodo
+  1 MAY - 31 MAY (31 días)
+  Tipo de cuenta :
+  RappiCuenta - Cuenta de ahorros
+  Extracto de tu RappiCuenta
+Resumen del periodo
+Saldo anterior     $233,730.14
+  Abonos     +$8,007.87
+Intereses ganados     +$1,759.57
+  Detalles de movimientos     Del 1 MAY - 31 MAY (31 días)
+  Fecha     Descripción     Valor
+  11 May 2026     Redención Cashback     +$8,007.87
+  31 May 2026     Intereses ganados     +$1,759.57
+  15 May 2026     Retiro a Nequi     -$50,000.00
+  Los intereses son calculados de forma diaria sobre el saldo de la cuenta.`;
+
+describe('PDF RappiCuenta (L.2 / F.5)', () => {
+  test('toIsoEs convierte mes en español', () => {
+    assert.equal(toIsoEs('11', 'May', '2026'), '2026-05-11');
+    assert.equal(toIsoEs('1', 'dic.', '2025'), '2025-12-01');
+    assert.equal(toIsoEs('5', 'xxx', '2026'), null);
+  });
+  test('detectPdfBank reconoce el extracto por su texto (no por filename)', () => {
+    const p = detectPdfBank(FIX_RAPPICUENTA_PDF, 'extracto_RAPPICARD.pdf');
+    assert.ok(p);
+    assert.equal(p.id, 'rappicuenta');
+  });
+  test('parse extrae solo filas de movimientos (formato US), con signo', () => {
+    const profile = PDF_PROFILES.find((p) => p.id === 'rappicuenta');
+    const result = finishPdfResult(profile, profile.parse(FIX_RAPPICUENTA_PDF));
+    assert.equal(result.items.length, 3);
+    assert.deepEqual(result.items[0], { date: '2026-05-11', description: 'Redención Cashback', amount: 8007.87, type: 'income' });
+    assert.deepEqual(result.items[1], { date: '2026-05-31', description: 'Intereses ganados', amount: 1759.57, type: 'income' });
+    assert.deepEqual(result.items[2], { date: '2026-05-15', description: 'Retiro a Nequi', amount: 50000, type: 'expense' });
+    // Las líneas del resumen ("Abonos +$8,007.87") no llevan fecha → no entran.
+    assert.equal(result.period.from, '2026-05-11');
+    assert.equal(result.period.to, '2026-05-31');
+    assert.equal(result.currency, 'COP');
+  });
+  test('texto ajeno → null (cae al flujo del prompt de IA)', () => {
+    assert.equal(detectPdfBank('Extracto de tarjeta de crédito Davivienda', 'x.pdf'), null);
+  });
+  test('REAL (local; se salta si no existe): el extracto verdadero del dueño parsea', () => {
+    const real = join(__root, 'tests', 'fixtures', 'import', 'private', 'extracto_2026-05-01_2026-05-31-RAPPICARD.extracted.txt');
+    if (!existsSync(real)) return; // gitignored: solo corre en el PC del dueño
+    const text = readFileSync(real, 'utf8');
+    const p = detectPdfBank(text, 'extracto_RAPPICARD.pdf');
+    assert.ok(p && p.id === 'rappicuenta');
+    const result = finishPdfResult(p, p.parse(text));
+    assert.ok(result.items.length >= 2, `esperaba ≥2 movimientos, hubo ${result.items.length}`);
+    assert.ok(result.items.every((i) => i.date && i.amount > 0 && i.description));
   });
 });
