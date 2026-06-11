@@ -378,12 +378,14 @@ fecha/hora/tarjeta, crea la transacción como gasto en la cuenta correcta y la c
 | K.4 ✅ | Mapeo tarjeta→cuenta en Settings (`emailcapture.cardmap`, JSON editable sin redeploy) | — | hoja Settings | S | 🔴 |
 | K.5 ✅ | Categorización por reglas (`emailcapture.categoryrules`, regex case-insensitive, primera gana) + `emailcapture.fallbackcategoryid`. Groq descartado por ahora (las reglas cubren; menos datos a terceros) | — | `backend/EmailCapture.gs` | M | 🔴 |
 | K.6 ✅ | Idempotencia `gm_{messageId}` (vía `idempotentHit_` de `createTransaction_`) + etiquetas `FinanceOS/procesado`/`revisar` + AuditLog por correo en revisión y por corrida | — | `backend/EmailCapture.gs` | S | 🔴 |
-| K.7 | Compatibilidad con import manual: la tx creada por email debe matchear el `dupKey` del Sprint F (`date\|amount\|descNorm`) para que importar el extracto después no duplique — verificar con un extracto real post-deploy | Sprint F | `src/services/importService.js` (verificar) | S | — |
-| K.8 | Verificación en vivo: compra real → correo → trigger → tx visible en `#/transactions` con cuenta/categoría/fecha-hora correctas | QA | — | S | — |
+| K.7 | Compatibilidad con import manual: la tx creada por email debe matchear el `dupKey` del Sprint F (`date\|amount\|descNorm`) para que importar el extracto después no duplique — verificar con el próximo extracto real | Sprint F | `src/services/importService.js` (verificar) | S | — |
+| K.8 ✅ | Verificación en vivo 2026-06-11: reenvío real RappiCard → `runEmailCapture` → tx `gm_19eb51450d1107ee` (Amazon Prime Video, $27.700,73, cuenta RappiCard, categoría Suscripciones por regla) · idempotencia probada (2ª corrida skipped=1) · notificaciones de cuenta Bancolombia ignoradas · fixes derivados: `ecCleanMerchant_` (separador de guiones) y `coerce_` hora local (`Utils.gs` — compras nocturnas caían al día siguiente) | QA | — | ✅ |
 
-**Deploy pendiente (manual del dueño, ver `backend/README.md` §"Captura desde Gmail"):**
-copiar `EmailCapture.gs` + `Code.gs` actualizado → re-autorizar (scope Gmail) → ejecutar
-`setupEmailCapture()` → rellenar `cardmap`/`fallbackcategoryid` en Settings → Nueva versión.
+**Deploy ✅ COMPLETO (2026-06-11):** `EmailCapture.gs` + `Code.gs` + `Utils.gs` desplegados,
+scope Gmail autorizado, `setupEmailCapture()` ejecutado (trigger 15 min), Settings
+configurados (cardmap/reglas/fallback). Reenvíos: RappiCard por filtro → script;
+Bancolombia llega directo (email predeterminado cambiado en el banco). **Sprint K
+operativo en producción; solo queda K.7 (verificar dedup con el próximo extracto).**
 
 **Criterio de aceptación:**
 - Una compra con RappiCard o Bancolombia aparece en Transacciones en ≤30 min, sin tocar la app,
