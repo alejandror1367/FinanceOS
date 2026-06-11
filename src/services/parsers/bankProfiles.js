@@ -281,6 +281,48 @@ export const PDF_PROFILES = [
       return { items, skipped };
     },
   },
+  {
+    // L.4 — Nu (tarjeta de crédito). Tabla de movimientos (pág. 2):
+    //   "Fecha Descripción Valor Cuotas Valor Interés del mes Total a pagar Restante"
+    //   "  29 ABR  Amazon Prime  $24.900,00  1 de 1  $24.900,00  1.97% ..."
+    //   "2026"   ← el AÑO viaja en la línea siguiente (la fila solo trae día+mes)
+    // Cada fila = compra → expense (cargo a la tarjeta). Monto = primera col "Valor"
+    // (valor original de la compra), no "Total a pagar este mes".
+    // ⚠ Montos en formato colombiano ($24.900,00). Se SALTAN los pagos/abonos
+    //   ("Gracias por tu pago"): no son gasto y doble-contarían con la cuenta origen.
+    //   Las sub-filas "Intereses en mora" no traen fecha → no entran.
+    id: 'nu',
+    name: 'Nu',
+    color: '#8A05BE',
+    textColor: '#fff',
+    currency: 'COP',
+    detect(text) {
+      return /Nu Financiera|Nu Colombia Compañía|NIT 901\.658\.107-2/i.test(text);
+    },
+    parse(text) {
+      const lines = String(text).split('\n');
+      // Año de respaldo: primer "20XX" del documento (la fecha límite de pago).
+      const periodYear = (String(text).match(/\b(20\d{2})\b/) || [])[1];
+      const items = [];
+      let skipped = 0;
+      for (let i = 0; i < lines.length; i++) {
+        const m = lines[i].match(/^\s*(\d{1,2})\s+([A-Za-z]{3})\s+(.+?)\s+\$\s?([\d.,]+)/);
+        if (!m) continue;
+        // El año está en la línea siguiente como "20XX" (a veces con texto envuelto).
+        let year = periodYear;
+        const next = (lines[i + 1] || '').match(/^\s*(20\d{2})\b/);
+        if (next) year = next[1];
+        const date = toIsoEs(m[1], m[2], year);
+        const description = m[3].trim();
+        const amount = parseMoney(m[4]);
+        if (!date || !(amount > 0)) { skipped++; continue; }
+        // Pagos/abonos a la tarjeta no son gasto (doble conteo con la cuenta origen).
+        if (/gracias por tu|tu pago|^abono/i.test(description)) { skipped++; continue; }
+        items.push({ date, description, amount: Math.abs(amount), type: 'expense' });
+      }
+      return { items, skipped };
+    },
+  },
 ];
 
 export function detectPdfBank(text, filename) {

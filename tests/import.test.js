@@ -293,3 +293,70 @@ describe('PDF RappiCuenta (L.2 / F.5)', () => {
     assert.ok(result.items.every((i) => i.date && i.amount > 0 && i.description));
   });
 });
+
+// ── Sprint L.4: perfil PDF Nu (tarjeta de crédito) ──────────────────────────────
+// Fixture sintético (datos inventados, misma estructura del extracto real). El año
+// viaja en la línea siguiente a cada fila; los pagos/abonos se saltan.
+
+const FIX_NU_PDF = `Llegó tu extracto de Mayo
+  Fecha límite de pago    Fecha de corte    Periodo facturado
+  09 JUN 2026    18 MAY 2026    17 ABR - 17 MAY 2026
+  Nu Financiera
+NIT 901.658.107-2
+  1 / 2
+
+--- PÁGINA ---
+
+Fecha  Descripción     Valor     Cuotas     Valor     Interés del mes    Total a pagar     Restante
+  09 MAY  Gracias por tu  $450.450,50     -$24.838,05
+2026  pago
+  29 ABR  Amazon Prime     $24.900,00     1 de 1     $24.900,00  1.97%     $0,00  $24.900,00     $0,00
+2026
+29 MAR  Spotify Premio     $16.900,00     1 de 1     $0,00  1.89%     $610,42  $641,72     $0,00
+2026
+Intereses en  1.89%     $31,30
+mora
+20 MAR  Promo Viaje     $100.000,00     1 de 1     $0,00  1.89%     $3.017,20  $3.142,92     $0,00
+2026
+  Nu Colombia Compañía de Financiamiento S.A.
+  2 / 2`;
+
+describe('PDF Nu (L.4)', () => {
+  test('detectPdfBank reconoce Nu por su texto (no por filename)', () => {
+    const p = detectPdfBank(FIX_NU_PDF, 'Nu_2026-06-07.pdf');
+    assert.ok(p);
+    assert.equal(p.id, 'nu');
+  });
+  test('parse extrae compras como expense, con año de la línea siguiente', () => {
+    const profile = PDF_PROFILES.find((p) => p.id === 'nu');
+    const result = finishPdfResult(profile, profile.parse(FIX_NU_PDF));
+    assert.equal(result.items.length, 3); // 3 compras; el pago se salta
+    assert.deepEqual(result.items.find((i) => i.description === 'Amazon Prime'),
+      { date: '2026-04-29', description: 'Amazon Prime', amount: 24900, type: 'expense' });
+    assert.deepEqual(result.items.find((i) => i.description === 'Spotify Premio'),
+      { date: '2026-03-29', description: 'Spotify Premio', amount: 16900, type: 'expense' });
+    assert.deepEqual(result.items.find((i) => i.description === 'Promo Viaje'),
+      { date: '2026-03-20', description: 'Promo Viaje', amount: 100000, type: 'expense' });
+    assert.equal(result.currency, 'COP');
+  });
+  test('salta el pago/abono ("Gracias por tu pago")', () => {
+    const profile = PDF_PROFILES.find((p) => p.id === 'nu');
+    const result = profile.parse(FIX_NU_PDF);
+    assert.ok(!result.items.some((i) => /gracias|pago/i.test(i.description)));
+    assert.ok(result.skipped >= 1);
+  });
+  test('RappiCuenta NO se detecta como Nu (perfiles no colisionan)', () => {
+    assert.equal(detectPdfBank(FIX_RAPPICUENTA_PDF, 'x.pdf').id, 'rappicuenta');
+  });
+  test('REAL (local; se salta si no existe): el extracto Nu verdadero parsea', () => {
+    const real = join(__root, 'tests', 'fixtures', 'import', 'private', 'Nu_2026-06-07.extracted.txt');
+    if (!existsSync(real)) return; // gitignored: solo corre en el PC del dueño
+    const text = readFileSync(real, 'utf8');
+    const p = detectPdfBank(text, 'Nu_2026-06-07.pdf');
+    assert.ok(p && p.id === 'nu');
+    const result = finishPdfResult(p, p.parse(text));
+    assert.ok(result.items.length >= 2, `esperaba ≥2 compras, hubo ${result.items.length}`);
+    assert.ok(result.items.every((i) => i.date && i.amount > 0 && i.description && i.type === 'expense'));
+    assert.ok(!result.items.some((i) => /gracias por tu/i.test(i.description)), 'no debe incluir el pago');
+  });
+});
