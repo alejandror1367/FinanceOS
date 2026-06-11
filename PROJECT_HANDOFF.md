@@ -57,7 +57,7 @@ Centraliza: patrimonio neto, presupuestos, flujo de caja, inversiones, metas, de
 | TD-39 recurrentes automáticos | ✅ `recurringService` materializa vencidos al cargar — `d37a938` |
 | App-lock J.4 + J.4b | ✅ PIN (PBKDF2) + huella/Face ID (WebAuthn) — `53083b3` · `57ac36c` |
 | Cuentas remuneradas ampliadas | ✅ `YIELD_TYPES`: savings · bank · digital_wallet · investment — `461c156` |
-| Pendiente | J.3 (Groq, opcional) · TD-55/56 (visual P3) — Sprint F ✅ · TD-54 ✅ · J.5 ✅ · I.1 ✅ · verificaciones en vivo ✅ (2026-06-10) |
+| Pendiente | J.3 (Groq, opcional) — Sprint F ✅ · TD-54 ✅ · J.5 ✅ · I.1 ✅ · verificaciones en vivo ✅ · TD-55/56 ✅ (2026-06-10) |
 
 ---
 
@@ -729,8 +729,7 @@ Flujo: `Views → Services → Store → Views` (never direct to net/IndexedDB f
 
 ### Bugs abiertos
 - ✅ Verificaciones en vivo COMPLETADAS (2026-06-10, Playwright + JWT de prueba/IndexedDB + sesión real): snapshots desglose 6 campos · banner FX (Inversiones + Dashboard) · modal Registrar rendimiento (saldo promedio + aviso investment) · app-lock PIN/huella (overlay pre-mount, 5 intentos, UVPA) · recurrentes TD-39 (id determinista `rec_{id}_{fecha}`) · bottom-nav 375px (5 ítems) · import "Formato no reconocido" elegante. Limpieza verificada: 0 residuos `qa_test_`, syncQueue 0, token real restaurado.
-- 🟡 TD-55 (P3): `.row__actions` desborda viewport a 375px en Presupuestos/Metas (scroll lateral ~125px)
-- 🟡 TD-56 (P3): `.topbar__actions` sobresale 2–4px a 375px en Transacciones/Exportaciones
+- ✅ TD-55/TD-56 (P3 visual) corregidos 2026-06-10: wrap en headers de card (budgets/goals) + título del topbar con min-width 0/elipsis. 16/16 rutas sin overflow a 375px (verificado en prod)
 
 ### Pendientes en orden — ROADMAP-MAESTRO (Sprints A–J)
 > Detalle completo: `docs/Roadmap-Maestro.md`.

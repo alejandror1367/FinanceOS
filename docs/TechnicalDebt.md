@@ -174,8 +174,8 @@ La deuda se concentra en **tres temas de fondo**: (1) **modelo contable** (el le
 
 | ID | Problema | Origen | Impacto | Esf | Estado |
 |----|----------|--------|---------|-----|--------|
-| TD-55 | **`.row__actions` (≈307px) desborda el viewport a 375px** en Presupuestos y Metas — `document.scrollWidth` llega a 500px (125px de scroll lateral). Los botones de acción de fila no colapsan en móvil | QA I.1 (Playwright, prod v0.2.108) | Scroll horizontal accidental en móvil; acciones de fila parcialmente fuera de pantalla | S | Pendiente. Colapsar acciones en menú contextual o `flex-wrap`/ocultar labels bajo 480px (`components.css`). Evidencia: `verify-I1-budgets-375-light-overflow.png` |
-| TD-56 | **`.topbar__actions` (164px) sobresale 2–4px del viewport a 375px** en Transacciones y Exportaciones (`scrollWidth` 377–379px) | QA I.1 (Playwright, prod v0.2.108) | Micro-scroll lateral; cosmético | S | Pendiente. Revisar padding/gap del topbar en breakpoint móvil (`layout.css`) |
+| TD-55 ✅ | **`.row__actions` (≈307px) desborda el viewport a 375px** en Presupuestos y Metas — `document.scrollWidth` llegaba a 500px. Causa raíz: la regla móvil `.row__actions { flex: 0 0 100% }` asume un parent con wrap (`.row`), pero los headers de card de budgets/goals usan `.row-flex.between` sin wrap → basis 100% + shrink 0 empuja fuera del viewport | QA I.1 (Playwright, prod v0.2.108) | Scroll horizontal accidental en móvil | S | **HECHO** (2026-06-10): `.card > .row-flex.between:first-child { flex-wrap: wrap }` en el media ≤600px de `components.css`. Verificado en prod (inyección): 16/16 rutas sin overflow a 375px |
+| TD-56 ✅ | **`.topbar__actions` (164px) sobresalía 2–4px del viewport a 375px** en Transacciones y Exportaciones. Causa raíz: `.topbar__title` ("Transacciones" — una sola palabra) no podía encoger (min-width auto del flex item) | QA I.1 (Playwright, prod v0.2.108) | Micro-scroll lateral; cosmético | S | **HECHO** (2026-06-10): `.topbar__title` con `min-width: 0` + `nowrap` + elipsis (`layout.css`) y `gap: var(--space-3)` del topbar en móvil. Verificado en prod (inyección): sin overflow |
 
 ---
 

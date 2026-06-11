@@ -157,6 +157,9 @@ details[open] .kpi__dchev { transform: rotate(180deg); }
    contenido (título + subtítulo) puede mostrarse en hasta 2 líneas sin overflow. */
 @media (max-width: 600px) {
   .row { flex-wrap: wrap; align-items: flex-start; }
+  /* TD-55: los headers de card (Presupuestos/Metas) usan .row-flex.between, que no
+     envuelve; sin wrap aquí, .row__actions con basis 100% desborda el viewport. */
+  .card > .row-flex.between:first-child { flex-wrap: wrap; }
   .row__actions {
     flex: 0 0 100%;
     justify-content: flex-end;

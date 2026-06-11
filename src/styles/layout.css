@@ -79,7 +79,12 @@
   border-bottom: 1px solid var(--border-subtle);
   z-index: var(--z-sticky);
 }
-.topbar__title { font-size: var(--fs-h2); font-weight: var(--fw-semibold); letter-spacing: var(--tracking-tight); }
+/* TD-56: min-width 0 + elipsis para que el título (una sola palabra: "Transacciones")
+   pueda encoger como flex item en vez de empujar las acciones fuera del viewport. */
+.topbar__title {
+  font-size: var(--fs-h2); font-weight: var(--fw-semibold); letter-spacing: var(--tracking-tight);
+  min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 .topbar__spacer { flex: 1; }
 .topbar__actions { display: flex; align-items: center; gap: var(--space-2); }
 
@@ -125,7 +130,7 @@
   .app-shell.is-nav-open .scrim { opacity: 1; pointer-events: auto; }
   .menu-btn { display: inline-flex; }
   .content { padding: var(--space-6) var(--space-4) calc(var(--space-16) + 56px); }
-  .topbar { padding: 0 var(--space-4); }
+  .topbar { padding: 0 var(--space-4); gap: var(--space-3); }
 
   /* QA-001/005: el botón CTA del header no cabe junto al título en 375px — wrappea */
   .page-header .row-flex.between { flex-wrap: wrap; gap: var(--space-2); }

@@ -370,7 +370,7 @@ Ver §5.
 - [x] `TechnicalDebt.md` al día (todos los TD resueltos marcados ✅) — I.4
 - [x] `PROJECT_HANDOFF.md` sincronizado con el estado real del repo — I.5
 
-> **Estado v1.0:** ✅ **TODOS los criterios cumplidos** (2026-06-10). I.1 PASS con sesión real · Sprint F ✅ · TD-54 ✅ desplegado. Quedan opcionales: J.3 (Groq) y TD-55/56 (visual P3).
+> **Estado v1.0:** ✅ **TODOS los criterios cumplidos** (2026-06-10). I.1 PASS con sesión real · Sprint F ✅ · TD-54 ✅ desplegado · TD-55/56 ✅ corregidos. Queda opcional: J.3 (Groq).
 
 ---
 
