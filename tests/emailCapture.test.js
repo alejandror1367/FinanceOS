@@ -18,8 +18,8 @@ const gsSource = readFileSync(join(root, 'backend', 'EmailCapture.gs'), 'utf8');
 // El .gs declara funciones globales (estilo Apps Script); las extraemos evaluando
 // el archivo dentro de un scope de función. Las funciones de captura referencian
 // GmailApp/repoReadAll_ solo al INVOCARSE, no al definirse, así que el eval es seguro.
-const { ecParseAmountCo_, ecParseRappiCard_, ecParseBancolombia_, ecParseAlert_, ecResolveCategory_ } =
-  new Function(`${gsSource}; return { ecParseAmountCo_, ecParseRappiCard_, ecParseBancolombia_, ecParseAlert_, ecResolveCategory_ };`)();
+const { ecParseAmountCo_, ecParseRappiCard_, ecParseBancolombia_, ecParseAlert_, ecResolveCategory_, ecLooksLikeCardPurchase_ } =
+  new Function(`${gsSource}; return { ecParseAmountCo_, ecParseRappiCard_, ecParseBancolombia_, ecParseAlert_, ecResolveCategory_, ecLooksLikeCardPurchase_ };`)();
 
 const fixtureFile = readFileSync(join(root, 'tests', 'fixtures', 'email', 'AMEXBANCOLOMBIA-RAPPICARD-COMPRAS-EJEMPLOS.TXT'), 'utf8');
 
@@ -166,6 +166,28 @@ describe('ecParseAlert_ — fixtures reales (4 RappiCard + 4 Bancolombia)', () =
 
   test('monto cero o negativo → null (K: validación antes de crear)', () => {
     assert.equal(ecParseAlert_(BCOL_V1.replace('COP110.000,00', 'COP0,00')), null);
+  });
+});
+
+// ── ecLooksLikeCardPurchase_ (filtro: solo compras con TC; el resto se ignora) ──
+
+describe('ecLooksLikeCardPurchase_', () => {
+  test('compras con tarjeta de crédito → true', () => {
+    assert.equal(ecLooksLikeCardPurchase_(RAPPI_SAMPLE), true);
+    assert.equal(ecLooksLikeCardPurchase_(BCOL_V1), true);
+    assert.equal(ecLooksLikeCardPurchase_(BCOL_V2), true);
+  });
+  test('notificaciones de cuenta Bancolombia (transferencias, pagos, recepciones) → false (se ignoran en silencio)', () => {
+    assert.equal(ecLooksLikeCardPurchase_('Bancolombia: Transferiste COP500.000,00 desde tu cuenta de ahorros *1234 a NEQUI, el 05/06/2026 a las 10:00.'), false);
+    assert.equal(ecLooksLikeCardPurchase_('Bancolombia: Recibiste COP1.000.000,00 en tu cuenta de ahorros *1234, el 05/06/2026.'), false);
+    assert.equal(ecLooksLikeCardPurchase_('Bancolombia: Pagaste COP200.000,00 de tu factura, el 05/06/2026 a las 09:00.'), false);
+    assert.equal(ecLooksLikeCardPurchase_('Tu extracto del mes ya está disponible.'), false);
+  });
+  test('compra con TC pero plantilla cambiada → true (irá a FinanceOS/revisar, no se pierde)', () => {
+    assert.equal(ecLooksLikeCardPurchase_('Bancolombia: Compraste con tu T.Cred *0808 — formato nuevo sin monto'), true);
+  });
+  test('compra débito (sin T.Cred) → false (fuera del alcance: solo tarjetas de crédito)', () => {
+    assert.equal(ecLooksLikeCardPurchase_('Bancolombia: Compraste COP50.000,00 en TIENDA con tu Tarjeta Débito *9999, el 05/06/2026 a las 12:00.'), false);
   });
 });
 

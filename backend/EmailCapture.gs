@@ -108,6 +108,16 @@ function ecParseAlert_(body) {
   return parsed;
 }
 
+// ¿El correo PARECE una compra con tarjeta de crédito? El remitente de Bancolombia
+// también manda notificaciones de cuenta (transferencias, pagos, recepciones) que NO
+// nos interesan: esas se ignoran en silencio. Solo va a FinanceOS/revisar lo que
+// parece compra con TC pero no parseó (plantilla cambiada).
+function ecLooksLikeCardPurchase_(body) {
+  var text = String(body || '').replace(/\s+/g, ' ');
+  if (/Realizaste una compra con tu RappiCard/i.test(text)) return true;
+  return /Compraste/i.test(text) && /T\.?\s?Cred/i.test(text);
+}
+
 // Primera regla cuyo regex (case-insensitive) matchea el comercio; si ninguna, fallback.
 // rules: [["NETFLIX|YOUTUBE","cat_x"], ...] — regex inválido se ignora (no rompe el batch).
 function ecResolveCategory_(merchant, rules, fallbackId) {
@@ -142,7 +152,7 @@ function ecGetSettings_() {
 // Núcleo SIN lock: doPost ya sostiene el ScriptLock cuando llega vía runEmailCapture.
 function emailCaptureRun_() {
   var cfg = ecGetSettings_();
-  var summary = { created: 0, skipped: 0, review: 0, scanned: 0, errors: [] };
+  var summary = { created: 0, skipped: 0, review: 0, ignored: 0, scanned: 0, errors: [] };
   if (!cfg.enabled) { summary.disabled = true; return summary; }
 
   var labelOk = GmailApp.getUserLabelByName(EMAIL_CAPTURE.labelProcessed) || GmailApp.createLabel(EMAIL_CAPTURE.labelProcessed);
@@ -158,9 +168,15 @@ function emailCaptureRun_() {
       var txId = 'gm_' + msg.getId();
       try {
         if (idempotentHit_('Transactions', txId)) { summary.skipped++; threadOk = true; continue; }
-        var parsed = ecParseAlert_(msg.getPlainBody());
+        var body = msg.getPlainBody();
+        var parsed = ecParseAlert_(body);
         if (!parsed) {
-          // Correo del banco pero formato desconocido → a revisión, nunca se pierde.
+          if (!ecLooksLikeCardPurchase_(body)) {
+            // Notificación de cuenta (transferencia, pago, etc.): no nos interesa.
+            summary.ignored++;
+            continue;
+          }
+          // Parece compra con TC pero el formato no parseó → a revisión, nunca se pierde.
           summary.review++; threadReview = true;
           logAudit_('review', 'EmailCapture', msg.getId(), 'Alerta no parseable: ' + sanitizeString_(msg.getSubject(), 120));
           continue;

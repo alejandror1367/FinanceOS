@@ -136,6 +136,11 @@ y revisa el resumen `{ created, skipped, review, scanned }` + la hoja Transactio
   hace el dedup real; las etiquetas son solo trazabilidad humana.
 - Los correos reenviados desde otro Gmail (filtro de reenvío) conservan remitente y cuerpo
   originales → los parsers funcionan igual.
+- **Solo compras con tarjeta de crédito.** El remitente de Bancolombia también notifica
+  movimientos de cuenta (transferencias, pagos, recepciones) y compras débito: esos se
+  **ignoran en silencio** (`summary.ignored`). A `FinanceOS/revisar` solo va lo que parece
+  compra con T.Cred pero no parseó (plantilla cambiada). La tx siempre se crea en la
+  cuenta `credit_card` del `cardmap` (p. ej. Amex Bancolombia), nunca en la cuenta bancaria.
 - Parsers testeados en Node contra fixtures reales: `node --test tests/emailCapture.test.js`.
 
 ---
