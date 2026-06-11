@@ -85,6 +85,11 @@ describe('ecParseRappiCard_', () => {
   test('correo ajeno → null', () => {
     assert.equal(ecParseRappiCard_('Tu extracto ya está disponible'), null);
   });
+  test('comercio con separador de guiones del render real → se limpia (caso K.8 en vivo)', () => {
+    const real = RAPPI_SAMPLE.replace('Amazon Marketplace', 'Amazon Prime Video\n\n------------------------------');
+    const p = ecParseRappiCard_(real);
+    assert.equal(p.merchant, 'Amazon Prime Video');
+  });
 });
 
 // ── Bancolombia (2 variantes) ────────────────────────────────────────────────────

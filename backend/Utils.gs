@@ -79,7 +79,13 @@ function coerce_(value, type) {
   if (type === 'n') return Number(value) || 0;
   if (type === 'b') return value === true || value === 'true' || value === 'TRUE';
   if (type === 'd' || type === 'ts') {
-    if (value instanceof Date) return value.toISOString();
+    // Hora LOCAL del script (America/Bogota), no UTC: toISOString() desplazaba +5h,
+    // y una compra de las 19:46 salía como T00:46Z del día siguiente — los selectors
+    // agrupan por date.slice(0,10), así que caía en el día (o mes) equivocado.
+    // Para fechas sin hora (medianoche local) devuelve T00:00:00 — slice intacto.
+    if (value instanceof Date) {
+      return Utilities.formatDate(value, Session.getScriptTimeZone(), "yyyy-MM-dd'T'HH:mm:ss");
+    }
     return String(value);
   }
   return String(value);

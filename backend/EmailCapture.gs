@@ -46,6 +46,12 @@ var EMAIL_CAPTURE = {
 // ───────────────────────── Parsers puros ─────────────────────────
 // Sin dependencias de Apps Script: se testean en node (tests/emailCapture.test.js).
 
+// El render a texto plano de los correos reales separa campos con líneas de guiones
+// ("Amazon Prime Video ------------------"); se cortan junto con espacios sobrantes.
+function ecCleanMerchant_(s) {
+  return String(s || '').replace(/\s*[-–—_*]{3,}[\s\S]*$/, '').trim();
+}
+
 // Montos formato colombiano: '.' miles y ',' decimales ("391.390,39", "20.900", "COP110.000,00").
 function ecParseAmountCo_(s) {
   var t = String(s || '').replace(/[^\d.,]/g, '');
@@ -73,7 +79,7 @@ function ecParseRappiCard_(body) {
     bank: 'rappicard',
     amount: ecParseAmountCo_(amount[1]),
     last4: card[1],
-    merchant: merchant[1].trim(),
+    merchant: ecCleanMerchant_(merchant[1]),
     dateIso: date[1] + 'T' + time,
   };
 }
@@ -97,7 +103,7 @@ function ecParseBancolombia_(body) {
     bank: 'bancolombia',
     amount: ecParseAmountCo_(m[1]),
     last4: last4,
-    merchant: m[2].trim(),
+    merchant: ecCleanMerchant_(m[2]),
     dateIso: m[6] + '-' + mm + '-' + dd + 'T' + hhmm + ':00',
   };
 }
