@@ -372,14 +372,18 @@ fecha/hora/tarjeta, crea la transacción como gasto en la cuenta correcta y la c
 
 | # | Tarea | ID origen | Archivo | Esf | Deploy |
 |---|---|---|---|---|---|
-| K.1 | Fixtures: 2–3 correos reales de alerta por banco (Bancolombia, RappiCard) anonimizados en `tests/fixtures/email/` — **bloqueante, los aporta el dueño** | dueño | `tests/fixtures/email/` | S | — |
-| K.2 | `backend/EmailCapture.gs`: trigger temporal (15–30 min) + `GmailApp.search` por etiqueta/remitente + scope `gmail.readonly` (re-autorizar el proyecto) | — | `backend/EmailCapture.gs` (nuevo) | M | ✅ |
-| K.3 | Parsers por banco (regex sobre plantilla, sin IA): monto, comercio, fecha+hora ISO 8601, últimos 4 dígitos | — | `backend/EmailCapture.gs` | M | ✅ |
-| K.4 | Mapeo tarjeta→cuenta (últimos 4 dígitos → `accountId` credit_card) en hoja Settings, editable sin redeploy | — | `backend/Config.gs`, Settings | S | ✅ |
-| K.5 | Categorización por reglas comercio→categoría (tabla en Settings, p. ej. `RAPPI→Restaurantes`) + fallback "Sin categoría". Groq opcional SOLO para comercio desconocido (enviar solo el nombre del comercio, nunca montos) | — | `backend/EmailCapture.gs` | M | ✅ |
-| K.6 | Idempotencia y trazabilidad: id determinista `gm_{messageId}` + etiqueta Gmail `FinanceOS/procesado`; correo no parseable → etiqueta `FinanceOS/revisar` (nunca se pierde ni se duplica) | — | `backend/EmailCapture.gs` | S | ✅ |
-| K.7 | Compatibilidad con import manual: la tx creada por email debe matchear el `dupKey` del Sprint F (`date\|amount\|descNorm`) para que importar el extracto después no duplique | Sprint F | `backend/EmailCapture.gs`, `src/services/importService.js` (verificar) | S | — |
-| K.8 | Verificación en vivo: compra real de prueba → correo → trigger → tx visible en `#/transactions` con cuenta/categoría/fecha-hora correctas | QA | — | S | — |
+| K.1 ✅ | Fixtures: 4 correos reales por banco (Bancolombia Amex, RappiCard) aportados por el dueño en `tests/fixtures/email/AMEXBANCOLOMBIA-RAPPICARD-COMPRAS-EJEMPLOS.TXT` | dueño | `tests/fixtures/email/` | S | — |
+| K.2 ✅ | `backend/EmailCapture.gs`: trigger cada 15 min (`processEmailCapture`, mismo ScriptLock que doPost) + `GmailApp.search` (7d, idempotente) + acción `runEmailCapture` + `setupEmailCapture()` | — | `backend/EmailCapture.gs`, `Code.gs` | M | 🔴 pendiente |
+| K.3 ✅ | Parsers RappiCard (bloques) y Bancolombia (2 variantes de frase) — regex sin IA: monto CO, comercio, fecha+hora ISO, últimos 4. **17/17 tests sobre los fixtures reales** | — | `backend/EmailCapture.gs`, `tests/emailCapture.test.js` | M | 🔴 |
+| K.4 ✅ | Mapeo tarjeta→cuenta en Settings (`emailcapture.cardmap`, JSON editable sin redeploy) | — | hoja Settings | S | 🔴 |
+| K.5 ✅ | Categorización por reglas (`emailcapture.categoryrules`, regex case-insensitive, primera gana) + `emailcapture.fallbackcategoryid`. Groq descartado por ahora (las reglas cubren; menos datos a terceros) | — | `backend/EmailCapture.gs` | M | 🔴 |
+| K.6 ✅ | Idempotencia `gm_{messageId}` (vía `idempotentHit_` de `createTransaction_`) + etiquetas `FinanceOS/procesado`/`revisar` + AuditLog por correo en revisión y por corrida | — | `backend/EmailCapture.gs` | S | 🔴 |
+| K.7 | Compatibilidad con import manual: la tx creada por email debe matchear el `dupKey` del Sprint F (`date\|amount\|descNorm`) para que importar el extracto después no duplique — verificar con un extracto real post-deploy | Sprint F | `src/services/importService.js` (verificar) | S | — |
+| K.8 | Verificación en vivo: compra real → correo → trigger → tx visible en `#/transactions` con cuenta/categoría/fecha-hora correctas | QA | — | S | — |
+
+**Deploy pendiente (manual del dueño, ver `backend/README.md` §"Captura desde Gmail"):**
+copiar `EmailCapture.gs` + `Code.gs` actualizado → re-autorizar (scope Gmail) → ejecutar
+`setupEmailCapture()` → rellenar `cardmap`/`fallbackcategoryid` en Settings → Nueva versión.
 
 **Criterio de aceptación:**
 - Una compra con RappiCard o Bancolombia aparece en Transacciones en ≤30 min, sin tocar la app,

@@ -115,6 +115,10 @@ var ROUTES = {
   // Import (proxy Gemini API)
   parseStatement: function (d) { return parseStatement_(d); },
 
+  // Sprint K: captura de compras desde Gmail — corrida manual autenticada (POST).
+  // Sin lock propio: doPost ya sostiene el ScriptLock.
+  runEmailCapture: function (d) { return emailCaptureRun_(); },
+
   // TD-28: purga física de filas soft-deleted (acción de administración).
   purgeDeleted: function () { return purgeDeleted_(); },
 

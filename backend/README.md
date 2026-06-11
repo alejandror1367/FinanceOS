@@ -22,6 +22,7 @@ El frontend nunca conoce Sheets; solo el contrato `action`-based.
 | `Reports.gs` | `getDashboard`, `computeNetWorth_` (valores derivados, no persistidos). |
 | `Quotes.gs` | `getQuotes` — cotizaciones en vivo (Yahoo Finance) para inversiones. |
 | `Import.gs` | `parseStatement` — proxy a la API de Gemini para parsear extractos bancarios (`#/import`). |
+| `EmailCapture.gs` | **Sprint K** — captura automática de compras desde Gmail: trigger temporal + parsers RappiCard/Bancolombia + `runEmailCapture`. Ver §"Captura desde Gmail". |
 | `Migration.gs` | `recalculateAccountBalances_` — recálculo de saldos desde transacciones (TD-01). |
 | `Audit.gs` | Registro en `AuditLog`. |
 | `appsscript.json` | Manifiesto (runtime V8, web app). |
@@ -98,7 +99,44 @@ Escritura(POST): createAccount/updateAccount/deleteAccount
                 setSetting
                 recalculateBalances        (recálculo de saldos — TD-01)
                 parseStatement             (parsing de extractos con Gemini)
+                runEmailCapture            (corrida manual de la captura Gmail — Sprint K)
 ```
+
+---
+
+## Captura de compras desde Gmail (Sprint K)
+
+`EmailCapture.gs` lee los correos de alerta de compra (RappiCard y Bancolombia) en el
+Gmail de la cuenta que ejecuta el script y crea la transacción como gasto en la tarjeta
+correspondiente (fecha+hora, monto, comercio, categoría). Idempotente por `messageId`
+(`id = gm_<messageId>`): re-ejecutar nunca duplica. Lo no parseable queda etiquetado
+`FinanceOS/revisar` y auditado — jamás se pierde en silencio.
+
+**Puesta en marcha (una vez):**
+1. Copia `EmailCapture.gs` al proyecto de Apps Script y **guarda** → al ejecutar pedirá
+   re-autorizar con el scope de Gmail. Acepta.
+2. Ejecuta **`setupEmailCapture()`** desde el editor: crea las etiquetas
+   `FinanceOS/procesado` y `FinanceOS/revisar`, las claves de Settings y el **trigger
+   cada 15 min** (`processEmailCapture`).
+3. En la hoja **Settings** del spreadsheet rellena (editar la celda directamente;
+   `setSetting` trunca a 240 chars):
+   - `emailcapture.cardmap` → JSON últimos-4-dígitos → accountId de la tarjeta.
+   - `emailcapture.fallbackcategoryid` → categoryId (kind=expense) para comercios sin regla.
+   - `emailcapture.categoryrules` → JSON `[["REGEX","categoryId"], ...]` (primera que matchea gana).
+   - `emailcapture.enabled` → `true` / `false` (apagado de emergencia sin tocar el trigger).
+4. Publica **Nueva versión** de la implementación (para exponer la acción `runEmailCapture`).
+
+**Prueba:** ejecuta `processEmailCapture()` desde el editor (o POST `runEmailCapture`)
+y revisa el resumen `{ created, skipped, review, scanned }` + la hoja Transactions.
+
+**Notas de diseño:**
+- El trigger toma el **mismo `ScriptLock`** que `doPost` (no se pisa con escrituras del
+  frontend); si no lo consigue en 20 s, lo reintenta el próximo run.
+- La búsqueda re-escanea `newer_than:7d` sin filtrar por etiqueta: la idempotencia por id
+  hace el dedup real; las etiquetas son solo trazabilidad humana.
+- Los correos reenviados desde otro Gmail (filtro de reenvío) conservan remitente y cuerpo
+  originales → los parsers funcionan igual.
+- Parsers testeados en Node contra fixtures reales: `node --test tests/emailCapture.test.js`.
 
 ---
 
