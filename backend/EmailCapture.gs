@@ -28,7 +28,9 @@
 
 var EMAIL_CAPTURE = {
   // Ventana de búsqueda: idempotencia por id permite re-escanear sin duplicar.
-  query: 'newer_than:7d (from:noreply@rappicard.co OR from:alertasynotificaciones@an.notificacionesbancolombia.com OR "Realizaste una compra con tu RappiCard" OR "Bancolombia: Compraste")',
+  // in:anywhere incluye Spam: los correos de bancos REENVIADOS (filtro o manual)
+  // suelen fallar SPF y caer ahí; sin esto se perderían en silencio.
+  query: 'in:anywhere newer_than:7d (from:noreply@rappicard.co OR from:alertasynotificaciones@an.notificacionesbancolombia.com OR "Realizaste una compra con tu RappiCard" OR "Bancolombia: Compraste")',
   labelProcessed: 'FinanceOS/procesado',
   labelReview: 'FinanceOS/revisar',
   maxMessagesPerRun: 50,
@@ -152,7 +154,8 @@ function ecGetSettings_() {
 // Núcleo SIN lock: doPost ya sostiene el ScriptLock cuando llega vía runEmailCapture.
 function emailCaptureRun_() {
   var cfg = ecGetSettings_();
-  var summary = { created: 0, skipped: 0, review: 0, ignored: 0, scanned: 0, errors: [] };
+  // ignoredSubjects/reviewSubjects: diagnóstico (máx 10) para saber QUÉ se descartó.
+  var summary = { created: 0, skipped: 0, review: 0, ignored: 0, scanned: 0, errors: [], ignoredSubjects: [], reviewSubjects: [] };
   if (!cfg.enabled) { summary.disabled = true; return summary; }
 
   var labelOk = GmailApp.getUserLabelByName(EMAIL_CAPTURE.labelProcessed) || GmailApp.createLabel(EMAIL_CAPTURE.labelProcessed);
@@ -167,17 +170,22 @@ function emailCaptureRun_() {
       summary.scanned++;
       var txId = 'gm_' + msg.getId();
       try {
-        if (idempotentHit_('Transactions', txId)) { summary.skipped++; threadOk = true; continue; }
+        // Salta si la fila YA EXISTE, incluso soft-deleted: si el dueño borró la tx
+        // auto-creada en la app, el scan NO debe resucitarla (idempotentHit_ devuelve
+        // null para isDeleted=true y createTransaction_ la recrearía).
+        if (repoFindRowIndex_('Transactions', txId) > 0) { summary.skipped++; threadOk = true; continue; }
         var body = msg.getPlainBody();
         var parsed = ecParseAlert_(body);
         if (!parsed) {
           if (!ecLooksLikeCardPurchase_(body)) {
             // Notificación de cuenta (transferencia, pago, etc.): no nos interesa.
             summary.ignored++;
+            if (summary.ignoredSubjects.length < 10) summary.ignoredSubjects.push(sanitizeString_(msg.getSubject(), 80));
             continue;
           }
           // Parece compra con TC pero el formato no parseó → a revisión, nunca se pierde.
           summary.review++; threadReview = true;
+          if (summary.reviewSubjects.length < 10) summary.reviewSubjects.push(sanitizeString_(msg.getSubject(), 80));
           logAudit_('review', 'EmailCapture', msg.getId(), 'Alerta no parseable: ' + sanitizeString_(msg.getSubject(), 120));
           continue;
         }
