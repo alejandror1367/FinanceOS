@@ -64,9 +64,12 @@ const SHELL_ASSETS = [
 ];
 
 self.addEventListener('install', (event) => {
+  // cache: 'reload' salta el HTTP cache del navegador: GitHub Pages sirve con
+  // max-age=600, y sin esto el precache puede fijar assets de hasta 10 min de
+  // antigüedad en la versión nueva del SW (visto en deploy de v0.2.109).
   event.waitUntil(
     caches.open(SHELL_CACHE)
-      .then((cache) => cache.addAll(SHELL_ASSETS))
+      .then((cache) => cache.addAll(SHELL_ASSETS.map((u) => new Request(u, { cache: 'reload' }))))
       .catch((err) => console.warn('[sw] precache parcial:', err)),
   );
   // No skipWaiting aquí: esperamos al mensaje del cliente para activar.
