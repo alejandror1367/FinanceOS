@@ -507,21 +507,21 @@ HEAD pasó de `75eacca` a **`b870d6c`**. SW `v0.2.10 → v0.2.13`. Tests `33 →
 ```
 Rama:    main
 Remote:  https://github.com/alejandror1367/FinanceOS.git
-HEAD:    2ba3af6  feat(import): L.1 PDFs con contrasena + L.2 perfil RappiCuenta
-SW:      v0.2.111 (sincronizado con config.version)
+HEAD:    9acc93b  chore: permisos settings.json (PowerShell + git wildcards)
+SW:      v0.2.113 (sincronizado con config.version)
 Status:  origin/main sincronizado · worktree limpio
 ```
 
 ### Commits recientes
 ```
+9acc93b chore: permisos settings.json (PowerShell + git wildcards)
+8f02642 feat(import): L.4b perfil PDF RappiCard (Davivienda, TC)
+93e510d feat(import): L.4 perfil PDF Nu (tarjeta de credito)
+ae4ab30 docs: handoff 2026-06-11 (2a parte) — Global66 en produccion + Sprint L.1/L.2
 2ba3af6 feat(import): L.1 PDFs con contrasena + L.2 perfil RappiCuenta (cierra F.5)
 478a110 docs: Sprint L — diseno de perfiles PDF de extractos (Nu, Amex, RappiCuenta)
 64ea7ce feat(email-capture): ELECTRIFICADORA/ENERGIA/UNE TELCO en regla de Servicios
 9f2e663 feat(email-capture): Global66 Smart Card (debito) con moneda del comercio
-e536bf0 docs: handoff 2026-06-11 — v1.0 16/16, Sprint K en produccion, proximo: PDFs
-b1c3b7e chore: carpeta gitignored para extractos reales de desarrollo (datos personales)
-1063ce7 docs(roadmap): Sprint K operativo en produccion — K.8 verificado en vivo
-ce31e08 fix(email-capture): K.8 en vivo — comercio sin guiones y fechas en hora local
 ```
 
 ---
@@ -676,7 +676,7 @@ Transacciones completas — agrupación fecha, filtros mes/categoría, totales, 
 
 **Estado actual HEAD:**
 ```
-commit: 2ba3af6 · rama: main · SW: v0.2.111 · config.version: 0.2.111 · tests: 251 (168 selectors + 13 recurring + 29 import + 31 emailCapture + 10 dismiss)
+commit: 9acc93b · rama: main · SW: v0.2.113 · config.version: 0.2.113 · tests: 260 (168 selectors + 13 recurring + 38 import + 31 emailCapture + 10 dismiss)
 ```
 
 **v1.0 criterios 16/16 ✅ · Sprints A–I, F y K completos. Próximo: perfiles PDF de extractos (ver §18 y NEXT_SESSION.md).**
@@ -687,7 +687,19 @@ commit: 2ba3af6 · rama: main · SW: v0.2.111 · config.version: 0.2.111 · test
 
 > Leer esto antes que cualquier otra sección. Máximo 100 líneas. Fuente de verdad para retomar de inmediato.
 
-**HEAD:** `2ba3af6` · **SW/config.version:** `v0.2.111` · **Tests:** 168 selectors + 13 recurring + 29 import + 31 emailCapture + 10 dismiss = **251** · **Rama:** main · **Sync:** ✅ todo pusheado
+**HEAD:** `9acc93b` · **SW/config.version:** `v0.2.113` · **Tests:** 168 selectors + 13 recurring + 38 import + 31 emailCapture + 10 dismiss = **260** · **Rama:** main · **Sync:** ✅ todo pusheado
+
+> **Sesión 2026-06-11 (3ª parte):** **Sprint L avanza — perfiles PDF de TC.**
+> **L.4 ✅** perfil `nu` (`93e510d`): detecta por texto (Nu Financiera / NIT
+> `901.658.107-2`), compras→expense, monto = col "Valor" (compra completa), año en
+> la línea siguiente a la fila (lookahead), salta pagos/abonos. **L.4b ✅** perfil
+> `rappicard` Davivienda (`8f02642`): fecha ISO en fila, monto = "Valor facturado",
+> monto≤0 (PAGOS POR PSE/abonos) se salta, descripción envuelta (MercadoPago) se
+> reconstruye. Ambos con **test REAL local** contra los PDFs verdaderos del dueño
+> (en `private/`, gitignored). import 29→38. `settings.json` con permisos del dueño
+> commiteado (`9acc93b`). **PRÓXIMO: L.3 (Amex XLSX)** — investigado, NO implementado:
+> el XLSX va por `excelParser`→`BANK_PROFILES` (no PDF_PROFILES); falta perfil `amex`
+> (`matchFilename /amex/i` + `matchHeaders`). Estructura ya mapeada del PDF (ver abajo).
 
 > **Sesión 2026-06-11 (2ª parte):** **Global66 Smart Card ✅ en producción** — `ecParseGlobal66_`
 > (débito, moneda del comercio COP/USD/EUR, sello FX backend vía `getFxRates_`), cardmap
@@ -1621,54 +1633,58 @@ Tras git pull deben APROBARSE y REINICIARSE Claude Code: las tools MCP se fijan 
 PROYECTO: FinanceOS — PWA financiera personal y privada de Alejo.
 Repo: https://github.com/alejandror1367/FinanceOS (rama main).
 Prod: https://alejandror1367.github.io/FinanceOS/
-HEAD: 2ba3af6 · SW v0.2.111 · Tests 251
+HEAD: 9acc93b · SW v0.2.113 · Tests 260
 
 INVARIANTES (ver CLAUDE.md): JS ES Modules sin build step · sin frameworks/bundlers ·
 cero deps npm en runtime · frontend abstraído tras src/services/ · Apps Script +
 Google Sheets (13 hojas) + GitHub Pages + OAuth de Google · offline-first.
 
 ROADMAP ACTIVO: docs/Roadmap-Maestro.md ← fuente única.
-ESTADO: v1.0 16/16 ✅ · Sprints A–I, F, K ✅ · L 🟡 (L.1/L.2 ✅; faltan L.3–L.6) ·
-J 🟡 (solo J.3 opcional). Backend AL DÍA (EmailCapture con Global66 desplegado).
+ESTADO: v1.0 16/16 ✅ · Sprints A–I, F, K ✅ · L 🟡 (L.1/L.2/L.4/L.4b ✅; faltan
+L.3, L.5, L.6) · J 🟡 (solo J.3 opcional). Backend AL DÍA (EmailCapture+Global66 desplegado).
 
-HECHO EN SESIÓN 2026-06-11 (2ª parte, todo pusheado; backend desplegado por el dueño):
-- Global66 Smart Card ✅ EN PRODUCCIÓN: ecParseGlobal66_ (débito; moneda del COMERCIO
-  COP/USD/EUR), tx descuenta de la cuenta Global66 (cardmap 7292), sello FX en backend
-  (getFxRates_ → amountBase/fxRateToBase/fxRateDate, contrato TD-54). Verificado en
-  vivo: tx real ELECTRIFICADORA; códigos de verificación y avisos de cuenta ignorados.
-- Regla Servicios += ELECTRIFICADORA|ENERGIA|UNE TELCO (docs/emailcapture-rules-cell.txt).
-- Sprint L diseñado (docs/Import-PDF-Perfiles.md) tras analizar los 4 extractos REALES
-  en tests/fixtures/import/private/ (GITIGNORED — jamás commitear; .extracted.txt al lado).
-- L.1 ✅: parsePdf(buffer, password) + PdfPasswordError (falta vs incorrecta) + fase
-  "password" en #/import (reintento; la contraseña solo vive en memoria).
-- L.2 ✅: PDF_PROFILES/detectPdfBank (detección por TEXTO del PDF, no filename) +
-  perfil RappiCuenta (formato US, toIsoEs) — cierra F.5. finishPdfResult normaliza
-  al shape de applyProfile (preview/dedup intactos).
-- DECISIONES DEL DUEÑO: D1 cuotas → valor TOTAL en fecha de compra · D2 pagos/abonos
-  del extracto → SALTARLOS · los 4 PDFs comparten contraseña (la sabe el dueño;
-  pedírsela en sesión — NO está escrita en el repo).
+HECHO EN SESIÓN 2026-06-11 (3ª parte, todo pusheado):
+- L.4 ✅ perfil PDF Nu (93e510d): id `nu` en PDF_PROFILES. detect por TEXTO (Nu
+  Financiera / NIT 901.658.107-2). Cada fila de movimiento = compra → expense; monto =
+  1ª col "Valor" (compra completa, D1). El AÑO viaja en la línea siguiente a la fila
+  ("29 ABR"/"2026") → lookahead, fallback al año del periodo. Salta pagos/abonos
+  ("Gracias por tu pago", D2); sub-filas "Intereses en mora" (sin fecha) no entran.
+- L.4b ✅ perfil PDF RappiCard/Davivienda (8f02642): id `rappicard`. detect por TEXTO
+  (RappiCard / "Producto emitido por Davivienda"). Fecha ISO en la fila; monto = 1ª col
+  "Valor facturado" (compra completa). Monto≤0 (PAGOS POR PSE, abonos, saldo a favor)
+  se salta (D2). Descripción envuelta (fila MercadoPago sin texto entre fecha y $) se
+  reconstruye con las líneas adyacentes. GASTOS DE COBRANZA (positivo) se conserva.
+- Ambos perfiles con TEST REAL LOCAL en import.test.js contra los PDFs verdaderos del
+  dueño (.extracted.txt en private/, gitignored → se salta en otros PCs). import 29→38.
+- settings.json del dueño commiteado (9acc93b): permisos PowerShell+git que viajan entre PCs.
+- DECISIONES DEL DUEÑO (vigentes): D1 cuotas → valor TOTAL en fecha de compra · D2
+  pagos/abonos del extracto → SALTARLOS · los 4 PDFs comparten contraseña (la sabe el
+  dueño; pedírsela en sesión — NO está en el repo).
 
 PENDIENTES EN ORDEN:
 
-1. Sprint L restante (diseño listo en docs/Import-PDF-Perfiles.md):
-   - L.3 Amex: probar primero el XLSX (Extracto_202605_Amex_Detallado_0808.xlsx) con
-     excelParser; si no, perfil PDF: SOLO sección "Nuevos movimientos" (la sección
-     "Movimientos antes de..." duplicaría cuotas viejas), negativos = abonos (saltar,
-     D2), estado DOLARES aparte → tx en USD con sello FX.
-   - L.4 Nu TC (PDF pág. 2): fecha partida en 2 líneas ("09 MAY"/"2026"), compras con
-     "N de M" → valor total (D1), filas "Gracias por tu pago" y sub-filas "Intereses
-     en mora" → saltar.
-   - L.4b RappiCard TC (PDF Davivienda 00200001...CREDIT_CARD_STATEMENT.pdf): filas
-     "Virtual/- · YYYY-MM-DD · comercio · $valor · n de m"; comercio puede partirse
-     en 2 líneas (ej. "MERCADO"/"PAGO*MERCADOLI"); negativos = pagos (saltar).
-   - L.5 (=K.7): verificar dedup contra tx gm_ de email al importar extracto.
-   - L.6: verificación EN VIVO en #/import con los PDFs reales (password + preview).
+1. L.3 Amex (XLSX) — INVESTIGADO, NO implementado. RUTA DISTINTA: el XLSX va por
+   excelParser (esm.sh/xlsx) → headers+rows → detectBank(headers, filename) →
+   BANK_PROFILES (NO PDF_PROFILES). Falta crear perfil `amex` en BANK_PROFILES con
+   matchFilename /amex/i + matchHeaders + mapRow. PRIMER PASO: sacar los headers reales
+   del XLSX (npm i xlsx --no-save en un script temporal y dump de la 1ª hoja; node_modules
+   gitignored). Estructura del extracto (del PDF Extracto_202605_Amex_Detallado_0808):
+   - 2 secciones por moneda: "ESTADO DE CUENTA EN: DOLARES" y "EN: PESOS" (esta tarjeta
+     trae casi todo en PESOS; la de DÓLARES vino en $0). La de USD → tx con sello FX.
+   - Tabla movimientos: "Número de autorización · Fecha(DD/MM/YYYY) · Movimientos ·
+     Valor movimiento · cuotas(n/m) · Valor Couta/Abono · %mensual · %anual · Saldo pendiente".
+   - USAR SOLO la sección "Nuevos movimientos entre <corte>"; la sección "Movimientos
+     antes de 15 abr" son cuotas viejas → DUPLICARÍAN (no importar).
+   - Monto = "Valor movimiento" (1ª col $, compra completa, D1). Negativos (ABONO
+     SUCURSAL VIRTUAL, MERCADO PAGO -$, Pagos/abonos) → saltar (D2).
+   - OJO doble fila MercadoPago: una -$480.000 (reverso/abono, saltar) y otra +$480.000
+     1/6 (compra real, importar) — el signo decide.
+   - Cargos tipo INTERESES CORRIENTES / CUOTA DE MANEJO / IVA POR REEXPEDICION / COBRO
+     TAR.REEX (positivos) = cargos reales → expense.
+2. L.5 (=K.7): verificar dedup contra tx gm_ de email al importar extracto.
+3. L.6: verificación EN VIVO en #/import con los PDFs reales (password + preview).
    Para probar localmente sin deploy: npx serve . y subir los PDFs de private/.
-2. J.3 — Narrativa Groq (OPCIONAL): sin script lock · % relativos · caché · disclaimer.
-3. PENDIENTE DEL DUEÑO (recordárselo): pegar el bloque de permisos en
-   .claude/settings.json (el clasificador impide que el agente lo auto-edite; el bloque
-   exacto está en la conversación del 2026-06-11) y pegar cardmap+reglas actualizados
-   en la hoja Settings (docs/emailcapture-rules-cell.txt + cardmap con "7292").
+4. J.3 — Narrativa Groq (OPCIONAL): sin script lock · % relativos · caché · disclaimer.
 
 CAVEATS:
 - Los PDFs reales y sus .extracted.txt viven en tests/fixtures/import/private/
@@ -1687,12 +1703,12 @@ CAVEATS:
   al tocar src/; backend-only NO bumpea (manual).
 
 FORMA DE TRABAJO: fases pequeñas y verificables · explicar qué/por qué · tests tras
-cada cambio (251 base) · commits atómicos · PowerShell: git commit con here-string @'...'@.
+cada cambio (260 base) · commits atómicos · PowerShell: git commit con here-string @'...'@.
 Empezar con: git log --oneline -5 · git status · node --test tests/import.test.js.
 ```
 
 ---
 
-*Actualizado el 2026-06-11 (2ª parte) por Claude (handoff): Global66 en producción + Sprint L.1/L.2 (PDFs con contraseña, perfil RappiCuenta, F.5 cerrado). HEAD 2ba3af6 · v0.2.111 · 251 tests.*
+*Actualizado el 2026-06-11 (3ª parte) por Claude (handoff): Sprint L.4/L.4b — perfiles PDF de TC (Nu + RappiCard/Davivienda) con test real local; settings.json del dueño versionado. HEAD 9acc93b · v0.2.113 · 260 tests.*
 
 

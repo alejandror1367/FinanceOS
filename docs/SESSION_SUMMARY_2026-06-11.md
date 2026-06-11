@@ -74,3 +74,24 @@ desplegados por el dueño; scope Gmail autorizado; `setupEmailCapture()` ejecuta
 4. **K.7**: verificar dedup importando el primer extracto real (RappiCard o Amex) —
    puede requerir matching extra si la descripción del extracto difiere del comercio.
 5. **F.5**: perfil RappiCuenta (sale gratis del mismo PDF de RappiCard).
+
+## 3ª parte de la sesión (perfiles PDF de TC — Sprint L.4/L.4b)
+
+| Cambio | Impacto |
+|---|---|
+| L.4: perfil PDF Nu (`93e510d`) | TC Nu entra sola — detect por texto (Nu Financiera / NIT `901.658.107-2`); compras→expense con valor total (D1); año en la línea siguiente vía lookahead; salta pagos/abonos y sub-filas de mora |
+| L.4b: perfil PDF RappiCard/Davivienda (`8f02642`) | TC RappiCard entra sola — fecha ISO en fila, monto = "Valor facturado"; monto≤0 (PAGOS POR PSE/abonos) se salta (D2); descripción envuelta (MercadoPago) reconstruida |
+| Test real local por perfil en `import.test.js` | Validados contra los PDFs verdaderos del dueño (`private/`, gitignored → se saltan en otros PCs). import 29→38 |
+| `settings.json` del dueño versionado (`9acc93b`) | Permisos PowerShell+git viajan entre PCs |
+
+**L.3 Amex (XLSX):** investigado, NO implementado — va por `excelParser`→`BANK_PROFILES`
+(no PDF_PROFILES); falta perfil `amex` (`matchFilename`/`matchHeaders`/`mapRow`). Estructura
+del extracto ya mapeada en PROJECT_HANDOFF §19.
+**Decisiones del dueño (vigentes):** D1 cuotas→valor total · D2 pagos del extracto→saltar.
+**Tests:** 260/260 · **SW:** v0.2.113 · **HEAD:** `9acc93b`.
+
+### Próximas tareas prioritarias (3ª parte)
+1. **L.3 Amex XLSX** — perfil `amex` en `BANK_PROFILES`; sacar headers reales del XLSX.
+2. **L.5 (=K.7)** — verificar dedup contra tx `gm_` de email al importar extracto.
+3. **L.6** — verificación EN VIVO en `#/import` con los PDFs reales (password + preview).
+4. **J.3** (opcional) — narrativa Groq.
