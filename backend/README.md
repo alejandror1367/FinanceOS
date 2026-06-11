@@ -119,7 +119,10 @@ correspondiente (fecha+hora, monto, comercio, categoría). Idempotente por `mess
    `FinanceOS/procesado` y `FinanceOS/revisar`, las claves de Settings y el **trigger
    cada 15 min** (`processEmailCapture`).
 3. En la hoja **Settings** del spreadsheet rellena (editar la celda directamente;
-   `setSetting` trunca a 240 chars):
+   `setSetting` trunca a 240 chars). **Valores recomendados listos para pegar
+   (con los ids reales de las cuentas/categorías del dueño): ver
+   `backend/EmailCapture.settings.example.json`** — validado por
+   `tests/emailCapture.test.js` contra los fixtures reales.
    - `emailcapture.cardmap` → JSON últimos-4-dígitos → accountId de la tarjeta.
    - `emailcapture.fallbackcategoryid` → categoryId (kind=expense) para comercios sin regla.
    - `emailcapture.categoryrules` → JSON `[["REGEX","categoryId"], ...]` (primera que matchea gana).

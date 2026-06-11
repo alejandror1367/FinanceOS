@@ -215,3 +215,45 @@ describe('ecResolveCategory_', () => {
     assert.equal(ecResolveCategory_('ABC', [], ''), '');
   });
 });
+
+// ── Reglas recomendadas (backend/EmailCapture.settings.example.json) ────────────
+
+describe('reglas recomendadas del example.json', () => {
+  const example = JSON.parse(readFileSync(join(root, 'backend', 'EmailCapture.settings.example.json'), 'utf8'));
+  const rules = example['emailcapture.categoryrules'];
+  const fallback = example['emailcapture.fallbackcategoryid'];
+  const CAT = {
+    restaurantes: '01KSZWJN0FBP406DNKJJHV1RHX', mercado: '01KSZWJP1S7HPJT3S0GNQ4RXJ4',
+    transporte: '01KSZWJQJYKSS8SG5MFM5NZ9MB', suscripciones: '01KSZWJRDXNHCEHTQ1G6XBCPZ3',
+    tecnologia: '01KSZZSZKZJQQ6F0NGTS2HD070', otros: '01KTG03AFZMDVMRCMFXYG8E7TQ',
+  };
+
+  test('estructura válida: pares [regex, categoryId] y regex compilables', () => {
+    assert.ok(Array.isArray(rules) && rules.length >= 15);
+    rules.forEach(([pattern, catId]) => {
+      assert.ok(typeof pattern === 'string' && pattern.length);
+      assert.match(catId, /^01[A-Z0-9]{24}$/);
+      new RegExp(pattern, 'i'); // lanza si es inválido
+    });
+  });
+
+  test('los comercios de los fixtures reales categorizan bien', () => {
+    assert.equal(ecResolveCategory_('OPENAI CHATGPT SUBSCR', rules, fallback), CAT.suscripciones);
+    assert.equal(ecResolveCategory_('STARLINK DL', rules, fallback), CAT.suscripciones);
+    assert.equal(ecResolveCategory_('YouTube', rules, fallback), CAT.suscripciones);
+    assert.equal(ecResolveCategory_('Amazon Marketplace', rules, fallback), CAT.tecnologia);
+    assert.equal(ecResolveCategory_('TIENDA D1 MALAGA', rules, fallback), CAT.mercado);
+    assert.equal(ecResolveCategory_('DL*DIDI RIDES CO', rules, fallback), CAT.transporte);
+    assert.equal(ecResolveCategory_('PAYU*NETFLIX V', rules, fallback), CAT.suscripciones);
+    assert.equal(ecResolveCategory_('S.C.A.R.E.', rules, fallback), CAT.otros); // sin regla → fallback
+  });
+
+  test('el orden desambigua: específico gana sobre genérico', () => {
+    assert.equal(ecResolveCategory_('UBER EATS BOGOTA', rules, fallback), CAT.restaurantes);
+    assert.equal(ecResolveCategory_('UBER *TRIP', rules, fallback), CAT.transporte);
+    assert.equal(ecResolveCategory_('RAPPI PRIME', rules, fallback), CAT.suscripciones);
+    assert.equal(ecResolveCategory_('RAPPI*RESTAURANTE XYZ', rules, fallback), CAT.restaurantes);
+    assert.equal(ecResolveCategory_('AMAZON PRIME CO', rules, fallback), CAT.suscripciones);
+    assert.equal(ecResolveCategory_('MERCADO PAGO*VENDEDOR', rules, fallback), CAT.tecnologia);
+  });
+});
