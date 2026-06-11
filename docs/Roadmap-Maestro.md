@@ -404,7 +404,7 @@ Amex PESOS/DOLARES + XLSX, RappiCuenta). PDFs reales en `tests/fixtures/import/p
 |---|---|---|
 | L.1 ✅ | Password en `pdfParser.js` (`getDocument({password})` + `PdfPasswordError`) + fase "password" en `#/import` (reintento; contraseña solo en memoria) — `2ba3af6` | S |
 | L.2 ✅ | Perfil RappiCuenta (`PDF_PROFILES`/`detectPdfBank` por TEXTO, formato US, `toIsoEs`) + fixture sintético + test condicional contra el extracto real — cierra F.5 — `2ba3af6` | S |
-| L.3 | Amex: evaluar XLSX con `excelParser.js`; perfil solo "Nuevos movimientos", negativos=abono, sección USD | M |
+| L.3 ✅ | Amex por XLSX: `parseExcelRaw` (todas las hojas crudas) + `EXCEL_PROFILES`/`detectExcelBank` — perfil `amex_bancolombia`: solo "Movimientos durante el periodo", el signo decide (abonos/reversos fuera, D2), valor TOTAL de compras en cuotas (D1), hoja DOLARES → items USD. Test real: 11 items del XLSX verdadero | M |
 | L.4 | Perfil Nu TC (PDF): fecha en 2 líneas, cuotas (valor total en fecha de compra — D1 ✅), ignorar sub-filas de mora | M |
 | L.4b | Perfil RappiCard TC (PDF Davivienda, `00200001...CREDIT_CARD_STATEMENT.pdf`): filas `Virtual/- · YYYY-MM-DD · comercio · $valor · n de m`; comercio puede partirse en 2 líneas; negativos = pagos (saltar — D2 ✅) | M |
 | L.5 | K.7: dedup contra tx `gm_` de email (normalización de descripción si hace falta) | S |

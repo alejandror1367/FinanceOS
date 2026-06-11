@@ -13,7 +13,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseCSV } from '../src/services/parsers/csvParser.js';
-import { detectBank, detectPdfBank, BANK_PROFILES, PDF_PROFILES, toIso, toIsoEs, parseMoney } from '../src/services/parsers/bankProfiles.js';
+import { detectBank, detectPdfBank, detectExcelBank, BANK_PROFILES, PDF_PROFILES, EXCEL_PROFILES, toIso, toIsoEs, parseMoney } from '../src/services/parsers/bankProfiles.js';
 import { applyProfile, finishPdfResult, dupKey } from '../src/services/importService.js';
 import { toCSV } from '../src/utils/export.js';
 
@@ -422,5 +422,113 @@ describe('PDF RappiCard / Davivienda (L.4b)', () => {
     assert.ok(result.items.length >= 5, `esperaba ≥5 cargos, hubo ${result.items.length}`);
     assert.ok(result.items.every((i) => i.date && i.amount > 0 && i.description && i.type === 'expense'));
     assert.ok(!result.items.some((i) => /PSE/.test(i.description)), 'no debe incluir el pago PSE');
+  });
+});
+
+// ── Sprint L.3: perfil Excel TC Bancolombia/Amex (hojas crudas) ─────────────────
+
+const FIX_AMEX_SHEETS = [
+  {
+    name: 'DOLARES',
+    rows: [
+      ['Información Cliente:', '', ''],
+      ['Información de la Tarjeta', '***********0808', ''],
+      ['Moneda: ', 'DOLARES', ''],
+      ['Movimientos durante el periodo', '', '', '', '', '', '', '', ''],
+      ['Número de autorización', 'Fecha', 'Movimientos', 'Valor Movimiento', 'Número de cuotas', 'Valor cuota/abono', 'Interés mensual (%)', 'Interés anual (%)', 'Saldo pendiente'],
+      ['111111', '10/05/2026', 'AMAZON US', '25.99', '1/1', '25.99', '0,0000', '00,0000', '0,00'],
+    ],
+  },
+  {
+    name: 'PESOS',
+    rows: [
+      ['Información Cliente:', '', ''],
+      ['Información de la Tarjeta', '***********0808', ''],
+      ['Moneda: ', 'PESOS', ''],
+      ['Pago total', '3.126.176,00', ''],
+      ['Movimientos durante el periodo', '', '', '', '', '', '', '', ''],
+      ['Número de autorización', 'Fecha', 'Movimientos', 'Valor Movimiento', 'Número de cuotas', 'Valor cuota/abono', 'Interés mensual (%)', 'Interés anual (%)', 'Saldo pendiente'],
+      ['', '18/05/2026', 'INTERESES CORRIENTES', '70.838,00', '', '70.838,00', '', '', '0,00'],
+      ['000000', '18/05/2026', 'CUOTA DE MANEJO', '18.495,00', '', '18.495,00', '', '', '0,00'],
+      ['191651', '05/05/2026', 'ABONO SUCURSAL VIRTUAL', '-2.886.877,00', '', '-2.886.877,00', '', '', '0,00'],
+      ['458659', '03/05/2026', 'DL*DIDI RIDES CO', '36.400,00', '1/1', '36.400,00', '0,0000', '00,0000', '0,00'],
+      ['393744', '19/04/2026', 'MERCADO PAGO', '-480.000,00', '', '-480.000,00', '', '', '0,00'],
+      ['393744', '19/04/2026', 'MERCADO PAGO', '480.000,00', '1/6', '80.000,00', '0,0000', '00,0000', '400.000,00'],
+      ['', '', '', '', '', '', '', '', ''],
+      ['Movimientos antes del periodo', '', '', '', '', '', '', '', ''],
+      ['Número de autorización', 'Fecha', 'Movimientos', 'Valor Movimiento', 'Número de cuotas', 'Valor cuota/abono', 'Interés mensual (%)', 'Interés anual (%)', 'Saldo pendiente'],
+      ['516566', '20/03/2026', 'MERCADOPAGO COLOMBIA', '706.000,00', '2/3', '235.333,33', '1,9110', '25,5026', '235.333,34'],
+    ],
+  },
+];
+
+describe('Excel TC Bancolombia/Amex (L.3)', () => {
+  const profile = EXCEL_PROFILES.find((p) => p.id === 'amex_bancolombia');
+
+  test('detectExcelBank por contenido de hojas (sin depender del filename)', () => {
+    assert.equal(detectExcelBank(FIX_AMEX_SHEETS, 'cualquier.xlsx'), profile);
+    assert.equal(detectExcelBank([{ name: 'Hoja1', rows: [['Date', 'Amount'], ['2026-01-01', '5']] }], 'movs.xlsx'), null);
+  });
+
+  test('importa SOLO "durante el periodo"; la sección "antes del periodo" queda fuera', () => {
+    const result = finishPdfResult(profile, profile.parse(FIX_AMEX_SHEETS));
+    assert.ok(!result.items.some((i) => i.description.includes('MERCADOPAGO COLOMBIA')),
+      'las cuotas viejas no deben importarse (duplicarían deuda)');
+  });
+
+  test('el signo decide: abonos/reversos negativos se saltan (D2), compras quedan', () => {
+    const result = finishPdfResult(profile, profile.parse(FIX_AMEX_SHEETS));
+    assert.ok(!result.items.some((i) => i.description.includes('ABONO')), 'abono saltado');
+    const mp = result.items.filter((i) => i.description === 'MERCADO PAGO');
+    assert.equal(mp.length, 1, 'del par MercadoPago solo entra la compra positiva');
+    assert.equal(mp[0].amount, 480000, 'valor TOTAL de la compra en cuotas (D1), no la cuota');
+    assert.equal(result.skipped, 2); // ABONO + reverso MercadoPago
+  });
+
+  test('cargos del banco (intereses, cuota de manejo) son gastos válidos', () => {
+    const result = finishPdfResult(profile, profile.parse(FIX_AMEX_SHEETS));
+    assert.ok(result.items.some((i) => i.description === 'INTERESES CORRIENTES' && i.amount === 70838));
+    assert.ok(result.items.some((i) => i.description === 'CUOTA DE MANEJO' && i.amount === 18495));
+  });
+
+  test('hoja DOLARES → items con currency USD; hoja PESOS sin currency (COP del result)', () => {
+    const result = finishPdfResult(profile, profile.parse(FIX_AMEX_SHEETS));
+    const usd = result.items.find((i) => i.description === 'AMAZON US');
+    assert.ok(usd);
+    assert.equal(usd.currency, 'USD');
+    assert.equal(usd.amount, 25.99);
+    assert.ok(!result.items.find((i) => i.description === 'DL*DIDI RIDES CO').currency);
+    assert.equal(result.currency, 'COP');
+  });
+
+  test('fechas DD/MM/YYYY normalizadas y tipo expense en todo', () => {
+    const result = finishPdfResult(profile, profile.parse(FIX_AMEX_SHEETS));
+    assert.ok(result.items.every((i) => /^\d{4}-\d{2}-\d{2}$/.test(i.date) && i.type === 'expense'));
+    assert.equal(result.items.find((i) => i.description === 'DL*DIDI RIDES CO').date, '2026-05-03');
+  });
+
+  test('REAL (local; se salta si falta archivo o lib xlsx): el XLSX verdadero parsea', async () => {
+    const real = join(__root, 'tests', 'fixtures', 'import', 'private', 'Extracto_202605_Amex_Detallado_0808.xlsx');
+    if (!existsSync(real)) return;
+    let XLSX;
+    try { XLSX = await import('xlsx'); } catch { return; } // dev-only --no-save
+    const wb = XLSX.read(readFileSync(real));
+    const sheets = wb.SheetNames.map((name) => ({
+      name,
+      rows: XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, raw: false, defval: '' })
+        .map((r) => r.map((c) => String(c || '').trim())),
+    }));
+    const p = detectExcelBank(sheets, 'Extracto_202605_Amex_Detallado_0808.xlsx');
+    assert.ok(p && p.id === 'amex_bancolombia');
+    const result = finishPdfResult(p, p.parse(sheets));
+    // Mayo 2026: 13 filas "durante el periodo" en PESOS − ABONO − reverso MercadoPago = 11
+    assert.equal(result.items.length, 11);
+    assert.equal(result.skipped, 2);
+    assert.ok(result.items.every((i) => i.date && i.amount > 0 && i.type === 'expense'));
+    assert.ok(!result.items.some((i) => /ABONO|MERCADOPAGO COLOMBIA|BATH & BODY|AMERICAN EAGLE|LA COLINA|DAFITI/i.test(i.description)),
+      'sin abonos ni cuotas viejas');
+    const mp = result.items.filter((i) => i.description === 'MERCADO PAGO');
+    assert.equal(mp.length, 1);
+    assert.equal(mp[0].amount, 480000);
   });
 });

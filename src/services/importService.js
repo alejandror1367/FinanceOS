@@ -3,9 +3,9 @@
 // para formatos desconocidos (más confiable que APIs con límites de tokens).
 
 import { parseCSV } from './parsers/csvParser.js';
-import { parseExcel } from './parsers/excelParser.js';
+import { parseExcel, parseExcelRaw } from './parsers/excelParser.js';
 import { parsePdf, PdfPasswordError } from './parsers/pdfParser.js';
-import { BANK_PROFILES, detectBank, detectPdfBank } from './parsers/bankProfiles.js';
+import { BANK_PROFILES, detectBank, detectPdfBank, detectExcelBank } from './parsers/bankProfiles.js';
 
 export { PdfPasswordError };
 
@@ -107,6 +107,12 @@ export const importService = {
 
     if (isExcel) {
       const buffer = await readAsBuffer(file);
+      // L.3: primero los perfiles de hojas crudas (extractos con metadata arriba y
+      // varias tablas — p. ej. TC Bancolombia/Amex); si ninguno, el camino genérico
+      // "1ª fila = headers" de siempre.
+      const sheets = await parseExcelRaw(buffer);
+      const rawProfile = detectExcelBank(sheets, file.name);
+      if (rawProfile) return finishPdfResult(rawProfile, rawProfile.parse(sheets));
       const { headers, rows } = await parseExcel(buffer);
       const profile = detectBank(headers, file.name);
       if (profile) return applyProfile(profile, headers, rows);

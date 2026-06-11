@@ -14,6 +14,19 @@ async function loadXLSX() {
   return xlsxLib;
 }
 
+// L.3: todas las hojas en crudo — para perfiles que no siguen el patrón
+// "1ª fila = headers" (p. ej. el extracto Amex de Bancolombia: metadata arriba,
+// varias tablas por hoja, una hoja por moneda).
+export async function parseExcelRaw(buffer) {
+  const xlsx = await loadXLSX();
+  const wb = xlsx.read(new Uint8Array(buffer), { type: 'array', raw: false, dateNF: 'yyyy-mm-dd' });
+  return wb.SheetNames.map((name) => ({
+    name,
+    rows: xlsx.utils.sheet_to_json(wb.Sheets[name], { header: 1, raw: false, dateNF: 'yyyy-mm-dd', defval: '' })
+      .map((r) => r.map((c) => String(c || '').trim())),
+  }));
+}
+
 export async function parseExcel(buffer) {
   const xlsx = await loadXLSX();
   const wb = xlsx.read(new Uint8Array(buffer), { type: 'array', raw: false, dateNF: 'yyyy-mm-dd' });

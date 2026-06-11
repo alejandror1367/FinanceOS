@@ -13,13 +13,14 @@ import { toast } from '../services/toast.js';
 const ACCEPT = '.csv,.xlsx,.xls,.pdf';
 
 const SOURCES = [
-  { name: 'Bancolombia', hint: 'CSV / PDF' },
-  { name: 'NuBank',      hint: 'CSV desde app' },
-  { name: 'Nequi',       hint: 'CSV / PDF' },
-  { name: 'Global66',    hint: 'CSV historial' },
-  { name: 'RappiPay',    hint: 'PDF extracto' },
-  { name: 'XTB',         hint: 'Excel / CSV' },
-  { name: 'AQR Invest',  hint: 'Excel / PDF' },
+  { name: 'Bancolombia',     hint: 'CSV cuenta' },
+  { name: 'Amex Bancolombia', hint: 'XLSX extracto TC' },
+  { name: 'NuBank',          hint: 'CSV / PDF extracto TC' },
+  { name: 'Nequi',           hint: 'CSV' },
+  { name: 'Global66',        hint: 'CSV historial' },
+  { name: 'RappiCard',       hint: 'PDF extracto TC' },
+  { name: 'RappiCuenta',     hint: 'PDF extracto' },
+  { name: 'XTB',             hint: 'Excel / CSV' },
 ];
 
 const TYPE_LABEL = { income: 'Ingreso', expense: 'Gasto', transfer: 'Transferencia' };

@@ -374,6 +374,73 @@ export function detectPdfBank(text, filename) {
   return null;
 }
 
+// ───────────────── Perfiles de Excel por hojas crudas (Sprint L.3) ─────────────────
+// Para XLSX que no siguen "1ª fila = headers". Reciben TODAS las hojas en crudo
+// (parseExcelRaw): [{ name, rows: string[][] }]. Mismo contrato de salida que
+// PDF_PROFILES: parse → { items, skipped }.
+
+export const EXCEL_PROFILES = [
+  {
+    // L.3 — Extracto detallado de TC Bancolombia (Amex *0808). Una hoja por moneda
+    // (DOLARES / PESOS); en cada una, tabla "Movimientos durante el periodo" con
+    // header "Número de autorización · Fecha · Movimientos · Valor Movimiento · ...".
+    // SOLO se importa esa sección: "Movimientos antes del periodo" son cuotas de
+    // compras viejas → duplicarían deuda histórica.
+    id: 'amex_bancolombia',
+    name: 'TC Bancolombia (Amex)',
+    color: '#FBDB00',
+    textColor: '#111',
+    currency: 'COP',
+    detect(sheets, filename) {
+      const hasMovs = sheets.some((s) => s.rows.some((r) => r.some((c) => /Movimientos durante el periodo/i.test(c))));
+      const hasCard = sheets.some((s) => s.rows.some((r) => r.some((c) => /Información de la Tarjeta/i.test(c))));
+      return (hasMovs && hasCard) || /amex/i.test(String(filename || ''));
+    },
+    parse(sheets) {
+      const items = [];
+      let skipped = 0;
+      for (const sheet of sheets) {
+        // Moneda de la hoja: fila "Moneda:" → DOLARES = USD; PESOS/otra = COP.
+        const monedaRow = sheet.rows.find((r) => /^Moneda\s*:?\s*$/i.test(r[0] || '') || /^Moneda\s*:/i.test(r[0] || ''));
+        const isUsd = /DOLARES/i.test((monedaRow && monedaRow[1]) || sheet.name);
+        let inPeriod = false;
+        for (const row of sheet.rows) {
+          const first = row[0] || '';
+          const joined = row.join(' ');
+          if (/Movimientos durante el periodo/i.test(joined)) { inPeriod = true; continue; }
+          if (/Movimientos antes del periodo/i.test(joined)) { inPeriod = false; continue; }
+          if (!inPeriod) continue;
+          if (/Número de autorización/i.test(first) || /^Fecha$/i.test(row[1] || '')) continue; // header de la tabla
+          const date = toIso(row[1]);
+          if (!date) continue; // fila vacía o ajena a la tabla
+          const amount = parseMoney(row[3]);
+          // D2: abonos/pagos/devoluciones llegan en negativo (ABONO SUCURSAL VIRTUAL,
+          // reverso de MERCADO PAGO) → se saltan. Cero/inválido también.
+          if (!(amount > 0)) { skipped++; continue; }
+          items.push({
+            date,
+            description: (row[2] || '').trim() || 'TC Bancolombia',
+            // D1: valor TOTAL de la compra en su fecha (col "Valor Movimiento"),
+            // aunque esté diferida a cuotas (n/m) — así modela la app la deuda de CC.
+            amount,
+            type: 'expense',
+            ...(isUsd ? { currency: 'USD' } : {}),
+            reference: (row[0] || '').trim() || undefined,
+          });
+        }
+      }
+      return { items, skipped };
+    },
+  },
+];
+
+export function detectExcelBank(sheets, filename) {
+  for (const p of EXCEL_PROFILES) {
+    if (p.detect && p.detect(sheets, String(filename || ''))) return p;
+  }
+  return null;
+}
+
 export function detectBank(headers, filename) {
   const name = String(filename || '').toLowerCase();
   for (const p of BANK_PROFILES) {
