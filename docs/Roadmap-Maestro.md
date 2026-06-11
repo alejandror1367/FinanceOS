@@ -38,9 +38,10 @@
 
 ### Qué queda (sprints pendientes)
 
-Sprints A–J detallados en §4. Estimación total: **~18–22 días de desarrollo** + varios deploys de backend.
+Sprints A–K detallados en §4. **A–I ✅ completos (2026-06-10) · v1.0 criterios 16/16 ✅.**
 
-**Camino crítico de valor:** A → B → C (paralelo con B) → E → F → G → H → I → J (últimos dos opcionales).
+**Pendiente activo:** **Sprint K** (captura automática de compras desde Gmail — P2, nuevo
+2026-06-10, bloqueado por fixtures K.1 del dueño) · J.3 (narrativa Groq, P3 opcional).
 
 ### Criterios de "listo para v1.0"
 
@@ -348,6 +349,48 @@ Ver §5.
 - Los datos enviados a Groq son solo porcentajes y categorías, sin montos COP absolutos ni símbolos de tickers identificables.
 
 **Nota:** TD-38 (J.1) y TD-22 (J.2) están marcados ✅ en TechnicalDebt.md. Verificar en git log antes de re-implementar.
+
+---
+
+### Sprint K — Captura automática de compras desde Gmail (P2, nuevo 2026-06-10)
+
+**Objetivo:** las compras con tarjeta llegan solas a Transacciones: el backend (Apps Script)
+lee los correos de alerta de los bancos en el Gmail del dueño, extrae monto/comercio/
+fecha/hora/tarjeta, crea la transacción como gasto en la cuenta correcta y la categoriza.
+**Origen:** solicitud directa del dueño (2026-06-10).
+**Prioridad:** P2. **Riesgo:** medio (plantillas de correo de bancos cambian sin aviso).
+**Deploy:** ✅ (todo es backend; frontend sin cambios — las tx bajan por el pull normal).
+**Esfuerzo estimado:** ~1–2 días (Bancolombia + RappiCard; Nu queda vía `#/import`).
+
+**Decisiones ya tomadas con el dueño:**
+- RappiCard llega a un Gmail y Bancolombia a otro → **reenvío automático por filtro de
+  Gmail ya configurado** por el dueño hacia la cuenta del backend (verificado paso 1–3).
+- **Nubank no envía correos de compra** → queda fuera de este sprint; sigue por extracto
+  mensual en `#/import` (perfil Nu ya existente). Revisar si Nu permite activar correos.
+- El correo reenviado conserva el cuerpo; el parser identifica el banco por cabeceras/
+  asunto/contenido, no por el remitente del sobre.
+
+| # | Tarea | ID origen | Archivo | Esf | Deploy |
+|---|---|---|---|---|---|
+| K.1 | Fixtures: 2–3 correos reales de alerta por banco (Bancolombia, RappiCard) anonimizados en `tests/fixtures/email/` — **bloqueante, los aporta el dueño** | dueño | `tests/fixtures/email/` | S | — |
+| K.2 | `backend/EmailCapture.gs`: trigger temporal (15–30 min) + `GmailApp.search` por etiqueta/remitente + scope `gmail.readonly` (re-autorizar el proyecto) | — | `backend/EmailCapture.gs` (nuevo) | M | ✅ |
+| K.3 | Parsers por banco (regex sobre plantilla, sin IA): monto, comercio, fecha+hora ISO 8601, últimos 4 dígitos | — | `backend/EmailCapture.gs` | M | ✅ |
+| K.4 | Mapeo tarjeta→cuenta (últimos 4 dígitos → `accountId` credit_card) en hoja Settings, editable sin redeploy | — | `backend/Config.gs`, Settings | S | ✅ |
+| K.5 | Categorización por reglas comercio→categoría (tabla en Settings, p. ej. `RAPPI→Restaurantes`) + fallback "Sin categoría". Groq opcional SOLO para comercio desconocido (enviar solo el nombre del comercio, nunca montos) | — | `backend/EmailCapture.gs` | M | ✅ |
+| K.6 | Idempotencia y trazabilidad: id determinista `gm_{messageId}` + etiqueta Gmail `FinanceOS/procesado`; correo no parseable → etiqueta `FinanceOS/revisar` (nunca se pierde ni se duplica) | — | `backend/EmailCapture.gs` | S | ✅ |
+| K.7 | Compatibilidad con import manual: la tx creada por email debe matchear el `dupKey` del Sprint F (`date\|amount\|descNorm`) para que importar el extracto después no duplique | Sprint F | `backend/EmailCapture.gs`, `src/services/importService.js` (verificar) | S | — |
+| K.8 | Verificación en vivo: compra real de prueba → correo → trigger → tx visible en `#/transactions` con cuenta/categoría/fecha-hora correctas | QA | — | S | — |
+
+**Criterio de aceptación:**
+- Una compra con RappiCard o Bancolombia aparece en Transacciones en ≤30 min, sin tocar la app,
+  con monto, comercio, fecha y hora exactos, en la cuenta de la tarjeta correcta.
+- Correr el trigger dos veces seguidas no crea duplicados (idempotencia por `messageId`).
+- Importar después el extracto mensual del mismo banco no duplica esas compras (dupKey).
+- Correos con formato desconocido quedan en `FinanceOS/revisar` con log en AuditLog; cero pérdida silenciosa.
+- La app sigue 100% funcional sin esta característica (la captura enriquece, no es requisito).
+
+**Prerrequisitos pendientes del dueño:** (1) fixtures K.1 · (2) confirmar a qué Gmail
+llega cada alerta tras el reenvío · (3) opcional: revisar si Nu permite activar correos de compra.
 
 ---
 

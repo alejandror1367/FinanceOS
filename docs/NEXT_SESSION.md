@@ -61,6 +61,12 @@ PENDIENTES EN ORDEN:
 4. J.5 ✅ RESUELTO 2026-06-10 — alejandrorr1367@gmail.com confirmado como cuenta
    alternativa del dueño; documentado en backend/Config.gs (solo comentario, sin deploy).
 
+4b. Sprint K — NUEVO (2026-06-10): captura automática de compras con tarjeta desde
+   Gmail (backend Apps Script + GmailApp, trigger 15-30 min). Detalle completo en
+   Roadmap-Maestro §Sprint K (K.1-K.8). BLOQUEADO por el dueño: fixtures de correos
+   reales de Bancolombia y RappiCard (K.1). Reenvío Gmail secundario→principal YA
+   configurado por el dueño. Nubank queda vía #/import mensual (no envía correos).
+
 5. J.3 — Narrativa Groq de portafolio (OPCIONAL): sin script lock · % relativos sin
    montos COP · anti prompt-injection · caché CacheService · disclaimer.
 

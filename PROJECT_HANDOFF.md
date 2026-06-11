@@ -57,7 +57,7 @@ Centraliza: patrimonio neto, presupuestos, flujo de caja, inversiones, metas, de
 | TD-39 recurrentes automáticos | ✅ `recurringService` materializa vencidos al cargar — `d37a938` |
 | App-lock J.4 + J.4b | ✅ PIN (PBKDF2) + huella/Face ID (WebAuthn) — `53083b3` · `57ac36c` |
 | Cuentas remuneradas ampliadas | ✅ `YIELD_TYPES`: savings · bank · digital_wallet · investment — `461c156` |
-| Pendiente | J.3 (Groq, opcional) — Sprint F ✅ · TD-54 ✅ · J.5 ✅ · I.1 ✅ · verificaciones en vivo ✅ · TD-55/56 ✅ (2026-06-10) |
+| Pendiente | **Sprint K** (compras desde Gmail, P2 — espera fixtures K.1 del dueño) · J.3 (Groq, opcional) — Sprint F ✅ · TD-54 ✅ · J.5 ✅ · I.1 ✅ · verificaciones ✅ · TD-55/56 ✅ |
 
 ---
 
