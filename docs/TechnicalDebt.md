@@ -174,8 +174,14 @@ La deuda se concentra en **tres temas de fondo**: (1) **modelo contable** (el le
 
 | ID | Problema | Origen | Impacto | Esf | Estado |
 |----|----------|--------|---------|-----|--------|
-| TD-55 ✅ | **`.row__actions` (≈307px) desborda el viewport a 375px** en Presupuestos y Metas — `document.scrollWidth` llegaba a 500px. Causa raíz: la regla móvil `.row__actions { flex: 0 0 100% }` asume un parent con wrap (`.row`), pero los headers de card de budgets/goals usan `.row-flex.between` sin wrap → basis 100% + shrink 0 empuja fuera del viewport | QA I.1 (Playwright, prod v0.2.108) | Scroll horizontal accidental en móvil | S | **HECHO** (2026-06-10): `.card > .row-flex.between:first-child { flex-wrap: wrap }` en el media ≤600px de `components.css`. Verificado en prod (inyección): 16/16 rutas sin overflow a 375px |
-| TD-56 ✅ | **`.topbar__actions` (164px) sobresalía 2–4px del viewport a 375px** en Transacciones y Exportaciones. Causa raíz: `.topbar__title` ("Transacciones" — una sola palabra) no podía encoger (min-width auto del flex item) | QA I.1 (Playwright, prod v0.2.108) | Micro-scroll lateral; cosmético | S | **HECHO** (2026-06-10): `.topbar__title` con `min-width: 0` + `nowrap` + elipsis (`layout.css`) y `gap: var(--space-3)` del topbar en móvil. Verificado en prod (inyección): sin overflow |
+| TD-55 ✅ | **`.row__actions` (≈307px) desborda el viewport a 375px** en Presupuestos y Metas — `document.scrollWidth` llegaba a 500px. Causa raíz: la regla móvil `.row__actions { flex: 0 0 100% }` asume un parent con wrap (`.row`), pero los headers de card de budgets/goals usan `.row-flex.between` sin wrap → basis 100% + shrink 0 empuja fuera del viewport | QA I.1 (Playwright, prod v0.2.108) | Scroll horizontal accidental en móvil | S | **HECHO** (2026-06-10): `.card > .row-flex.between:first-child { flex-wrap: wrap }` en el media ≤600px de `components.css`. Verificado en prod v0.2.110: 16/16 rutas sin overflow a 375px |
+| TD-56 ✅ | **`.topbar__actions` (164px) sobresalía 2–4px del viewport a 375px** en Transacciones y Exportaciones. Causa raíz: `.topbar__title` ("Transacciones" — una sola palabra) no podía encoger (min-width auto del flex item) | QA I.1 (Playwright, prod v0.2.108) | Micro-scroll lateral; cosmético | S | **HECHO** (2026-06-10): `.topbar__title` con `min-width: 0` + `nowrap` + elipsis (`layout.css`) y `gap: var(--space-3)` del topbar en móvil. Verificado en prod v0.2.110: sin overflow |
+
+> **Hallazgo colateral del deploy (corregido en `14dd401`):** el precache del SW
+> (`cache.addAll`) pasaba por el HTTP cache del navegador; con `max-age=600` de
+> GitHub Pages, una versión nueva del SW podía fijar CSS/JS de hasta 10 min de
+> antigüedad para toda la vida de esa versión (ocurrió al desplegar v0.2.109 —
+> el fix TD-55/56 no entró al precache). Ahora `install` usa `Request(..., { cache: 'reload' })`.
 
 ---
 
