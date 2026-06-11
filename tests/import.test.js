@@ -280,7 +280,7 @@ describe('PDF RappiCuenta (L.2 / F.5)', () => {
     assert.equal(result.currency, 'COP');
   });
   test('texto ajeno → null (cae al flujo del prompt de IA)', () => {
-    assert.equal(detectPdfBank('Extracto de tarjeta de crédito Davivienda', 'x.pdf'), null);
+    assert.equal(detectPdfBank('Extracto de cuenta de ahorros Bancolombia', 'x.pdf'), null);
   });
   test('REAL (local; se salta si no existe): el extracto verdadero del dueño parsea', () => {
     const real = join(__root, 'tests', 'fixtures', 'import', 'private', 'extracto_2026-05-01_2026-05-31-RAPPICARD.extracted.txt');
@@ -358,5 +358,69 @@ describe('PDF Nu (L.4)', () => {
     assert.ok(result.items.length >= 2, `esperaba ≥2 compras, hubo ${result.items.length}`);
     assert.ok(result.items.every((i) => i.date && i.amount > 0 && i.description && i.type === 'expense'));
     assert.ok(!result.items.some((i) => /gracias por tu/i.test(i.description)), 'no debe incluir el pago');
+  });
+});
+
+// ── Sprint L.4b: perfil PDF RappiCard (Davivienda, tarjeta de crédito) ──────────
+// Fecha ISO en la fila. Fila MERCADO PAGO con descripción envuelta; PAGOS POR PSE
+// negativo se salta. Fixture sintético (estructura del extracto real).
+
+const FIX_RAPPICARD_PDF = `  Producto emitido por Davivienda S.A.
+  Extracto de tarjeta de crédito
+  Número de tarjeta Virtual     8967
+
+--- PÁGINA ---
+
+Detalle de transacciones: ALEJANDRO ROJAS RODERO (Titular)
+  Tarjeta     Fecha     Descripción     facturado  Cuotas  pendiente
+  -     2026-04-30     GASTOS DE COBRANZA     $1.471,00     $1.471,00     N/A     $0,00     0%     0,00%
+Virtual     2026-05-05     NETFLIX     $29.900,00     $29.900,00     1 de 1     $0,00     0,0000%     0,00%
+Virtual     2026-05-07     AMAZON PRIME*4G10P2BC3     $28.928,39     $28.928,39     1 de 1     $0,00     0,0000%     0,00%
+MERCADO
+Virtual     2026-05-09     $119.416,00     $13.268,44     1 de 9     $106.147,56     0,0000%     0,00%
+PAGO*MERCADOLI
+Virtual     2026-05-09     CLAUDE.AI SUBSCRIPTION     $76.450,04     $76.450,04     1 de 1     $0,00     0,0000%     0,00%
+-     2026-05-09     PAGOS POR PSE     $-481.872,99     N/A     N/A     N/A     0%     0,00%
+Virtual     2026-05-11     OPENAI *CHATGPT SUBSCR     $20.900,00     $20.900,00     1 de 1     $0,00     0,0000%     0,00%
+
+--- PÁGINA ---
+
+  Paga tu RappiCard fácilmente desde tu cuenta RappiPay o PSE.
+Banco Davivienda S.A NIT860.034.313-7`;
+
+describe('PDF RappiCard / Davivienda (L.4b)', () => {
+  test('detectPdfBank reconoce RappiCard por su texto', () => {
+    const p = detectPdfBank(FIX_RAPPICARD_PDF, '00200001CREDIT_CARD_STATEMENT.pdf');
+    assert.ok(p);
+    assert.equal(p.id, 'rappicard');
+  });
+  test('parse extrae compras como expense, salta el pago PSE negativo', () => {
+    const profile = PDF_PROFILES.find((p) => p.id === 'rappicard');
+    const result = finishPdfResult(profile, profile.parse(FIX_RAPPICARD_PDF));
+    assert.equal(result.items.length, 6); // 6 cargos; PAGOS POR PSE (negativo) se salta
+    assert.deepEqual(result.items.find((i) => i.description === 'NETFLIX'),
+      { date: '2026-05-05', description: 'NETFLIX', amount: 29900, type: 'expense' });
+    assert.deepEqual(result.items.find((i) => i.description === 'GASTOS DE COBRANZA'),
+      { date: '2026-04-30', description: 'GASTOS DE COBRANZA', amount: 1471, type: 'expense' });
+    assert.ok(!result.items.some((i) => /PSE/.test(i.description)), 'no debe incluir el pago PSE');
+    assert.equal(result.currency, 'COP');
+  });
+  test('reconstruye descripción envuelta (MERCADO PAGO) y usa el valor facturado', () => {
+    const profile = PDF_PROFILES.find((p) => p.id === 'rappicard');
+    const result = profile.parse(FIX_RAPPICARD_PDF);
+    const mp = result.items.find((i) => i.date === '2026-05-09' && i.amount === 119416);
+    assert.ok(mp, 'fila MercadoPago presente con valor facturado completo (no la cuota)');
+    assert.match(mp.description, /MERCADO.*PAGO/);
+  });
+  test('REAL (local; se salta si no existe): el extracto RappiCard verdadero parsea', () => {
+    const real = join(__root, 'tests', 'fixtures', 'import', 'private', '00200001000000161284CREDIT_CARD_STATEMENT.extracted.txt');
+    if (!existsSync(real)) return; // gitignored: solo corre en el PC del dueño
+    const text = readFileSync(real, 'utf8');
+    const p = detectPdfBank(text, 'x.pdf');
+    assert.ok(p && p.id === 'rappicard');
+    const result = finishPdfResult(p, p.parse(text));
+    assert.ok(result.items.length >= 5, `esperaba ≥5 cargos, hubo ${result.items.length}`);
+    assert.ok(result.items.every((i) => i.date && i.amount > 0 && i.description && i.type === 'expense'));
+    assert.ok(!result.items.some((i) => /PSE/.test(i.description)), 'no debe incluir el pago PSE');
   });
 });

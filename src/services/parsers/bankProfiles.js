@@ -323,6 +323,48 @@ export const PDF_PROFILES = [
       return { items, skipped };
     },
   },
+  {
+    // L.4b — RappiCard (tarjeta de crédito emitida por Davivienda). Tabla (pág. 2):
+    //   "Tarjeta Fecha Descripción facturado Cuotas pendiente Tasa..."
+    //   "Virtual  2026-05-05  NETFLIX  $29.900,00  $29.900,00  1 de 1 ..."
+    // Fecha ISO en la fila. Monto = 1ª col "Valor facturado del periodo" (compra
+    // completa, no la cuota del mes). Monto <= 0 → pago/abono/saldo a favor (PAGOS
+    // POR PSE) → se salta. Filas con descripción envuelta (la fila de datos queda
+    // sin texto entre fecha y $) → se reconstruye con la línea previa + siguiente.
+    id: 'rappicard',
+    name: 'RappiCard',
+    color: '#FF441B',
+    textColor: '#fff',
+    currency: 'COP',
+    detect(text) {
+      return /RappiCard|Producto emitido por Davivienda/i.test(text);
+    },
+    parse(text) {
+      const lines = String(text).split('\n');
+      const isDateRow = (s) => /\d{4}-\d{2}-\d{2}/.test(s);
+      const isBareAmount = (s) => /^\$?\s*-?[\d.,]+$/.test(s);
+      const items = [];
+      let skipped = 0;
+      for (let i = 0; i < lines.length; i++) {
+        const m = lines[i].match(/(\d{4}-\d{2}-\d{2})\s+(.*?)\$\s?(-?[\d.,]+)/);
+        if (!m) continue;
+        const date = m[1];
+        let description = m[2].trim();
+        const amount = parseMoney(m[3]);
+        if (!description) {
+          // Descripción envuelta: la fila de datos no trae texto. Toma líneas
+          // adyacentes que no sean otra fila de fecha ni un monto suelto.
+          description = [lines[i - 1], lines[i + 1]]
+            .map((s) => (s || '').trim())
+            .filter((s) => s && !isDateRow(s) && !isBareAmount(s))
+            .join(' ').trim();
+        }
+        if (!date || !(amount > 0)) { skipped++; continue; }
+        items.push({ date, description: description || 'Movimiento', amount: Math.abs(amount), type: 'expense' });
+      }
+      return { items, skipped };
+    },
+  },
 ];
 
 export function detectPdfBank(text, filename) {
