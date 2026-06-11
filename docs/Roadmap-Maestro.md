@@ -384,8 +384,34 @@ fecha/hora/tarjeta, crea la transacción como gasto en la cuenta correcta y la c
 **Deploy ✅ COMPLETO (2026-06-11):** `EmailCapture.gs` + `Code.gs` + `Utils.gs` desplegados,
 scope Gmail autorizado, `setupEmailCapture()` ejecutado (trigger 15 min), Settings
 configurados (cardmap/reglas/fallback). Reenvíos: RappiCard por filtro → script;
-Bancolombia llega directo (email predeterminado cambiado en el banco). **Sprint K
-operativo en producción; solo queda K.7 (verificar dedup con el próximo extracto).**
+Bancolombia y Global66 llegan directo (email predeterminado cambiado en cada app).
+**Sprint K operativo en producción; solo queda K.7 (verificar dedup con el próximo extracto).**
+
+**Extensión Global66 ✅ (2026-06-11, `9f2e663`):** Smart Card débito — `ecParseGlobal66_`
+(moneda del comercio COP/USD/EUR), descuenta de la cuenta Global66 vía cardmap (`7292`),
+sello FX en backend para divisas (getFxRates_ → amountBase/fxRateToBase/fxRateDate).
+Verificado en vivo: tx real creada + códigos de verificación y avisos de cuenta ignorados.
+
+---
+
+### Sprint L — Perfiles PDF de extractos (P2, nuevo 2026-06-11)
+
+**Diseño completo en `docs/Import-PDF-Perfiles.md`** (layouts reales analizados: Nu TC,
+Amex PESOS/DOLARES + XLSX, RappiCuenta). PDFs reales en `tests/fixtures/import/private/`
+(gitignored). Nu y RappiCuenta con contraseña → L.1 primero.
+
+| # | Tarea | Esf |
+|---|---|---|
+| L.1 | Password en `pdfParser.js` (`getDocument({password})` + `PasswordException`) + campo en `#/import` | S |
+| L.2 | Perfil RappiCuenta (formato US) + fixture sintético + tests — cierra F.5 | S |
+| L.3 | Amex: evaluar XLSX con `excelParser.js`; perfil solo "Nuevos movimientos", negativos=abono, sección USD | M |
+| L.4 | Perfil Nu TC: fecha en 2 líneas, cuotas (valor total en fecha de compra), ignorar sub-filas de mora | M |
+| L.5 | K.7: dedup contra tx `gm_` de email (normalización de descripción si hace falta) | S |
+| L.6 | Verificación en vivo con los PDFs reales (preview, 0 duplicados) | S |
+
+**Decisiones abiertas (dueño):** D1 cuotas→valor total (propuesto) · D2 pagos/abonos del
+extracto: saltar por defecto (propuesto) · D3 falta el PDF de la TARJETA RappiCard (el
+subido era RappiCuenta).
 
 **Criterio de aceptación:**
 - Una compra con RappiCard o Bancolombia aparece en Transacciones en ≤30 min, sin tocar la app,

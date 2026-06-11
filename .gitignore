@@ -16,3 +16,7 @@ AGENTS.md
 
 # Extractos reales para desarrollo local - NUNCA se commitean (datos personales)
 tests/fixtures/import/private/
+
+# Dev-only (npm install --no-save; cero deps en runtime)
+node_modules/
+package-lock.json
