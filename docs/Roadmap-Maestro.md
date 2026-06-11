@@ -402,16 +402,18 @@ Amex PESOS/DOLARES + XLSX, RappiCuenta). PDFs reales en `tests/fixtures/import/p
 
 | # | Tarea | Esf |
 |---|---|---|
-| L.1 | Password en `pdfParser.js` (`getDocument({password})` + `PasswordException`) + campo en `#/import` | S |
-| L.2 | Perfil RappiCuenta (formato US) + fixture sintético + tests — cierra F.5 | S |
+| L.1 ✅ | Password en `pdfParser.js` (`getDocument({password})` + `PdfPasswordError`) + fase "password" en `#/import` (reintento; contraseña solo en memoria) — `2ba3af6` | S |
+| L.2 ✅ | Perfil RappiCuenta (`PDF_PROFILES`/`detectPdfBank` por TEXTO, formato US, `toIsoEs`) + fixture sintético + test condicional contra el extracto real — cierra F.5 — `2ba3af6` | S |
 | L.3 | Amex: evaluar XLSX con `excelParser.js`; perfil solo "Nuevos movimientos", negativos=abono, sección USD | M |
-| L.4 | Perfil Nu TC: fecha en 2 líneas, cuotas (valor total en fecha de compra), ignorar sub-filas de mora | M |
+| L.4 | Perfil Nu TC (PDF): fecha en 2 líneas, cuotas (valor total en fecha de compra — D1 ✅), ignorar sub-filas de mora | M |
+| L.4b | Perfil RappiCard TC (PDF Davivienda, `00200001...CREDIT_CARD_STATEMENT.pdf`): filas `Virtual/- · YYYY-MM-DD · comercio · $valor · n de m`; comercio puede partirse en 2 líneas; negativos = pagos (saltar — D2 ✅) | M |
 | L.5 | K.7: dedup contra tx `gm_` de email (normalización de descripción si hace falta) | S |
-| L.6 | Verificación en vivo con los PDFs reales (preview, 0 duplicados) | S |
+| L.6 | Verificación en vivo con los PDFs reales en `#/import` (password + preview + 0 duplicados) | S |
 
-**Decisiones abiertas (dueño):** D1 cuotas→valor total (propuesto) · D2 pagos/abonos del
-extracto: saltar por defecto (propuesto) · D3 falta el PDF de la TARJETA RappiCard (el
-subido era RappiCuenta).
+**Decisiones del dueño (2026-06-11):** D1 ✅ cuotas → valor TOTAL en fecha de compra ·
+D2 ✅ pagos/abonos del extracto → saltarlos · D3 ✅ PDF de RappiCard TC subido
+(es de Davivienda; mismo password). Los 4 PDFs comparten contraseña (la conoce el dueño;
+no está escrita en ningún archivo del repo).
 
 **Criterio de aceptación:**
 - Una compra con RappiCard o Bancolombia aparece en Transacciones en ≤30 min, sin tocar la app,

@@ -49,6 +49,20 @@ desplegados por el dueño; scope Gmail autorizado; `setupEmailCapture()` ejecuta
 - **K.7**: el próximo import de extracto no debe duplicar compras ya capturadas por email.
 - Amex Bancolombia: confirmar si su PDF de extracto tiene contraseña.
 
+## 2ª parte de la sesión (tarde/noche)
+
+| Cambio | Impacto |
+|---|---|
+| Global66 Smart Card en EmailCapture (`9f2e663`, desplegado) | Compras débito Global66 entran solas, en la moneda del comercio (COP/USD/EUR) con tasa FX sellada; verificado en vivo |
+| Regla Servicios ampliada (`64ea7ce`) | ELECTRIFICADORA/ENERGIA/UNE TELCO categorizan solas |
+| Análisis de los 4 extractos reales + diseño Sprint L (`478a110`) | `docs/Import-PDF-Perfiles.md`: layouts Nu/Amex/RappiCuenta/RappiCard TC |
+| L.1: PDFs con contraseña (`2ba3af6`) | `#/import` pide la contraseña y reintenta; solo en memoria |
+| L.2: perfil RappiCuenta por texto (`2ba3af6`) | Primer perfil PDF nativo sin IA — cierra F.5; test contra el extracto real PASA |
+
+**Decisiones del dueño:** D1 cuotas→valor total · D2 pagos del extracto→saltar · D3 PDF RappiCard TC subido.
+**Pendiente del dueño:** pegar permisos en `.claude/settings.json` (bloqueado para el agente) · cardmap `7292` + reglas en hoja Settings.
+**Tests:** 251/251 · **SW:** v0.2.111.
+
 ## Próximas 5 tareas prioritarias
 
 1. **Soporte de PDFs con contraseña** en `pdfParser.js` (`getDocument({password})` +
