@@ -305,21 +305,21 @@ Ver §5.
 
 ---
 
-### Sprint I — QA en vivo + pulido v1.0 (P2/P3) 🟡 CASI COMPLETO (2026-06-10) · falta solo I.1 (QA en vivo)
+### Sprint I — QA en vivo + pulido v1.0 (P2/P3) ✅ COMPLETO (2026-06-10) · I.1 ejecutado con sesión real
 
 **Objetivo:** completar QA automatizado y cerrar P3 de presupuestos y documentación.
-**Estado:** I.2–I.5 ✅ (I.2/I.3 ya estaban hechos; I.4/I.5 esta sesión). **I.1 (Playwright en vivo) pendiente — requiere login OAuth del dueño.**
+**Estado:** I.1–I.5 ✅. I.1 ejecutado 2026-06-10 con la sesión OAuth real del dueño (GIS silent refresh en el browser Playwright): 16 rutas (15 + `#/fire`) × desktop/375px × light/dark = 64 combinaciones, **0 errores JS · 0 fallos de red** (solo warning GSI/FedCM benigno). Hallazgos visuales menores registrados como **TD-55/TD-56** (overflow horizontal a 375px en budgets/goals y transactions/exports).
 
 | # | Tarea | ID origen | Archivo | Esf | Deploy |
 |---|---|---|---|---|---|
-| I.1 🔴 | Re-lanzar Playwright: 15 rutas, responsive 375px, dark/light, sin errores JS/red | QA (pendiente) | — | M | — |
+| I.1 ✅ | Re-lanzar Playwright: 15 rutas, responsive 375px, dark/light, sin errores JS/red — **PASS 2026-06-10** (64 combinaciones, 0 errores; TD-55/56 visuales) | QA en vivo | — | M | — |
 | I.2 ✅ | Proyección de presupuesto: no proyecta cuando `day ≤ 3` (`projected = day>3 ? (consumed/day)*diasMes : consumed`) | TD-36 | `src/store/selectors.js:424-432` | S | — |
 | I.3 ✅ | Solapamiento de presupuestos: `(categoryId, period, periodKey)` único, error inline | TD-37 | `src/views/budgets.js:105-113` | S | — |
 | I.4 ✅ | Housekeeping `TechnicalDebt.md`: TD-11 marcado resuelto (SyncPill); TD-54 nota de mitigación actualizada (banner fxGaps) | housekeeping | `docs/TechnicalDebt.md` | S | — |
 | I.5 ✅ | `PROJECT_HANDOFF.md` + roadmap + checklist v1.0 al estado real | docs | `docs/` | S | — |
 
 **Criterio de aceptación:**
-- 🔴 Playwright 15/15 sin errores JS, 375px, dark/light — **pendiente (I.1)**.
+- ✅ Playwright 15/15 sin errores JS, 375px, dark/light — **PASS (I.1, 2026-06-10)**.
 - ✅ No hay bug P0/P1 abierto en el código (los únicos abiertos son TD-54 P2 y verificaciones en vivo).
 
 ---
@@ -365,12 +365,12 @@ Ver §5.
 - [x] `getTransactions` paginado; cold-start aceptable con histórico grande — BE-006 / Sprint G ✅ desplegado
 - [x] `iss`/`exp` validados en el backend — SEC-002 / R5
 - [x] Tests ≥ 120 (cubrir FX, ventas parciales, amortización, cuentas remuneradas) — **155/155**
-- [ ] QA en vivo (Playwright) sin errores JS en las 15 rutas, responsive y temas OK — **Sprint I.1 pendiente (requiere login)**
+- [x] QA en vivo (Playwright) sin errores JS en las 15 rutas, responsive y temas OK — **I.1 PASS 2026-06-10 (sesión real)**
 - [x] Sin bugs P0/P1 abiertos en el código (único abierto: TD-54 P2 — tx divisa extranjera en cashflow/presupuestos)
 - [x] `TechnicalDebt.md` al día (todos los TD resueltos marcados ✅) — I.4
 - [x] `PROJECT_HANDOFF.md` sincronizado con el estado real del repo — I.5
 
-> **Estado v1.0:** todos los criterios cumplidos salvo **I.1 (QA en vivo con Playwright)** y el **Sprint F (Import/Export)**, que no es bloqueante para el núcleo financiero. Falta también la conversión por tasa histórica de TD-54 (P2).
+> **Estado v1.0:** ✅ **TODOS los criterios cumplidos** (2026-06-10). I.1 PASS con sesión real · Sprint F ✅ · TD-54 ✅ desplegado. Quedan opcionales: J.3 (Groq) y TD-55/56 (visual P3).
 
 ---
 

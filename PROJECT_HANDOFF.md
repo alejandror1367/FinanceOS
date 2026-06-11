@@ -53,11 +53,11 @@ Centraliza: patrimonio neto, presupuestos, flujo de caja, inversiones, metas, de
 | Selectors CDT | ✅ `investmentsValue` y `positionValue` usan `cdtCurrentValue` para CDTs |
 | Roadmap-Maestro.md | ✅ Fuente única de planificación — consolida 4 roadmaps + TechnicalDebt |
 | Sprints A–E, G, H (2026-06-10) | ✅ FX desplegado · ventas parciales · WCAG AA · cuentas remuneradas (desplegado) · deudas/metas · backend perf (cursor desplegado) · charts/bottom-nav |
-| Sprint I (2026-06-10) | 🟡 I.2–I.5 ✅ · I.1 (QA Playwright en vivo) pendiente de login |
+| Sprint I (2026-06-10) | ✅ I.1–I.5 — I.1 PASS con sesión real: 16 rutas × desktop/375px × light/dark, 0 errores JS/red (TD-55/56 visuales P3) |
 | TD-39 recurrentes automáticos | ✅ `recurringService` materializa vencidos al cargar — `d37a938` |
 | App-lock J.4 + J.4b | ✅ PIN (PBKDF2) + huella/Face ID (WebAuthn) — `53083b3` · `57ac36c` |
 | Cuentas remuneradas ampliadas | ✅ `YIELD_TYPES`: savings · bank · digital_wallet · investment — `461c156` |
-| Pendiente | J.3 (Groq, opcional) · I.1 (QA login) · verificaciones en vivo — Sprint F ✅ · TD-54 ✅ · J.5 ✅ |
+| Pendiente | J.3 (Groq, opcional) · TD-55/56 (visual P3) — Sprint F ✅ · TD-54 ✅ · J.5 ✅ · I.1 ✅ · verificaciones en vivo ✅ (2026-06-10) |
 
 ---
 
@@ -705,7 +705,7 @@ commit: 4d0387e · rama: main · SW: v0.2.105 · config.version: 0.2.105 · test
 - **Backend Apps Script:** ✅ **Al día** — Sprint A/D/G y TD-54 (`Config.gs`+`Transactions.gs`+`Reports.gs`+`setupDatabase()`, columnas amountBase/fxRateToBase/fxRateDate) desplegados 2026-06-10.
 - **Tests:** **205** — 168 selectors + 13 recurring + 24 import (`node --test tests/selectors.test.js tests/recurring.test.js tests/import.test.js`)
 - **Roadmap activo:** `docs/Roadmap-Maestro.md` ← FUENTE ÚNICA. Reemplaza todos los roadmaps anteriores.
-- **Plan Opus (R0–R8):** R0–R5 ✅ · **Sprints A–H ✅ (todos)** · **Sprint I 🟡** (falta I.1 QA login) · **J 🟡** (falta J.3 Groq · J.5 ✅ documentado 2026-06-10) · **TD-54 ✅ desplegado**.
+- **Plan Opus (R0–R8):** R0–R5 ✅ · **Sprints A–I ✅ (todos, incl. I.1 QA en vivo PASS)** · **J 🟡** (falta J.3 Groq · J.5 ✅ documentado 2026-06-10) · **TD-54 ✅ desplegado** · **v1.0: criterios 16/16 ✅**.
 
 ### Deploy — ✅ Todo en producción (2026-06-10)
 `Quotes.gs` · `Code.gs` · `Reports.gs` (FX + TD-54) · `Config.gs` (`lastYieldDate` + columnas FX) · `Transactions.gs` (G.7 cursor + TD-54). `setupDatabase()` ejecutado para `amountBase`/`fxRateToBase`/`fxRateDate`.
@@ -728,10 +728,9 @@ Flujo: `Views → Services → Store → Views` (never direct to net/IndexedDB f
 - Seguridad: `logAccessDenied_` rate-limit · `iss`/`exp` validados · `importMaxChars` configurable
 
 ### Bugs abiertos
-- 🟡 Verificación en vivo snapshots nuevo formato (priceService values) — pendiente Playwright con login
-- 🟡 Verificación en vivo FX: aviso de exclusión en Inversiones + `getFxRates` responde — pendiente Playwright con login (deploy ✅ hecho)
-- 🟡 Verificación en vivo app-lock J.4/J.4b (overlay PIN + huella) — pendiente login; PBKDF2 y WebAuthn (UVPA disponible) validados en navegador
-- 🟡 Verificación en vivo recurrentes TD-39 (materialización al cargar) — pendiente login; lógica pura con 13 tests
+- ✅ Verificaciones en vivo COMPLETADAS (2026-06-10, Playwright + JWT de prueba/IndexedDB + sesión real): snapshots desglose 6 campos · banner FX (Inversiones + Dashboard) · modal Registrar rendimiento (saldo promedio + aviso investment) · app-lock PIN/huella (overlay pre-mount, 5 intentos, UVPA) · recurrentes TD-39 (id determinista `rec_{id}_{fecha}`) · bottom-nav 375px (5 ítems) · import "Formato no reconocido" elegante. Limpieza verificada: 0 residuos `qa_test_`, syncQueue 0, token real restaurado.
+- 🟡 TD-55 (P3): `.row__actions` desborda viewport a 375px en Presupuestos/Metas (scroll lateral ~125px)
+- 🟡 TD-56 (P3): `.topbar__actions` sobresale 2–4px a 375px en Transacciones/Exportaciones
 
 ### Pendientes en orden — ROADMAP-MAESTRO (Sprints A–J)
 > Detalle completo: `docs/Roadmap-Maestro.md`.
@@ -742,11 +741,11 @@ Flujo: `Views → Services → Store → Views` (never direct to net/IndexedDB f
 5. ~~Sprint E — Deudas y Metas~~ ✅ 2026-06-10 (`goalSavingsSplit` + tests; resto previo) — `ee27d5b`
 6. ~~Sprint G — Backend perf~~ ✅ 2026-06-10 (G.1–G.6 previo · G.7 cursor `bdde64a` · deploy ✅)
 7. ~~Sprint H — Charts responsive~~ ✅ 2026-06-10 (H.3 bottom-nav `82b913a`; H.1/H.2 previo)
-8. ~~Sprint I — QA + v1.0~~ 🟡 2026-06-10 (I.2–I.5 ✅; **I.1 Playwright en vivo pendiente de login**)
+8. ~~Sprint I — QA + v1.0~~ ✅ 2026-06-10 (I.1 PASS en vivo con sesión real: 64 combinaciones, 0 errores JS/red)
 9. ~~Sprint F — Import/Export~~ ✅ 2026-06-10 (auditoría + F.1–F.4/F.6 `30d9c9b`/`b85427f`; F.5 diferido sin muestra)
 10. ~~TD-54 — FX histórica en tx~~ ✅ 2026-06-10 (Codex + escritor `0e5841f` · deploy ✅)
 11. **Sprint J — restante**: J.3 narrativa Groq (J.5 ✅ 2º email confirmado del dueño y documentado en `Config.gs` 2026-06-10 · XIRR/CAGR ✅ · J.2 ✅ · J.4 PIN ✅ `53083b3` · J.4b huella ✅ `57ac36c` · TD-39 ✅ `d37a938`)
-12. **I.1 — QA Playwright en vivo** (requiere login) + verificaciones acumuladas
+12. ~~I.1 — QA Playwright en vivo + verificaciones acumuladas~~ ✅ 2026-06-10 (sesión real del dueño vía GIS silent refresh en el browser Playwright; reportes A–H PASS + I.1 PASS; TD-55/56 registrados)
 
 ### Riesgos abiertos
 - `analyzePortfolio` (J.3, si se hace) NO debe tomar LockService → congelaría la cola de sync

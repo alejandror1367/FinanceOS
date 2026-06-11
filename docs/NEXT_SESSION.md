@@ -49,12 +49,14 @@ PENDIENTES EN ORDEN:
    categoría = alerta) · F.4 validar montos cero/negativos antes del preview ·
    F.5 perfil RappiCuenta en bankProfiles.js · F.6 export por período desde/hasta.
 
-2. I.1 — QA Playwright en vivo (requiere LOGIN del dueño en el browser Playwright):
-   15 rutas · 375px · dark/light · 0 errores JS/red. Único criterio v1.0 sin marcar.
+2. I.1 ✅ PASS 2026-06-10 — QA en vivo con sesión real (GIS silent refresh en browser
+   Playwright): 16 rutas × desktop/375px × light/dark = 64 combinaciones, 0 errores
+   JS, 0 fallos de red. v1.0: criterios completos. Hallazgos visuales → TD-55/TD-56.
 
-3. Verificaciones en vivo acumuladas (mismo login): snapshots formato nuevo · avisos
-   FX en Inversiones · modal Registrar rendimiento · app-lock PIN/huella · recurrentes
-   automáticos · bottom-nav 375px.
+3. Verificaciones en vivo acumuladas ✅ COMPLETADAS 2026-06-10 (técnica JWT de prueba +
+   IndexedDB + sesión real): snapshots 6 campos · banner FX · modal rendimiento ·
+   app-lock PIN/huella · recurrentes TD-39 · bottom-nav 375px · import robusto.
+   Limpieza verificada (0 residuos qa_test_, syncQueue 0, token restaurado).
 
 4. J.5 ✅ RESUELTO 2026-06-10 — alejandrorr1367@gmail.com confirmado como cuenta
    alternativa del dueño; documentado en backend/Config.gs (solo comentario, sin deploy).

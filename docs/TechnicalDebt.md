@@ -168,6 +168,17 @@ La deuda se concentra en **tres temas de fondo**: (1) **modelo contable** (el le
 
 ---
 
+## TD nuevos — QA I.1 en vivo 2026-06-10 (TD-55, TD-56)
+
+### P3 · Baja (visual/responsive; no afectan cifras ni funcionalidad)
+
+| ID | Problema | Origen | Impacto | Esf | Estado |
+|----|----------|--------|---------|-----|--------|
+| TD-55 | **`.row__actions` (≈307px) desborda el viewport a 375px** en Presupuestos y Metas — `document.scrollWidth` llega a 500px (125px de scroll lateral). Los botones de acción de fila no colapsan en móvil | QA I.1 (Playwright, prod v0.2.108) | Scroll horizontal accidental en móvil; acciones de fila parcialmente fuera de pantalla | S | Pendiente. Colapsar acciones en menú contextual o `flex-wrap`/ocultar labels bajo 480px (`components.css`). Evidencia: `verify-I1-budgets-375-light-overflow.png` |
+| TD-56 | **`.topbar__actions` (164px) sobresale 2–4px del viewport a 375px** en Transacciones y Exportaciones (`scrollWidth` 377–379px) | QA I.1 (Playwright, prod v0.2.108) | Micro-scroll lateral; cosmético | S | Pendiente. Revisar padding/gap del topbar en breakpoint móvil (`layout.css`) |
+
+---
+
 ## Documentos relacionados
 
 - `docs/Audit.md` · `docs/Audit-Financiero.md` · `docs/Audit-Frontend.md` · `docs/Audit-Backend.md`
