@@ -7,15 +7,16 @@ import { store } from '../store/store.js';
 import { dataService } from '../services/dataService.js';
 import { formatMoney, formatDate } from '../utils/format.js';
 import { isExpenseLike } from '../store/selectors.js';
-import { Button, EmptyState } from '../components/ui.js';
-import { openModal, confirmDialog } from '../components/modal.js';
+import { Button, EmptyState, ProgressBar, Fab } from '../components/ui.js';
+import { openModal, confirmDialog, openActionSheet } from '../components/modal.js';
 import { field, textInput, numberInput, textarea, select, segmented, setFieldError, focusFieldError } from '../components/forms.js';
 import { toast } from '../services/toast.js';
 import { guardedOp, guardedSave } from '../components/crud.js';
 
 // Estado de filtro a nivel de módulo (persiste entre re-renders).
 function currentMonth() { return new Date().toISOString().slice(0, 7); }
-const FILTER = { q: '', type: 'all', accountId: 'all', month: currentMonth(), categoryId: 'all' };
+const PAGE_SIZE = 50; // R1: paginación — antes se renderizaba TODO el historial
+const FILTER = { q: '', type: 'all', accountId: 'all', month: currentMonth(), categoryId: 'all', limit: PAGE_SIZE };
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -171,9 +172,9 @@ function groupNet(txList, m, cur) {
   return formatMoney(net, cur, { signed: true });
 }
 
-// ---------- Resumen de filtro ----------
-function buildSummary(filtered, m, cur) {
-  if (!filtered.length) return '';
+// ---------- Resumen vivo del filtro (R1): barras ingresos/gastos + neto ----------
+function buildFlowSummary(filtered, m, cur) {
+  if (!filtered.length) return null;
   const debtIds = new Set(
     Object.values(m.acc).filter((a) => a.type === 'credit_card').map((a) => a.id),
   );
@@ -183,8 +184,26 @@ function buildSummary(filtered, m, cur) {
     else if (isExpenseLike(t, debtIds)) expense += t.amount;
   }
   const net = income - expense;
+  const max = Math.max(income, expense, 1);
   const count = filtered.length === 1 ? '1 transacción' : `${filtered.length} transacciones`;
-  return `${count} · ${formatMoney(net, cur, { signed: true })} neto`;
+  const bar = (label, value, pct, variant) => el('div', { class: 'dash-flow__item' }, [
+    el('div', { class: 'dash-flow__top' }, [
+      el('span', { class: 't-caption', text: label }),
+      el('span', { class: 'tabular dash-flow__amt', text: formatMoney(value, cur) }),
+    ]),
+    ProgressBar(pct, variant, { ariaLabel: label }),
+  ]);
+  return el('div', { class: 'card card--pad-sm tx-flow' }, [
+    el('div', { class: 'dash-flow' }, [
+      bar('Ingresos', income, (income / max) * 100, 'positive'),
+      bar('Gastos', expense, (expense / max) * 100, 'negative'),
+      el('div', { class: 'dash-flow__net' }, [
+        el('span', { class: 't-caption', text: count }),
+        el('span', { class: `tabular dash-flow__netval ${net >= 0 ? 'text-positive' : 'text-negative'}`,
+          text: formatMoney(net, cur, { signed: true }) }),
+      ]),
+    ]),
+  ]);
 }
 
 // ---------- Actualizar opciones de <select> sin recrear el elemento ----------
@@ -193,6 +212,18 @@ function updateOpts(selectEl, opts) {
   selectEl.replaceChildren(...opts.map((o) =>
     el('option', { value: o.value, selected: String(o.value) === String(cur) ? true : null, text: o.label })
   ));
+}
+
+// ---------- Acciones de una transacción (compartidas: iconos desktop + sheet móvil) ----------
+function txActions(t) {
+  return [
+    { label: 'Editar', iconName: 'edit', onClick: () => openTxModal({ tx: t, mode: 'edit' }) },
+    { label: 'Duplicar', iconName: 'copy', onClick: () => openTxModal({ tx: { ...t, id: undefined, date: today() }, mode: 'create' }) },
+    { label: 'Eliminar', iconName: 'trash', danger: true, onClick: () => confirmDialog({
+      title: 'Eliminar transacción', message: '¿Eliminar esta transacción?',
+      onConfirm: () => guardedOp(() => dataService.remove('transactions', t.id), 'Transacción eliminada', 'Error al eliminar'),
+    }) },
+  ];
 }
 
 // ---------- Fila ----------
@@ -213,25 +244,26 @@ function txRow(t, m, cur) {
     ? `${isDebtPayment ? 'Pago deuda' : 'Transferencia'} · ${acc ? acc.name : '?'} → ${toAcc ? toAcc.name : '?'} · ${formatDate(t.date, 'short')}`
     : `${label} · ${acc ? acc.name : ''} · ${formatDate(t.date, 'short')}`;
 
-  return el('div', { class: 'row' }, [
+  const actions = txActions(t);
+
+  // R1 móvil: la fila completa abre un bottom sheet (los 3 icon-btn quedan ocultos por CSS).
+  return el('div', { class: 'row tx-row', on: { click: (e) => {
+    if (!window.matchMedia('(max-width: 920px)').matches) return;
+    if (e.target.closest('button, a')) return;
+    openActionSheet({ title: t.description || label, actions });
+  } } }, [
     el('div', { class: 'row__avatar', html: icon(iconName) }),
     el('div', { class: 'row__main' }, [
       el('div', { class: 'row__title', text: t.description || label }),
       el('div', { class: 'row__sub', text: subLabel }),
     ]),
     el('div', { class: `row__amount ${cls}`, text: `${sign}${formatMoney(t.amount, t.currency || cur)}` }),
-    el('div', { class: 'row__actions' }, [
-      el('button', { class: 'icon-btn', 'aria-label': 'Editar', title: 'Editar', on: { click: () => openTxModal({ tx: t, mode: 'edit' }) }, html: icon('edit') }),
-      el('button', { class: 'icon-btn', 'aria-label': 'Duplicar', title: 'Duplicar', on: { click: () => openTxModal({ tx: { ...t, id: undefined, date: today() }, mode: 'create' }) }, html: icon('copy') }),
+    el('div', { class: 'row__actions' }, actions.map((a) =>
       el('button', {
-        class: 'icon-btn icon-btn--danger', 'aria-label': 'Eliminar', title: 'Eliminar',
-        on: { click: () => confirmDialog({
-          title: 'Eliminar transacción', message: '¿Eliminar esta transacción?',
-          onConfirm: () => guardedOp(() => dataService.remove('transactions', t.id), 'Transacción eliminada', 'Error al eliminar'),
-        }) },
-        html: icon('trash'),
-      }),
-    ]),
+        class: `icon-btn${a.danger ? ' icon-btn--danger' : ''}`,
+        'aria-label': a.label, title: a.label,
+        on: { click: a.onClick }, html: icon(a.iconName),
+      }))),
   ]);
 }
 
@@ -239,7 +271,7 @@ function txRow(t, m, cur) {
 export function renderTransactions() {
   const root = el('div');
   const listMount = el('div');
-  const summaryEl = el('p', { class: 'tx-summary' });
+  const summaryMount = el('div');
 
   const searchEl = textInput({ name: 'q', value: FILTER.q, placeholder: 'Buscar…' });
   const monthEl = textInput({ name: 'fmonth', value: FILTER.month, type: 'month' });
@@ -253,11 +285,13 @@ export function renderTransactions() {
   const accEl = select({ name: 'facc', value: FILTER.accountId, options: [] });
   const catEl = select({ name: 'fcat', value: FILTER.categoryId, options: [] });
 
-  searchEl.addEventListener('input', () => { FILTER.q = searchEl.value; paint(); });
-  monthEl.addEventListener('change', () => { FILTER.month = monthEl.value; paint(); });
-  typeEl.addEventListener('change', () => { FILTER.type = typeEl.value; FILTER.categoryId = 'all'; paint(); });
-  accEl.addEventListener('change', () => { FILTER.accountId = accEl.value; paint(); });
-  catEl.addEventListener('change', () => { FILTER.categoryId = catEl.value; paint(); });
+  // Todo cambio de filtro reinicia la paginación (R1).
+  const resetAndPaint = () => { FILTER.limit = PAGE_SIZE; paint(); };
+  searchEl.addEventListener('input', () => { FILTER.q = searchEl.value; resetAndPaint(); });
+  monthEl.addEventListener('change', () => { FILTER.month = monthEl.value; resetAndPaint(); });
+  typeEl.addEventListener('change', () => { FILTER.type = typeEl.value; FILTER.categoryId = 'all'; resetAndPaint(); });
+  accEl.addEventListener('change', () => { FILTER.accountId = accEl.value; resetAndPaint(); });
+  catEl.addEventListener('change', () => { FILTER.categoryId = catEl.value; resetAndPaint(); });
 
   function paint() {
     const s = store.get();
@@ -280,21 +314,35 @@ export function renderTransactions() {
     });
     const filtered = applyFilters(all, m);
 
-    // Línea de resumen (TX-4)
-    summaryEl.textContent = buildSummary(filtered, m, cur);
+    // Resumen vivo con barras (R1) — totales sobre TODO el filtro, no la página.
+    mount(summaryMount, buildFlowSummary(filtered, m, cur) || el('span'));
+
+    // Paginación (R1): renderiza hasta FILTER.limit filas.
+    const visible = filtered.slice(0, FILTER.limit);
+    const remaining = filtered.length - visible.length;
 
     // Lista agrupada por fecha (TX-1)
-    const groups = groupByDate(filtered);
+    const groups = groupByDate(visible);
     const content = filtered.length
-      ? el('div', { class: 'card card--pad-sm' }, [
-          el('div', { class: 'row-list' }, [...groups.entries()].flatMap(([date, txs]) => [
-            el('div', { class: 'tx-date-header' }, [
-              el('span', { class: 'tx-date-label', text: dateGroupLabel(date) }),
-              el('span', { class: 'tx-date-total', text: groupNet(txs, m, cur) }),
-            ]),
-            ...txs.map((t) => txRow(t, m, cur)),
-          ])),
-        ])
+      ? el('div', {}, [
+          el('div', { class: 'card card--pad-sm' }, [
+            el('div', { class: 'row-list' }, [...groups.entries()].flatMap(([date, txs]) => [
+              el('div', { class: 'tx-date-header' }, [
+                el('span', { class: 'tx-date-label', text: dateGroupLabel(date) }),
+                el('span', { class: 'tx-date-total', text: groupNet(txs, m, cur) }),
+              ]),
+              ...txs.map((t) => txRow(t, m, cur)),
+            ])),
+          ]),
+          remaining > 0
+            ? el('div', { class: 'tx-loadmore' }, [
+                Button(`Cargar más (${remaining} restante${remaining === 1 ? '' : 's'})`, {
+                  variant: 'ghost',
+                  onClick: () => { FILTER.limit += PAGE_SIZE; paint(); },
+                }),
+              ])
+            : null,
+        ].filter(Boolean))
       : el('div', { class: 'card' }, [EmptyState({
           title: all.length ? 'Sin resultados' : 'Sin transacciones',
           message: all.length ? 'Ajusta la búsqueda o los filtros.' : 'Registra tu primer movimiento.',
@@ -310,18 +358,22 @@ export function renderTransactions() {
           el('h2', { class: 't-h1', text: 'Transacciones' }),
           el('p', { class: 'page-header__sub', text: 'Ingresos, gastos y transferencias.' }),
         ]),
-        Button('Nueva transacción', { variant: 'primary', iconName: 'plus', onClick: () => openTxModal({ mode: 'create' }) }),
+        el('div', { class: 'u-hide-mobile' }, [
+          Button('Nueva transacción', { variant: 'primary', iconName: 'plus', onClick: () => openTxModal({ mode: 'create' }) }),
+        ]),
       ]),
     ]),
-    el('div', { class: 'toolbar' }, [
+    // R1: barra de filtros sticky (clase filterbar de R0.5)
+    el('div', { class: 'toolbar filterbar' }, [
       el('div', { class: 'search' }, [el('span', { class: 'search__icon', html: icon('search') }), searchEl]),
       monthEl,
       typeEl,
       accEl,
       catEl,
     ]),
-    summaryEl,
+    summaryMount,
     listMount,
+    Fab('Nueva transacción', { onClick: () => openTxModal({ mode: 'create' }) }),
   );
 
   paint();

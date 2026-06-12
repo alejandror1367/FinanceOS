@@ -202,6 +202,7 @@ details[open] .kpi__dchev { transform: rotate(180deg); }
 /* ---------- Progress ---------- */
 .progress { height: 8px; border-radius: var(--radius-full); background: var(--bg-surface-2); overflow: hidden; }
 .progress__bar { height: 100%; border-radius: var(--radius-full); background: var(--accent); transition: width var(--dur-slow) var(--ease-out); }
+.progress__bar--positive { background: var(--positive); }
 .progress__bar--warning { background: var(--warning); }
 .progress__bar--negative { background: var(--negative); }
 .progress__bar--gold { background: var(--gold); }
@@ -676,6 +677,33 @@ body.modal-open { overflow: hidden; }
 
 /* Transacciones — resumen de filtro */
 .tx-summary { font-size: var(--fs-caption); color: var(--text-secondary); margin-bottom: var(--space-3); min-height: 1em; }
+
+/* ---- R1: resumen vivo + paginación + sheet móvil en Transacciones ---- */
+.tx-flow { margin-bottom: var(--space-4); }
+.tx-loadmore { display: flex; justify-content: center; margin-top: var(--space-4); }
+@media (max-width: 920px) {
+  /* Acciones por fila → bottom sheet (la fila completa es tappable) */
+  .tx-row .row__actions { display: none; }
+  .tx-row { cursor: pointer; }
+}
+
+/* ---- R1: quick-add de la vista Hoy (solo móvil — en desktop está el CTA) ---- */
+.today-quick { display: none; }
+@media (max-width: 920px) {
+  .today-quick { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); margin-top: var(--space-4); }
+  .today-quick__btn {
+    display: flex; align-items: center; justify-content: center; gap: var(--space-2);
+    padding: var(--space-4);
+    border-radius: var(--radius-md);
+    font-size: var(--fs-body); font-weight: var(--fw-semibold);
+    border: 1px solid var(--border-subtle);
+    transition: background var(--dur-fast) var(--ease-out);
+  }
+  .today-quick__btn svg { width: 18px; height: 18px; }
+  .today-quick__btn--expense { background: var(--negative-bg); color: var(--negative); }
+  .today-quick__btn--income  { background: var(--positive-bg); color: var(--positive); }
+  .today-quick__btn:active { filter: brightness(1.15); }
+}
 
 /* ---------- Vista FIRE — inputs y tabla de sensibilidad ---------- */
 .fire-inputs__grid {

@@ -1,13 +1,15 @@
 // views/today.js — vista "Hoy": copiloto financiero diario.
-// Composición reactiva sobre selectores + acceso rápido a nuevo movimiento.
+// Rediseño fintech R1: héroe con semáforo integrado, quick-add móvil y
+// "Para hoy" accionable (registrar pago / aportar a meta sin salir de la vista).
 
 import { el, mount } from '../utils/dom.js';
 import { icon } from '../utils/icons.js';
 import { store } from '../store/store.js';
 import { selectors } from '../store/selectors.js';
 import { formatMoney, relativeDay } from '../utils/format.js';
-import { Card, KpiCard, Badge, ProgressBar, EmptyState, Button } from '../components/ui.js';
+import { Card, Badge, ProgressBar, EmptyState, Button, HeroCard, Fab } from '../components/ui.js';
 import { openTxModal } from './transactions.js';
+import { openContributeModal } from './goals.js';
 import { dismiss, isDismissed, clearStale } from '../services/dismissService.js';
 
 function rowItem(iconName, title, sub, amount, cls) {
@@ -44,10 +46,7 @@ function buildInsight(s) {
 
 const HEALTH_LABEL   = { green: 'Todo en orden', yellow: 'Atención', red: 'Acción requerida' };
 const HEALTH_VARIANT = { green: 'positive',       yellow: 'warning',  red: 'negative' };
-const HEALTH_ICON    = { green: 'check',           yellow: 'bell',     red: 'bell' };
 const ACTION_ICON    = { payment: 'calendar', budget: 'budgets', goal: 'goals' };
-const ACTION_CTA     = { payment: 'Abonar',   budget: 'Ver',     goal: 'Aportar' };
-const ACTION_HREF    = { payment: '#/debts',  budget: '#/budgets', goal: '#/goals' };
 
 export function renderToday() {
   const root = el('div');
@@ -59,23 +58,45 @@ export function renderToday() {
     const accMap = {}; (s.accounts || []).forEach((a) => { accMap[a.id] = a; });
     const catMap = {}; (s.categories || []).forEach((c) => { catMap[c.id] = c; });
 
-    // ── KPIs ─────────────────────────────────────────────────────────────────
+    // ── Datos del día ─────────────────────────────────────────────────────────
     const liquidity  = selectors.totalLiquidity(s);
     const savings    = selectors.monthlySavings(s);
     const todayKey   = new Date().toISOString().slice(0, 10);
     const todays     = (s.transactions || []).filter((t) => String(t.date).slice(0, 10) === todayKey);
     const todayNet   = todays.reduce((sum, t) => sum + (t.type === 'income' ? t.amount : t.type === 'expense' ? -t.amount : 0), 0);
+    const health     = selectors.dailyHealth(s);
 
-    const kpis = el('div', { class: 'grid grid--kpi' }, [
-      KpiCard({ label: 'Saldo disponible', value: formatMoney(liquidity, cur), iconName: 'wallet', variant: 'accent', hero: true,
-        foot: [el('span', { class: 't-caption', text: `${selectors.liquidAccounts(s).length} cuentas` })] }),
-      KpiCard({ label: 'Hoy', value: formatMoney(todayNet, cur, { signed: true }), iconName: 'today', variant: 'neutral',
-        foot: [el('span', { class: 't-caption', text: `${todays.length} movimiento${todays.length !== 1 ? 's' : ''}` })] }),
-      KpiCard({ label: 'Ahorro del mes', value: formatMoney(savings, cur), iconName: 'networth', variant: savings >= 0 ? 'emerald' : 'negative' }),
+    // ── Héroe: saldo disponible + semáforo integrado ─────────────────────────
+    const heroCard = HeroCard({
+      label: 'Saldo disponible',
+      iconName: 'wallet',
+      value: formatMoney(liquidity, cur),
+      trendRow: [
+        Badge(HEALTH_LABEL[health.status], HEALTH_VARIANT[health.status]),
+        health.reasons.length
+          ? el('span', { class: 't-caption', text: health.reasons.join(' · ') })
+          : el('span', { class: 't-caption', text: `${selectors.liquidAccounts(s).length} cuentas líquidas` }),
+      ],
+      split: [
+        { label: 'Hoy', value: formatMoney(todayNet, cur, { signed: true }), cls: todayNet < 0 ? 'text-negative' : todayNet > 0 ? 'text-positive' : '' },
+        { label: 'Ahorro del mes', value: formatMoney(savings, cur, { compact: true }), cls: savings < 0 ? 'text-negative' : 'text-positive' },
+        { label: 'Movimientos hoy', value: String(todays.length) },
+      ],
+    });
+
+    // ── Quick-add móvil: gasto / ingreso a un toque ──────────────────────────
+    const quickAdd = el('div', { class: 'today-quick' }, [
+      el('button', { class: 'today-quick__btn today-quick__btn--expense', type: 'button',
+        on: { click: () => openTxModal({ tx: { type: 'expense' }, mode: 'create' }) } }, [
+        el('span', { html: icon('arrowDown') }), el('span', { text: 'Gasto' }),
+      ]),
+      el('button', { class: 'today-quick__btn today-quick__btn--income', type: 'button',
+        on: { click: () => openTxModal({ tx: { type: 'income' }, mode: 'create' }) } }, [
+        el('span', { html: icon('arrowUp') }), el('span', { text: 'Ingreso' }),
+      ]),
     ]);
 
-    // ── Semáforo + Insight + Progreso del mes ─────────────────────────────────
-    const health   = selectors.dailyHealth(s);
+    // ── Insight + progreso del mes ───────────────────────────────────────────
     const progress = selectors.monthProgress(s);
     const insight  = buildInsight(s);
 
@@ -91,17 +112,8 @@ export function renderToday() {
         ? ` · ${formatMoney(progress.monthlyExpense, cur, { compact: true })} de ${formatMoney(progress.totalBudget, cur, { compact: true })}`
         : '');
 
-    const healthCard = Card({
+    const pulseCard = Card({
       body: el('div', { class: 'today-health-body' }, [
-        el('div', { class: 'row-flex between' }, [
-          el('div', { class: 'row-flex' }, [
-            el('span', { class: 'today-health-icon', html: icon(HEALTH_ICON[health.status]) }),
-            Badge(HEALTH_LABEL[health.status], HEALTH_VARIANT[health.status]),
-          ]),
-          health.reasons.length
-            ? el('span', { class: 't-caption text-secondary', text: health.reasons.join(' · ') })
-            : null,
-        ].filter(Boolean)),
         insight ? el('p', { class: 'today-insight', text: insight }) : null,
         el('div', { class: 'today-progress' }, [
           ProgressBar(progressPct, progressVariant),
@@ -110,8 +122,24 @@ export function renderToday() {
       ].filter(Boolean)),
     });
 
-    // ── Para hoy ─────────────────────────────────────────────────────────────
+    // ── Para hoy — accionable (R1): registrar pago / ver presupuesto / aportar ─
     const items = selectors.actionItems(s);
+
+    function actionCta(item) {
+      if (item.type === 'payment' && item.raw) {
+        const r = item.raw;
+        return Button('Registrar', { variant: 'ghost', size: 'sm', onClick: () => openTxModal({
+          tx: { type: r.type || 'expense', amount: r.amount, accountId: r.accountId,
+                categoryId: r.categoryId, description: r.description },
+          mode: 'create',
+        }) });
+      }
+      if (item.type === 'goal' && item.raw) {
+        return Button('Aportar', { variant: 'ghost', size: 'sm', onClick: () => openContributeModal(item.raw) });
+      }
+      return el('a', { class: 'btn btn--ghost btn--sm', href: '#/budgets', text: 'Ver →' });
+    }
+
     const paraHoyCard = Card({
       title: 'Para hoy',
       action: items.length ? Badge(String(items.length), 'warning') : null,
@@ -128,27 +156,24 @@ export function renderToday() {
                 el('div', { class: 'row__sub' }, [Badge(item.meta, badgeVariant)]),
               ]),
               amtText ? el('div', { class: 'row__amount', text: amtText }) : null,
-              el('div', { class: 'row__actions' }, [
-                el('a', { class: 'btn btn--ghost btn--sm', href: ACTION_HREF[item.type],
-                  text: `${ACTION_CTA[item.type]} →` }),
-              ]),
+              el('div', { class: 'row__actions row__actions--visible' }, [actionCta(item)]),
             ].filter(Boolean));
           }))
         : EmptyState({ title: 'Todo al día', message: 'Sin pagos urgentes ni presupuestos al límite.', iconName: 'check' }),
     });
 
-    // ── Movimientos recientes ─────────────────────────────────────────────────
-    const recent   = selectors.recentTransactions(s, 5);
-    const upcoming = selectors.upcomingPayments(s, 4);
-    const goals    = selectors.activeGoals(s)
-      .slice().sort((a, b) => new Date(a.targetDate || '2999') - new Date(b.targetDate || '2999'))
-      .slice(0, 3);
+    // ── Movimientos: timeline de hoy, o recientes si el día está vacío ───────
+    const recent     = selectors.recentTransactions(s, 5);
+    const showTodays = todays.length > 0;
+    const txList     = showTodays
+      ? [...todays].sort((a, b) => (a.date < b.date ? 1 : -1))
+      : recent;
 
     const recentCard = Card({
-      title: 'Movimientos recientes',
+      title: showTodays ? 'Movimientos de hoy' : 'Movimientos recientes',
       action: Button('Ver todos', { variant: 'ghost', onClick: () => { location.hash = '#/transactions'; } }),
-      body: recent.length
-        ? el('div', { class: 'row-list' }, recent.map((t) => {
+      body: txList.length
+        ? el('div', { class: 'row-list' }, txList.map((t) => {
             const isIncome   = t.type === 'income';
             const isTransfer = t.type === 'transfer';
             const c    = catMap[t.categoryId];
@@ -163,7 +188,8 @@ export function renderToday() {
         : EmptyState({ title: 'Sin movimientos', iconName: 'transactions' }),
     });
 
-    // Contenedor para upcoming — permite re-render parcial sin repintar toda la vista.
+    // ── Próximos pagos (dismissables) ────────────────────────────────────────
+    const upcoming = selectors.upcomingPayments(s, 4);
     const upcomingArea = el('div');
 
     function renderUpcoming() {
@@ -200,6 +226,11 @@ export function renderToday() {
 
     renderUpcoming();
 
+    // ── Metas prioritarias ───────────────────────────────────────────────────
+    const goals = selectors.activeGoals(s)
+      .slice().sort((a, b) => new Date(a.targetDate || '2999') - new Date(b.targetDate || '2999'))
+      .slice(0, 3);
+
     const goalsCard = Card({
       title: 'Metas prioritarias',
       body: goals.length
@@ -210,7 +241,7 @@ export function renderToday() {
                 el('span', { class: 'goal__name', text: g.name }),
                 el('span', { class: 'goal__meta', text: `${pct.toFixed(0)}%` }),
               ]),
-              ProgressBar(pct, 'gold'),
+              ProgressBar(pct, 'gold', { ariaLabel: `Avance de ${g.name}` }),
             ]);
           }))
         : EmptyState({ title: 'Sin metas activas', iconName: 'goals' }),
@@ -226,16 +257,20 @@ export function renderToday() {
               el('h2', { class: 't-h1', text: `Hola, ${s.user}` }),
               el('p', { class: 'page-header__sub', text: dateStr.charAt(0).toUpperCase() + dateStr.slice(1) }),
             ]),
-            Button('Nuevo movimiento', { variant: 'primary', iconName: 'plus', onClick: () => openTxModal({ mode: 'create' }) }),
+            el('div', { class: 'u-hide-mobile' }, [
+              Button('Nuevo movimiento', { variant: 'primary', iconName: 'plus', onClick: () => openTxModal({ mode: 'create' }) }),
+            ]),
           ]),
         ]),
-        kpis,
-        el('div', { class: 'section' }, [healthCard]),
+        heroCard,
+        quickAdd,
+        el('div', { class: 'section' }, [pulseCard]),
         el('div', { class: 'section' }, [paraHoyCard]),
         el('div', { class: 'grid grid--2 section' }, [
           recentCard,
           el('div', { class: 'stack' }, [upcomingArea, goalsCard]),
         ]),
+        Fab('Nuevo movimiento', { onClick: () => openTxModal({ mode: 'create' }) }),
       ])
     );
   }

@@ -110,8 +110,8 @@ function openGoalModal({ goal = {}, mode = 'create' }) {
   });
 }
 
-// Aporte rápido a una meta.
-function openContributeModal(goal) {
+// Aporte rápido a una meta. Exportado: la vista Hoy lo usa en "Para hoy" (R1).
+export function openContributeModal(goal) {
   const s = store.get();
   const cur = goal.currency || s.baseCurrency;
   const linkedAcc = goal.linkedAccountId ? (s.accounts || []).find((a) => a.id === goal.linkedAccountId) : null;
