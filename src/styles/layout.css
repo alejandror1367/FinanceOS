@@ -187,10 +187,14 @@
 }
 .view-anim .grid--kpi > *,
 .view-anim .grid--2 > *,
+.view-anim .dash-row > *,
 .view-anim > .section,
 .view-anim > .card {
   animation: view-item-in var(--dur-slow) var(--ease-out) backwards;
 }
+.view-anim .dash-row > :nth-child(1) { animation-delay: 0ms; }
+.view-anim .dash-row > :nth-child(2) { animation-delay: 60ms; }
+.view-anim .dash-row > :nth-child(3) { animation-delay: 120ms; }
 .view-anim .grid--kpi > :nth-child(1) { animation-delay: 0ms; }
 .view-anim .grid--kpi > :nth-child(2) { animation-delay: 40ms; }
 .view-anim .grid--kpi > :nth-child(3) { animation-delay: 80ms; }

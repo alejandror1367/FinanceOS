@@ -1829,3 +1829,150 @@ describe('goalSavingsSplit (reparto del ahorro entre metas activas)', () => {
     assert.equal(selectors.goalSavingsSplit(s), 600_000);
   });
 });
+
+// ── Rediseño fintech: portfolioOverview + goalOutlook + dedup de alertas ──────
+
+describe('portfolioOverview (rediseño — CAMBIO 4/5)', () => {
+  before(() => { priceService.update({}, {}); });
+  after(() => { priceService.update({}, {}); });
+
+  function inv(id, opts = {}) {
+    return {
+      id, name: opts.name || id, symbol: opts.symbol ?? id,
+      assetType: opts.assetType || 'stock',
+      quantity: opts.qty ?? 1, purchasePrice: opts.buyPx ?? 100,
+      currentPrice: opts.curPx ?? 100, currency: opts.currency || 'COP',
+      commission: opts.commission || 0,
+    };
+  }
+
+  test('portafolio vacío → posiciones [] y total 0', () => {
+    const o = selectors.portfolioOverview(mkState());
+    assert.deepEqual(o.positions, []);
+    assert.equal(o.total, 0);
+    assert.equal(o.topGainer, null);
+    assert.equal(o.concentration, null);
+  });
+
+  test('agrupa lotes del mismo ticker en una posición', () => {
+    const s = mkState({ investments: [
+      inv('a1', { symbol: 'NVDA', qty: 2, buyPx: 100, curPx: 150 }),
+      inv('a2', { symbol: 'NVDA', qty: 1, buyPx: 120, curPx: 150 }),
+    ] });
+    const o = selectors.portfolioOverview(s);
+    assert.equal(o.positions.length, 1);
+    assert.equal(o.positions[0].quantity, 3);
+    assert.equal(o.positions[0].value, 3 * 150);
+    assert.equal(o.positions[0].cost, 2 * 100 + 1 * 120);
+  });
+
+  test('ordena por valor desc y calcula concentración del top', () => {
+    const s = mkState({ investments: [
+      inv('small', { symbol: 'SML', qty: 1, buyPx: 100, curPx: 100 }),
+      inv('big',   { symbol: 'BIG', qty: 9, buyPx: 100, curPx: 100 }),
+    ] });
+    const o = selectors.portfolioOverview(s);
+    assert.equal(o.positions[0].symbol, 'BIG');
+    assert.equal(o.total, 1000);
+    assert.ok(Math.abs(o.concentration.pct - 90) < 0.01);
+  });
+
+  test('topGainer y topLoser por returnPct', () => {
+    const s = mkState({ investments: [
+      inv('win',  { symbol: 'WIN',  qty: 1, buyPx: 100, curPx: 150 }), // +50%
+      inv('lose', { symbol: 'LOSE', qty: 1, buyPx: 100, curPx: 70 }),  // −30%
+    ] });
+    const o = selectors.portfolioOverview(s);
+    assert.equal(o.topGainer.symbol, 'WIN');
+    assert.equal(o.topLoser.symbol, 'LOSE');
+  });
+
+  test('distribución por tipo de activo suma 100%', () => {
+    const s = mkState({ investments: [
+      inv('s1', { symbol: 'A', assetType: 'stock',  qty: 6, buyPx: 100, curPx: 100 }),
+      inv('c1', { symbol: 'B', assetType: 'crypto', qty: 4, buyPx: 100, curPx: 100 }),
+    ] });
+    const o = selectors.portfolioOverview(s);
+    const sumPct = o.distribution.reduce((a, d) => a + d.pct, 0);
+    assert.ok(Math.abs(sumPct - 100) < 0.01);
+    assert.equal(o.distribution[0].type, 'stock'); // 60% > 40%
+  });
+
+  test('posición en divisa sin tasa FX se excluye (A.3 — sin 1:1)', () => {
+    priceService.update({}, {});
+    const s = mkState({ investments: [
+      inv('cop', { symbol: 'COP1', qty: 1, buyPx: 1000, curPx: 1000 }),
+      inv('usd', { symbol: 'USD1', qty: 1, buyPx: 100, curPx: 100, currency: 'USD' }),
+    ] });
+    const o = selectors.portfolioOverview(s);
+    assert.equal(o.positions.length, 1);
+    assert.equal(o.total, 1000);
+  });
+});
+
+describe('goalOutlook (rediseño — CAMBIO 7: metas inteligentes)', () => {
+  const TODAY = new Date('2026-06-12T12:00:00Z').getTime();
+
+  test('meta completada → probability 100 y months 0', () => {
+    const g = { targetAmount: 100, currentAmount: 100 };
+    const o = selectors.goalOutlook(mkState(), g, 50, TODAY);
+    assert.equal(o.probability, 100);
+    assert.equal(o.months, 0);
+    assert.equal(o.remaining, 0);
+  });
+
+  test('months = ceil(restante / aporte) y projectedDate avanza esos meses', () => {
+    const g = { targetAmount: 1_000_000, currentAmount: 400_000 };
+    const o = selectors.goalOutlook(mkState(), g, 200_000, TODAY);
+    assert.equal(o.months, 3); // 600k / 200k
+    assert.equal(o.projectedDate.slice(0, 7), '2026-09');
+  });
+
+  test('sin aporte → months null y sin fecha proyectada', () => {
+    const g = { targetAmount: 1_000_000, currentAmount: 0 };
+    const o = selectors.goalOutlook(mkState(), g, 0, TODAY);
+    assert.equal(o.months, null);
+    assert.equal(o.projectedDate, null);
+  });
+
+  test('aporte cubre lo requerido → probabilidad alta (≥90)', () => {
+    const g = { targetAmount: 1_200_000, currentAmount: 0, targetDate: '2027-06-12' }; // 12 meses → 100k/mes
+    const o = selectors.goalOutlook(mkState(), g, 150_000, TODAY);
+    assert.ok(o.probability >= 90, `probabilidad ${o.probability} debería ser ≥90`);
+    assert.ok(Math.abs(o.requiredMonthly - 100_000) < 1);
+  });
+
+  test('aporte a la mitad de lo requerido → probabilidad ~45', () => {
+    const g = { targetAmount: 1_200_000, currentAmount: 0, targetDate: '2027-06-12' };
+    const o = selectors.goalOutlook(mkState(), g, 50_000, TODAY);
+    assert.equal(o.probability, 45);
+  });
+
+  test('fecha objetivo vencida con saldo pendiente → probabilidad mínima (2)', () => {
+    const g = { targetAmount: 1_000_000, currentAmount: 100_000, targetDate: '2025-01-01' };
+    const o = selectors.goalOutlook(mkState(), g, 500_000, TODAY);
+    assert.equal(o.probability, 2);
+  });
+
+  test('sin targetDate → probability null (no inventa)', () => {
+    const g = { targetAmount: 1_000_000, currentAmount: 0 };
+    const o = selectors.goalOutlook(mkState(), g, 100_000, TODAY);
+    assert.equal(o.probability, null);
+    assert.equal(o.requiredMonthly, null);
+  });
+});
+
+describe('portfolioAlerts dedup (rediseño — CAMBIO 4)', () => {
+  before(() => { priceService.update({}, {}); });
+  after(() => { priceService.update({}, {}); });
+
+  test('dos lotes del mismo ticker en pérdida → UNA sola alerta loss', () => {
+    const mk = (id) => ({
+      id, name: 'NVDA', symbol: 'NVDA', assetType: 'stock',
+      quantity: 1, purchasePrice: 100, currentPrice: 70, currency: 'COP', commission: 0,
+    });
+    const s = mkState({ investments: [mk('l1'), mk('l2')] });
+    const losses = selectors.portfolioAlerts(s).filter((a) => a.type === 'loss');
+    assert.equal(losses.length, 1);
+  });
+});

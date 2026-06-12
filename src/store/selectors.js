@@ -1109,6 +1109,121 @@ export const selectors = {
     return native * fx[cur];
   },
 
+  // ── Rediseño fintech: visión del portafolio para el Dashboard ──────────────
+  // Agrupa por ticker (misma lógica que investmentsSummary) y devuelve posiciones
+  // valoradas en moneda base + insights deterministas (mayor ganador/perdedor,
+  // concentración y distribución por tipo de activo). Posiciones en divisa sin
+  // tasa FX se excluyen (A.3) — nunca suman 1:1.
+  portfolioOverview(s) {
+    const fx   = priceService.fxRates;
+    const base = s.baseCurrency || 'COP';
+    const toBase = (amount, cur) => {
+      if (amount === null || amount === undefined) return null;
+      if (!cur || cur === base) return amount;
+      const r = fx[cur];
+      return r ? amount * r : null;
+    };
+
+    const map = {};
+    for (const inv of (s.investments || [])) {
+      if (inv.isDeleted || inv.soldDate) continue;
+      const trivial = inv.assetType === 'cdt' || inv.assetType === 'fund';
+      const key = trivial && !inv.symbol ? inv.id : ((inv.symbol || inv.name) || inv.id || '').toUpperCase();
+      if (!map[key]) map[key] = { key, symbol: inv.symbol, name: inv.name, assetType: inv.assetType, currency: inv.currency || base, purchases: [] };
+      map[key].purchases.push(inv);
+      if (inv.name)      map[key].name      = inv.name;
+      if (inv.assetType) map[key].assetType = inv.assetType;
+      if (inv.currency)  map[key].currency  = inv.currency;
+    }
+
+    const positions = [];
+    for (const g of Object.values(map)) {
+      const sorted    = [...g.purchases].sort((a, b) => (b.purchaseDate || '').localeCompare(a.purchaseDate || ''));
+      const totalQty  = g.purchases.reduce((acc, p) => acc + (Number(p.quantity) || 0), 0);
+      const totalComm = g.purchases.reduce((acc, p) => acc + (Number(p.commission) || 0), 0);
+      const gc = g.purchases.reduce((acc, p) => acc + (Number(p.quantity) || 0) * (Number(p.purchasePrice || p.avgCost) || 0), 0) + totalComm;
+      const storedPrice = Number(sorted[0]?.currentPrice) || 0;
+
+      let value;
+      if (g.assetType === 'cdt') {
+        value = sorted[0] ? selectors.cdtCurrentValue(sorted[0]) : gc;
+      } else if (g.assetType === 'fund') {
+        value = sorted[0]?.currentValue || gc;
+      } else {
+        const lp    = priceService.priceFor((g.symbol || '').toUpperCase());
+        const price = lp?.price || storedPrice || 0;
+        value = price ? totalQty * price : gc;
+      }
+
+      const vBase = toBase(value, g.currency);
+      const cBase = toBase(gc,    g.currency);
+      if (vBase === null || cBase === null) continue;
+      positions.push({
+        key: g.key, name: g.name || g.symbol || g.key, symbol: g.symbol,
+        assetType: g.assetType || 'other', quantity: totalQty,
+        value: vBase, cost: cBase, gain: vBase - cBase,
+        returnPct: cBase ? ((vBase - cBase) / cBase) * 100 : 0,
+      });
+    }
+
+    positions.sort((a, b) => b.value - a.value);
+    const total = positions.reduce((acc, p) => acc + p.value, 0);
+
+    const withCost  = positions.filter((p) => p.cost > 0);
+    const topGainer = withCost.reduce((best, p) => (!best || p.returnPct > best.returnPct ? p : best), null);
+    const topLoser  = withCost.reduce((best, p) => (!best || p.returnPct < best.returnPct ? p : best), null);
+    const concentration = total > 0 && positions[0]
+      ? { name: positions[0].name, pct: (positions[0].value / total) * 100 }
+      : null;
+
+    const byType = new Map();
+    positions.forEach((p) => byType.set(p.assetType, (byType.get(p.assetType) || 0) + p.value));
+    const distribution = [...byType.entries()]
+      .map(([type, value]) => ({ type, value, pct: total ? (value / total) * 100 : 0 }))
+      .sort((a, b) => b.value - a.value);
+
+    return { positions, total, topGainer, topLoser, concentration, distribution };
+  },
+
+  // ── Rediseño fintech: metas inteligentes (probabilidad + fecha proyectada) ──
+  // monthlyContribution: aporte mensual disponible para ESTA meta (p. ej. del
+  // goalSavingsSplit). Devuelve { remaining, months, projectedDate,
+  // requiredMonthly, probability } — probability es null sin targetDate.
+  goalOutlook(s, goal, monthlyContribution, todayMs) {
+    const target    = Number(goal?.targetAmount) || 0;
+    const current   = Number(goal?.currentAmount) || 0;
+    const remaining = Math.max(0, target - current);
+    if (remaining <= 0) {
+      return { remaining: 0, months: 0, projectedDate: null, requiredMonthly: 0, probability: 100 };
+    }
+    const now     = todayMs !== undefined ? new Date(todayMs) : new Date();
+    const contrib = Math.max(0, Number(monthlyContribution) || 0);
+
+    const months = contrib > 0 ? Math.ceil(remaining / contrib) : null;
+    let projectedDate = null;
+    if (months !== null && months <= 600) {
+      const d = new Date(now.getFullYear(), now.getMonth() + months, 1);
+      projectedDate = d.toISOString().slice(0, 10);
+    }
+
+    let requiredMonthly = null;
+    let probability = null;
+    if (goal?.targetDate) {
+      const t = new Date(goal.targetDate);
+      const monthsLeft = (t.getFullYear() - now.getFullYear()) * 12 + (t.getMonth() - now.getMonth());
+      if (monthsLeft <= 0) {
+        requiredMonthly = remaining;
+        probability = 2; // fecha objetivo vencida con saldo pendiente
+      } else {
+        requiredMonthly = remaining / monthsLeft;
+        // Heurística determinista: razón aporte/requerido escalada a 0–98.
+        // ratio ≥ 1 (aporte cubre lo requerido) ≈ 90+; sin aporte → 2.
+        probability = Math.round(Math.max(2, Math.min(98, (contrib / requiredMonthly) * 90)));
+      }
+    }
+    return { remaining, months, projectedDate, requiredMonthly, probability };
+  },
+
   // R4 — portfolio alerts (I7a): deterministic rules, no AI.
   // Returns [{ type, severity, message, isApproximate?, inv? }].
   // Types: 'concentration' (>30%), 'maturity' (CDT≤30d), 'loss' (P&L<−20%), 'diversification' (1 ticker).
@@ -1177,7 +1292,16 @@ export const selectors = {
       }
     }
 
-    return alerts;
+    // CAMBIO 4 (rediseño): dedupe — varios lotes del mismo ticker generaban la
+    // misma alerta repetida (concentration/loss por lote). Una por tipo+ticker.
+    const seen = new Set();
+    return alerts.filter((a) => {
+      const ticker = (a.inv?.symbol || a.inv?.name || a.message).toUpperCase();
+      const key = `${a.type}:${ticker}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
   },
 
   // A.3 (FIN-005/TD-02): entidades en divisa extranjera SIN tasa FX disponible —

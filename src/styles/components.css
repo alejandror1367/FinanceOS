@@ -726,3 +726,142 @@ body.modal-open { overflow: hidden; }
   font-weight: var(--fw-bold);
   border-color: var(--accent);
 }
+
+/* ============================================================
+   Dashboard rediseño fintech (8 bloques — DOSSIER_UI_UX_FINTECH)
+   ============================================================ */
+
+/* Filas de 3 bloques: 3 col desktop → 2 col tablet → 1 col móvil */
+.dash-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.dash-row--hero { grid-template-columns: 1.45fr 1fr 1fr; }
+@media (max-width: 1180px) {
+  .dash-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dash-row--hero { grid-template-columns: 1fr 1fr; }
+  .dash-row--hero > .dash-hero { grid-column: span 2; }
+}
+@media (max-width: 720px) {
+  .dash-row, .dash-row--hero { grid-template-columns: 1fr; }
+  .dash-row--hero > .dash-hero { grid-column: span 1; }
+}
+
+/* ---- Bloque 1: Patrimonio héroe ---- */
+.dash-hero {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 140% at 100% 0%, var(--accent-bg), transparent 60%),
+    radial-gradient(90% 120% at 0% 100%, color-mix(in srgb, var(--accent-2) 7%, transparent), transparent 55%),
+    var(--bg-surface);
+  border-color: color-mix(in srgb, var(--accent) 22%, var(--border));
+  box-shadow: var(--hero-glow), var(--card-highlight);
+}
+.dash-hero__top { display: flex; align-items: center; justify-content: space-between; }
+.dash-hero__value {
+  font-size: clamp(2rem, 6vw, var(--fs-display-xl));
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--tracking-tighter);
+  margin-top: var(--space-2);
+}
+.dash-hero__trend { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-1); flex-wrap: wrap; }
+.dash-hero__split {
+  display: flex; gap: var(--space-6); flex-wrap: wrap;
+  margin-top: var(--space-4); padding-top: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+}
+.dash-hero__k { font-size: var(--fs-micro); color: var(--text-tertiary); font-weight: var(--fw-semibold); text-transform: uppercase; letter-spacing: var(--tracking-wide); }
+.dash-hero__v { font-size: var(--fs-h3); font-weight: var(--fw-semibold); margin-top: 2px; }
+.dash-hero__spark { position: absolute; right: var(--space-4); top: var(--space-5); color: var(--accent); opacity: 0.9; pointer-events: none; }
+@media (max-width: 520px) { .dash-hero__spark { display: none; } }
+
+/* ---- Bloque 2: Salud financiera (gauge) ---- */
+.dash-health { display: flex; align-items: center; gap: var(--space-5); }
+.dash-gauge { position: relative; width: 80px; height: 80px; flex: 0 0 auto; }
+.dash-gauge--positive { color: var(--positive); }
+.dash-gauge--info     { color: var(--accent); }
+.dash-gauge--warning  { color: var(--warning); }
+.dash-gauge--negative { color: var(--negative); }
+.dash-gauge__num {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  font-size: var(--fs-h2); font-weight: var(--fw-bold); color: var(--text-primary);
+}
+.dash-health__rows { flex: 1; display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+.dash-health__row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.dash-warn { color: var(--warning); }
+
+/* ---- Bloque 3: Flujo del mes ---- */
+.dash-flow { display: flex; flex-direction: column; gap: var(--space-3); }
+.dash-flow__top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: var(--space-1); }
+.dash-flow__amt { font-weight: var(--fw-semibold); font-size: var(--fs-caption); }
+.dash-flow__net {
+  display: flex; justify-content: space-between; align-items: center;
+  padding-top: var(--space-3); border-top: 1px solid var(--border-subtle);
+}
+.dash-flow__netval { font-size: var(--fs-h3); font-weight: var(--fw-bold); margin-right: var(--space-2); }
+
+/* ---- Totales de bloque (Inversiones / Deudas) ---- */
+.dash-blocktotal { font-size: var(--fs-kpi); font-weight: var(--fw-bold); letter-spacing: var(--tracking-tight); margin-bottom: var(--space-3); }
+
+/* ---- Filas compactas (posiciones, deudas) ---- */
+.dash-minilist { display: flex; flex-direction: column; }
+.dash-mini {
+  display: flex; align-items: center; gap: var(--space-3);
+  padding: var(--space-2) 0; border-top: 1px solid var(--border-subtle);
+}
+.dash-mini:first-child { border-top: 0; }
+.dash-mini__avatar {
+  width: 30px; height: 30px; border-radius: var(--radius-xs);
+  display: grid; place-items: center; flex: 0 0 auto;
+  font-size: var(--fs-micro); font-weight: var(--fw-bold);
+}
+.dash-mini__avatar--accent { background: var(--accent-bg); color: var(--accent); }
+.dash-mini__main { flex: 1; min-width: 0; }
+.dash-mini__title { font-size: var(--fs-body); font-weight: var(--fw-medium); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dash-mini__sub { font-size: var(--fs-caption); color: var(--text-tertiary); }
+.dash-mini__right { text-align: right; flex: 0 0 auto; }
+.dash-mini__val { font-weight: var(--fw-semibold); font-size: var(--fs-body); }
+.dash-mini__valsub { font-size: var(--fs-caption); }
+
+/* ---- Bloque 5: Deudas ---- */
+.dash-dist {
+  display: flex; height: 9px; border-radius: var(--radius-full);
+  overflow: hidden; margin-bottom: var(--space-3); gap: 2px;
+}
+.dash-dist > span { display: block; height: 100%; min-width: 4px; border-radius: 2px; }
+.dash-dot { width: 9px; height: 9px; border-radius: 50%; display: block; }
+.dash-strategy {
+  display: flex; align-items: flex-start; gap: var(--space-2);
+  margin-top: var(--space-3); padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--accent-bg);
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  font-size: var(--fs-caption); color: var(--text-secondary); line-height: var(--lh-snug);
+}
+.dash-strategy b { color: var(--accent); font-weight: var(--fw-semibold); }
+.dash-strategy svg { width: 15px; height: 15px; color: var(--accent); flex: 0 0 auto; margin-top: 1px; }
+.dash-strategy--warn { background: var(--warning-bg); border-color: color-mix(in srgb, var(--warning) 30%, transparent); }
+.dash-strategy--warn svg { color: var(--warning); }
+
+/* ---- Bloque 6: Metas (proyección + probabilidad) ---- */
+.goal__outlook {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--space-2); margin-top: var(--space-1);
+}
+
+/* ---- Bloque 8: Insights ---- */
+.dash-insights { display: flex; flex-direction: column; }
+.dash-insight {
+  display: flex; align-items: flex-start; gap: var(--space-3);
+  padding: var(--space-2) 0; border-top: 1px solid var(--border-subtle);
+}
+.dash-insight:first-child { border-top: 0; }
+.dash-insight__ico {
+  width: 28px; height: 28px; border-radius: var(--radius-xs);
+  display: grid; place-items: center; flex: 0 0 auto;
+}
+.dash-insight__ico svg { width: 14px; height: 14px; }
+.dash-insight__ico--positive { background: var(--positive-bg); color: var(--positive); }
+.dash-insight__ico--warning  { background: var(--warning-bg);  color: var(--warning); }
+.dash-insight__ico--negative { background: var(--negative-bg); color: var(--negative); }
+.dash-insight__ico--info     { background: var(--info-bg);     color: var(--info); }
+.dash-insight__text { font-size: var(--fs-caption); color: var(--text-secondary); line-height: var(--lh-snug); }
+.dash-insight__text b { color: var(--text-primary); font-weight: var(--fw-semibold); }
