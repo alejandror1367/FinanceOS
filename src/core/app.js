@@ -174,6 +174,22 @@ async function registerSW() {
 }
 
 // --- Re-render reactivo ante cambios del store ---
+// Si el re-render se salta por los guards (modal/typing/import), el cambio queda
+// PENDIENTE y se aplica al desbloquearse (modal cerrado / blur). Antes el evento
+// se perdía: eliminar una tx desde el diálogo de confirmación dejaba el dashboard
+// con totales viejos hasta el siguiente cambio del store (sync 30 s).
+let renderPending = false;
+
+function flushPendingRender() {
+  if (!renderPending) return;
+  const ae = document.activeElement;
+  const typing = ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT');
+  if (typing || document.body.classList.contains('modal-open') || document.querySelector('[data-import-busy]')) return;
+  renderPending = false;
+  const s = store.get();
+  if (s.ready && shellRefs && currentRoute) renderView(routes[s.ui.route], { animate: false });
+}
+
 function onStoreChange() {
   const s = store.get();
   // Actualiza la píldora de sincronización sin reconstruir la topbar.
@@ -191,8 +207,14 @@ function onStoreChange() {
   // Re-renderiza la vista activa cuando hay datos (sin animación ni reset de scroll).
   if (s.ready && shellRefs && currentRoute && !typing && !modalOpen && !importBusy) {
     renderView(routes[s.ui.route], { animate: false });
+  } else if (s.ready) {
+    renderPending = true;
   }
 }
+
+// Desbloqueos que aplican un render pendiente: cierre de modal y blur de inputs.
+document.addEventListener('financeos:modal-closed', () => setTimeout(flushPendingRender, 0));
+window.addEventListener('focusout', () => setTimeout(flushPendingRender, 60));
 
 // --- Arranque ---
 async function bootstrap() {

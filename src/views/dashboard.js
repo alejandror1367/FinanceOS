@@ -4,7 +4,7 @@
 import { el, mount } from '../utils/dom.js';
 import { icon } from '../utils/icons.js';
 import { store } from '../store/store.js';
-import { selectors, isExpenseLike } from '../store/selectors.js';
+import { selectors, isExpenseLike, sameMonth, transactionAmountBase } from '../store/selectors.js';
 import { formatMoney, formatPercent, relativeDay, formatDate } from '../utils/format.js';
 import {
   Card, KpiCard, Trend, Badge, BarChart, ProgressBar, EmptyState, Button,
@@ -66,25 +66,29 @@ export function renderDashboard() {
     );
 
     // ── Detalles desplegables por KPI ────────────────────────────────────────
-    const curKey = new Date().toISOString().slice(0, 7);
+    // MISMO criterio de mes que los totales (sameMonth = mes LOCAL) y MISMA
+    // conversión FX (transactionAmountBase). Antes el detalle usaba el mes UTC
+    // (toISOString) y montos nominales: de 19:00 a medianoche (Bogotá) en los
+    // cruces de día/mes, detalle y total divergían — "tx fantasma" reportada.
     const debtAccIds = new Set(s.accounts.filter((a) => a.type === 'credit_card').map((a) => a.id));
+    const txBase = (t) => transactionAmountBase(t, cur) ?? 0;
 
     const detailsExpense = (() => {
       const txs = s.transactions
-        .filter((t) => isExpenseLike(t, debtAccIds) && String(t.date).slice(0, 7) === curKey)
-        .sort((a, b) => b.amount - a.amount);
+        .filter((t) => isExpenseLike(t, debtAccIds) && sameMonth(t.date))
+        .sort((a, b) => txBase(b) - txBase(a));
       const rows = txs.slice(0, 7).map((t) => {
         const cat = selectors.categoryById(s, t.categoryId);
-        return { label: t.description || cat?.name || 'Sin descripción', value: formatMoney(t.amount, cur) };
+        return { label: t.description || cat?.name || 'Sin descripción', value: formatMoney(txBase(t), cur) };
       });
       if (txs.length > 7) rows.push({ label: `+${txs.length - 7} más`, value: '' });
       return rows;
     })();
 
     const detailsIncome = s.transactions
-      .filter((t) => t.type === 'income' && String(t.date).slice(0, 7) === curKey)
-      .sort((a, b) => b.amount - a.amount)
-      .map((t) => ({ label: t.description || 'Ingreso', value: formatMoney(t.amount, cur) }));
+      .filter((t) => t.type === 'income' && sameMonth(t.date))
+      .sort((a, b) => txBase(b) - txBase(a))
+      .map((t) => ({ label: t.description || 'Ingreso', value: formatMoney(txBase(t), cur) }));
 
     const detailsSavings = [
       { label: 'Ingresos del mes', value: formatMoney(income, cur) },
@@ -93,8 +97,9 @@ export function renderDashboard() {
       { label: 'Tasa de ahorro', value: formatPercent(savingsRate) },
     ];
 
+    // P1: orden por valor equivalente en COP (no nominal — una cuenta USD ordena por su valor real).
     const detailsLiquidity = selectors.liquidAccounts(s)
-      .sort((a, b) => (b.balance || 0) - (a.balance || 0))
+      .sort((a, b) => selectors.sumAccountsInBase(s, [b]) - selectors.sumAccountsInBase(s, [a]))
       .map((a) => ({ label: a.name, value: formatMoney(a.balance || 0, a.currency || cur) }));
 
     const detailsNetWorth = (() => {

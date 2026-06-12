@@ -371,6 +371,13 @@ export function renderAccounts() {
         const items = accounts.filter((a) => types.includes(a.type));
         if (!items.length) return null;
         const isCcGrp  = types.includes('credit_card');
+        // P1/P2: orden DESCENDENTE por valor equivalente en COP (FX) — nunca por el
+        // nominal de la divisa. Tarjetas: por magnitud de la deuda (mayor primero).
+        // Reactivo: repaint corre en cada cambio del store, el orden se recalcula solo.
+        const valBase = (a) => selectors.sumAccountsInBase(s, [a]);
+        items.sort((a, b) => (isCcGrp
+          ? Math.abs(valBase(b)) - Math.abs(valBase(a))
+          : valBase(b) - valBase(a)));
         // Total del grupo EN MONEDA BASE (FX): antes sumaba saldos crudos y una
         // billetera/cuenta en USD se mezclaba 1:1 con las de COP.
         const rawTotal = selectors.sumAccountsInBase(s, items);

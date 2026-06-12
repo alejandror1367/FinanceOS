@@ -17,6 +17,10 @@ export function closeModal() {
   overlay.style.animation = 'fade-in var(--dur-fast) reverse';
   setTimeout(() => overlay.remove(), 120);
   if (lastFocused && lastFocused.focus) lastFocused.focus();
+  // Aviso para app.js: si un cambio del store llegó CON el modal abierto (p. ej.
+  // eliminar una transacción desde el diálogo de confirmación), el re-render global
+  // se saltó; este evento permite aplicar ese render pendiente al cerrar.
+  document.dispatchEvent(new CustomEvent('financeos:modal-closed'));
 }
 
 function onKeydown(e) {
