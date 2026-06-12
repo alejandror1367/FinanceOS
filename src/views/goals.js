@@ -143,6 +143,14 @@ function goalCard(g, cur, monthlySavings) {
   const statusBadge = done ? Badge('Completada', 'positive') : g.status === 'paused' ? Badge('Pausada', 'warning') : Badge('Activa', 'info');
   const forecast = !done ? goalForecast(st.remaining, monthlySavings) : null;
 
+  // CAMBIO 7 (rediseño): probabilidad determinista de cumplimiento — misma
+  // heurística del Dashboard (selectors.goalOutlook), aporte = reparto mensual.
+  const outlook = !done ? selectors.goalOutlook(store.get(), g, monthlySavings) : null;
+  const probBadge = outlook?.probability != null
+    ? Badge(`${outlook.probability}% prob.`,
+        outlook.probability >= 70 ? 'positive' : outlook.probability >= 40 ? 'warning' : 'negative')
+    : null;
+
   // Línea de proyección inteligente — combina aporte recomendado + ritmo real.
   let forecastEl = null;
   if (!done) {
@@ -174,7 +182,7 @@ function goalCard(g, cur, monthlySavings) {
       el('div', { class: 'row-flex' }, [
         el('span', { class: 'row__avatar', html: icon(typeMeta(g.type).icon) }),
         el('div', {}, [
-          el('div', { class: 'row__title' }, [g.name, ' ', statusBadge]),
+          el('div', { class: 'row__title' }, [g.name, ' ', statusBadge, probBadge ? ' ' : null, probBadge].filter(Boolean)),
           el('div', { class: 'row__sub', text: typeMeta(g.type).label + (g.targetDate ? ` · ${formatDate(g.targetDate, 'medium')}` : '') }),
         ]),
       ]),
