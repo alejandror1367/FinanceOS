@@ -728,7 +728,79 @@ body.modal-open { overflow: hidden; }
 }
 
 /* ============================================================
-   Dashboard rediseño fintech (8 bloques — DOSSIER_UI_UX_FINTECH)
+   Design system fintech compartido (DOSSIER_UI_UX_FINTECH)
+   Las clases .dash-* nacieron en el Dashboard y son COMPARTIDAS
+   por todas las vistas vía components/ui.js (R0): HeroCard,
+   ScoreRing, MiniRow, DetailsBlock, Fab, FilterBar, ActionSheet.
+   ============================================================ */
+
+/* ---- FAB móvil (R0.3) — solo ≤920px, sobre la bottom-nav ---- */
+.fab { display: none; }
+@media (max-width: 920px) {
+  .fab {
+    display: grid; place-items: center;
+    position: fixed;
+    right: var(--space-4);
+    bottom: calc(62px + var(--space-3) * 2 + env(safe-area-inset-bottom, 0px));
+    width: 54px; height: 54px;
+    border-radius: var(--radius-full);
+    background: var(--btn-primary-grad);
+    color: var(--accent-contrast);
+    box-shadow: var(--btn-primary-shadow), var(--shadow-md);
+    z-index: var(--z-sticky);
+    transition: transform var(--dur-fast) var(--ease-out);
+  }
+  .fab:active { transform: scale(0.94); }
+  .fab svg { width: 24px; height: 24px; }
+  /* El FAB sustituye al CTA del header en móvil */
+  .u-hide-mobile { display: none !important; }
+}
+
+/* ---- Action sheet (R0.4) — modal--sheet: bottom sheet en móvil ---- */
+.sheet-actions { display: flex; flex-direction: column; gap: var(--space-1); }
+.sheet-actions__btn {
+  display: flex; align-items: center; gap: var(--space-3);
+  width: 100%; padding: var(--space-3) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-body); font-weight: var(--fw-medium);
+  color: var(--text-primary); text-align: left;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.sheet-actions__btn:hover { background: var(--bg-hover); }
+.sheet-actions__btn--danger { color: var(--negative); }
+.sheet-actions__ico { display: flex; color: var(--text-secondary); }
+.sheet-actions__btn--danger .sheet-actions__ico { color: var(--negative); }
+.sheet-actions__ico svg { width: 18px; height: 18px; }
+@media (max-width: 920px) {
+  .modal-overlay:has(.modal--sheet) { align-items: flex-end; padding: 0; }
+  .modal--sheet {
+    width: 100%; max-width: none;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    margin: auto 0 0;
+    max-height: 80dvh;
+    padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
+    animation: sheet-up var(--dur-base) var(--ease-out);
+  }
+  @keyframes sheet-up {
+    from { transform: translateY(24px); opacity: 0; }
+    to   { transform: none; opacity: 1; }
+  }
+  .sheet-actions__btn { padding: var(--space-4) var(--space-3); }
+}
+
+/* ---- Barra de filtros sticky (R0.5) ---- */
+.filterbar {
+  position: sticky;
+  top: var(--topbar-h);
+  z-index: calc(var(--z-sticky) - 2);
+  display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap;
+  padding: var(--space-2) 0 var(--space-3);
+  background: color-mix(in srgb, var(--bg-app) 86%, transparent);
+  backdrop-filter: saturate(140%) blur(10px);
+}
+
+/* ============================================================
+   Bloques del rediseño (compartidos, origen Dashboard)
    ============================================================ */
 
 /* Filas de 3 bloques: 3 col desktop → 2 col tablet → 1 col móvil */

@@ -102,6 +102,126 @@ export function BarChart(data = [], { ariaLabel, valueFormat } = {}) {
     ])));
 }
 
+// ============================================================
+// Componentes fintech compartidos (rediseño DOSSIER_UI_UX_FINTECH)
+// Extraídos del Dashboard (R0.1) para reuso en todas las vistas.
+// Estilos en components.css, sección "Dashboard rediseño fintech"
+// (las clases .dash-* son del design system compartido, no
+// exclusivas del Dashboard).
+// ============================================================
+
+// Sparkline SVG inline (sin librerías). values: number[].
+export function sparklineSvg(values, w = 170, h = 52, gradId = 'spark-fill') {
+  if (!values || values.length < 2) return '';
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+  const pts = values.map((v, i) => [
+    (i / (values.length - 1)) * w,
+    h - 5 - ((v - min) / range) * (h - 12),
+  ]);
+  const d = pts.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' ');
+  return `
+    <svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" fill="none" aria-hidden="true">
+      <defs>
+        <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
+          <stop stop-color="currentColor" stop-opacity="0.30"/>
+          <stop offset="1" stop-color="currentColor" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <path d="${d}" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+      <path d="${d} L ${w} ${h} L 0 ${h} Z" fill="url(#${gradId})"/>
+    </svg>`;
+}
+
+// Anillo de progreso/score 0–100 — gauge circular SVG con cifra al centro.
+// variant: positive | info | warning | negative (color del trazo).
+export function ScoreRing(score, variant = 'info', { ariaLabel } = {}) {
+  const r = 34; const c = 2 * Math.PI * r;
+  const clamped = Math.max(0, Math.min(100, score));
+  const off = c * (1 - clamped / 100);
+  return el('div', { class: `dash-gauge dash-gauge--${variant}`, role: 'img',
+    'aria-label': ariaLabel || `${Math.round(clamped)} de 100` }, [
+    el('div', { html: `
+      <svg width="80" height="80" viewBox="0 0 80 80" aria-hidden="true">
+        <circle cx="40" cy="40" r="${r}" stroke="var(--border)" stroke-width="7" fill="none"/>
+        <circle cx="40" cy="40" r="${r}" stroke="currentColor" stroke-width="7" fill="none"
+          stroke-dasharray="${c.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}"
+          stroke-linecap="round" transform="rotate(-90 40 40)"/>
+      </svg>` }),
+    el('div', { class: 'dash-gauge__num tabular', text: String(Math.round(score)) }),
+  ]);
+}
+
+// Fila compacta de alta densidad (posiciones, deudas, cuentas, insights…).
+// avatar: html string · sub/right/rightSub: nodo, string o array de nodos.
+export function MiniRow({ avatar, avatarClass = '', title, sub, right, rightSub }) {
+  return el('div', { class: 'dash-mini' }, [
+    avatar ? el('div', { class: `dash-mini__avatar ${avatarClass}`, html: avatar }) : null,
+    el('div', { class: 'dash-mini__main' }, [
+      el('div', { class: 'dash-mini__title', text: title }),
+      sub ? el('div', { class: 'dash-mini__sub' }, Array.isArray(sub) ? sub : [sub]) : null,
+    ]),
+    (right || rightSub) ? el('div', { class: 'dash-mini__right' }, [
+      right ? el('div', { class: 'dash-mini__val tabular' }, Array.isArray(right) ? right : [right]) : null,
+      rightSub ? el('div', { class: 'dash-mini__valsub' }, Array.isArray(rightSub) ? rightSub : [rightSub]) : null,
+    ].filter(Boolean)) : null,
+  ].filter(Boolean));
+}
+
+// <details> desplegable de desglose (mismo estilo que los KPI).
+// rows: [{ label, value }].
+export function DetailsBlock(rows, label = 'Detalle') {
+  if (!rows?.length) return null;
+  return el('details', { class: 'kpi__details' }, [
+    el('summary', { class: 'kpi__dtrig' }, [
+      el('span', { text: label }),
+      el('span', { class: 'kpi__dchev', html: icon('chevronDown') }),
+    ]),
+    el('ul', { class: 'kpi__dlist' },
+      rows.map((r) => el('li', { class: 'kpi__drow' }, [
+        el('span', { class: 'kpi__dlabel', text: r.label }),
+        el('span', { class: 'kpi__dvalue tabular', text: r.value }),
+      ]))
+    ),
+  ]);
+}
+
+// Tarjeta héroe — cifra dominante de la vista (patrón del Dashboard).
+// trendRow: nodos bajo el valor (Trend + captions) · split: [{ label, value, cls }]
+// sparkValues: serie para el sparkline decorativo · details: filas de desglose.
+export function HeroCard({ label, iconName, value, trendRow, split, sparkValues, details, detailsLabel } = {}) {
+  return el('article', { class: 'card dash-hero' }, [
+    el('div', { class: 'dash-hero__top' }, [
+      el('span', { class: 'kpi__label', text: label }),
+      iconName ? el('span', { class: 'kpi__icon', html: icon(iconName) }) : null,
+    ].filter(Boolean)),
+    el('div', { class: 'dash-hero__value tabular', text: value }),
+    trendRow?.length ? el('div', { class: 'dash-hero__trend' }, trendRow) : null,
+    split?.length ? el('div', { class: 'dash-hero__split' }, split.map((it) => el('div', {}, [
+      el('div', { class: 'dash-hero__k', text: it.label }),
+      el('div', { class: `dash-hero__v tabular${it.cls ? ' ' + it.cls : ''}`, text: it.value }),
+    ]))) : null,
+    sparkValues?.length >= 3 ? el('div', { class: 'dash-hero__spark', html: sparklineSvg(sparkValues) }) : null,
+    DetailsBlock(details, detailsLabel),
+  ].filter(Boolean));
+}
+
+// FAB móvil (R0.3) — acción primaria de creación al alcance del pulgar.
+// Solo visible ≤920px (CSS); en desktop el CTA del header sigue siendo el camino.
+export function Fab(label, { iconName = 'plus', onClick } = {}) {
+  return el('button', {
+    class: 'fab', type: 'button',
+    'aria-label': label, title: label,
+    on: onClick ? { click: onClick } : {},
+  }, [el('span', { html: icon(iconName) })]);
+}
+
+// Barra de filtros sticky (R0.5) — búsqueda + chips fijos al hacer scroll.
+export function FilterBar(children) {
+  return el('div', { class: 'filterbar' }, children);
+}
+
 // ariaLabel: descripción del progreso (default "Progreso"). Completa WCAG 4.1.2.
 export function ProgressBar(pct, variant = '', { title, ariaLabel } = {}) {
   const clamped = Math.max(0, Math.min(100, pct));

@@ -10,6 +10,7 @@ import { selectors, isExpenseLike, sameMonth, transactionAmountBase } from '../s
 import { formatMoney, formatPercent, relativeDay, formatDate } from '../utils/format.js';
 import {
   Card, Trend, Badge, BarChart, ProgressBar, EmptyState, Button,
+  HeroCard, ScoreRing, MiniRow, DetailsBlock, Fab,
 } from '../components/ui.js';
 import { openTxModal } from './transactions.js';
 import { dismiss, isDismissed, clearStale } from '../services/dismissService.js';
@@ -28,78 +29,6 @@ const ASSET_TYPE_LABEL = {
   stock: 'Acciones', etf: 'ETFs', crypto: 'Cripto', cdt: 'Renta fija',
   fund: 'Fondos', bond: 'Bonos', other: 'Otros',
 };
-
-// Sparkline SVG inline (sin librerías) — serie de patrimonio en el héroe.
-function sparklineSvg(values, w = 170, h = 52) {
-  if (!values || values.length < 2) return '';
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const range = max - min || 1;
-  const pts = values.map((v, i) => [
-    (i / (values.length - 1)) * w,
-    h - 5 - ((v - min) / range) * (h - 12),
-  ]);
-  const d = pts.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' ');
-  return `
-    <svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" fill="none" aria-hidden="true">
-      <defs>
-        <linearGradient id="dash-spark-fill" x1="0" y1="0" x2="0" y2="1">
-          <stop stop-color="currentColor" stop-opacity="0.30"/>
-          <stop offset="1" stop-color="currentColor" stop-opacity="0"/>
-        </linearGradient>
-      </defs>
-      <path d="${d}" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
-      <path d="${d} L ${w} ${h} L 0 ${h} Z" fill="url(#dash-spark-fill)"/>
-    </svg>`;
-}
-
-// Anillo de score (0–100) — gauge circular SVG.
-function scoreRing(score, variant) {
-  const r = 34; const c = 2 * Math.PI * r;
-  const off = c * (1 - Math.max(0, Math.min(100, score)) / 100);
-  return el('div', { class: `dash-gauge dash-gauge--${variant}`, role: 'img', 'aria-label': `Score financiero: ${score} de 100` }, [
-    el('div', { html: `
-      <svg width="80" height="80" viewBox="0 0 80 80" aria-hidden="true">
-        <circle cx="40" cy="40" r="${r}" stroke="var(--border)" stroke-width="7" fill="none"/>
-        <circle cx="40" cy="40" r="${r}" stroke="currentColor" stroke-width="7" fill="none"
-          stroke-dasharray="${c.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}"
-          stroke-linecap="round" transform="rotate(-90 40 40)"/>
-      </svg>` }),
-    el('div', { class: 'dash-gauge__num tabular', text: String(score) }),
-  ]);
-}
-
-// Fila compacta reutilizable (posiciones, deudas, insights).
-function miniRow({ avatar, avatarClass = '', title, sub, right, rightSub }) {
-  return el('div', { class: 'dash-mini' }, [
-    avatar ? el('div', { class: `dash-mini__avatar ${avatarClass}`, html: avatar }) : null,
-    el('div', { class: 'dash-mini__main' }, [
-      el('div', { class: 'dash-mini__title', text: title }),
-      sub ? el('div', { class: 'dash-mini__sub' }, Array.isArray(sub) ? sub : [sub]) : null,
-    ]),
-    (right || rightSub) ? el('div', { class: 'dash-mini__right' }, [
-      right ? el('div', { class: 'dash-mini__val tabular' }, Array.isArray(right) ? right : [right]) : null,
-      rightSub ? el('div', { class: 'dash-mini__valsub' }, Array.isArray(rightSub) ? rightSub : [rightSub]) : null,
-    ].filter(Boolean)) : null,
-  ].filter(Boolean));
-}
-
-// <details> desplegable estilo KPI (desgloses).
-function detailsBlock(rows, label = 'Detalle') {
-  if (!rows?.length) return null;
-  return el('details', { class: 'kpi__details' }, [
-    el('summary', { class: 'kpi__dtrig' }, [
-      el('span', { text: label }),
-      el('span', { class: 'kpi__dchev', html: icon('chevronDown') }),
-    ]),
-    el('ul', { class: 'kpi__dlist' },
-      rows.map((r) => el('li', { class: 'kpi__drow' }, [
-        el('span', { class: 'kpi__dlabel', text: r.label }),
-        el('span', { class: 'kpi__dvalue tabular', text: r.value }),
-      ]))
-    ),
-  ]);
-}
 
 function cardLink(label, hash) {
   return Button(label, { variant: 'ghost', size: 'sm', onClick: () => { location.hash = hash; } });
@@ -169,13 +98,11 @@ export function renderDashboard() {
       ];
     })();
 
-    const heroCard = el('article', { class: 'card dash-hero' }, [
-      el('div', { class: 'dash-hero__top' }, [
-        el('span', { class: 'kpi__label', text: 'Patrimonio neto' }),
-        el('span', { class: 'kpi__icon', html: icon('networth') }),
-      ]),
-      el('div', { class: 'dash-hero__value tabular', text: formatMoney(netWorth, cur) }),
-      el('div', { class: 'dash-hero__trend' }, [
+    const heroCard = HeroCard({
+      label: 'Patrimonio neto',
+      iconName: 'networth',
+      value: formatMoney(netWorth, cur),
+      trendRow: [
         monthlyTrend !== null ? Trend(monthlyTrend) : null,
         el('span', { class: 't-caption', text:
           monthlyTrend !== null ? 'este mes'
@@ -184,24 +111,15 @@ export function renderDashboard() {
           ? el('span', { class: 't-caption dash-hero__vs', text:
               `· ${netWorthTrend >= 0 ? '+' : '−'}${Math.abs(netWorthTrend).toFixed(1)}% vs snapshot` })
           : null,
-      ].filter(Boolean)),
-      el('div', { class: 'dash-hero__split' }, [
-        el('div', {}, [
-          el('div', { class: 'dash-hero__k', text: 'Activos' }),
-          el('div', { class: 'dash-hero__v tabular', text: formatMoney(totalAssets, cur, { compact: true }) }),
-        ]),
-        el('div', {}, [
-          el('div', { class: 'dash-hero__k', text: 'Pasivos' }),
-          el('div', { class: 'dash-hero__v tabular text-negative', text: totalLiab > 0 ? `−${formatMoney(totalLiab, cur, { compact: true })}` : formatMoney(0, cur) }),
-        ]),
-        el('div', {}, [
-          el('div', { class: 'dash-hero__k', text: 'Liquidez' }),
-          el('div', { class: 'dash-hero__v tabular', text: formatMoney(liquidity, cur, { compact: true }) }),
-        ]),
-      ]),
-      sparkValues.length >= 3 ? el('div', { class: 'dash-hero__spark', html: sparklineSvg(sparkValues) }) : null,
-      detailsBlock(detailsNetWorth),
-    ].filter(Boolean));
+      ].filter(Boolean),
+      split: [
+        { label: 'Activos', value: formatMoney(totalAssets, cur, { compact: true }) },
+        { label: 'Pasivos', value: totalLiab > 0 ? `−${formatMoney(totalLiab, cur, { compact: true })}` : formatMoney(0, cur), cls: 'text-negative' },
+        { label: 'Liquidez', value: formatMoney(liquidity, cur, { compact: true }) },
+      ],
+      sparkValues,
+      details: detailsNetWorth,
+    });
 
     // ── BLOQUE 2: Salud Financiera ───────────────────────────────────────────
     const breakdown = selectors.financialScoreBreakdown(s);
@@ -209,7 +127,7 @@ export function renderDashboard() {
       title: 'Salud financiera',
       action: Badge(sm.label, sm.variant),
       body: el('div', { class: 'dash-health' }, [
-        scoreRing(score, sm.variant),
+        ScoreRing(score, sm.variant, { ariaLabel: `Score financiero: ${score} de 100` }),
         el('div', { class: 'dash-health__rows' }, breakdown.map((f) => {
           const ratio = f.max ? f.pts / f.max : 0;
           const cls = ratio >= 0.66 ? 'text-positive' : ratio >= 0.33 ? 'dash-warn' : 'text-negative';
@@ -262,7 +180,7 @@ export function renderDashboard() {
             Badge(formatPercent(savingsRate), savings >= 0 ? 'positive' : 'negative'),
           ]),
         ]),
-        detailsBlock(detailsExpense, 'Gastos del mes'),
+        DetailsBlock(detailsExpense, 'Gastos del mes'),
       ].filter(Boolean)),
     });
 
@@ -277,7 +195,7 @@ export function renderDashboard() {
       body: portfolio.positions.length
         ? el('div', {}, [
             el('div', { class: 'dash-blocktotal tabular', text: formatMoney(portfolio.total, cur) }),
-            el('div', { class: 'dash-minilist' }, portfolio.positions.slice(0, 5).map((p) => miniRow({
+            el('div', { class: 'dash-minilist' }, portfolio.positions.slice(0, 5).map((p) => MiniRow({
               avatar: `<span>${(p.symbol || p.name).slice(0, 2).toUpperCase()}</span>`,
               avatarClass: 'dash-mini__avatar--accent',
               title: p.symbol || p.name,
@@ -304,7 +222,7 @@ export function renderDashboard() {
           style: { width: `${(d.balance / totalForDist) * 100}%`, background: palette[i % palette.length] },
           title: d.name,
         })));
-      const rows = list.slice(0, 4).map((d, i) => miniRow({
+      const rows = list.slice(0, 4).map((d, i) => MiniRow({
         avatar: `<span class="dash-dot" style="background:${palette[i % palette.length]}"></span>`,
         title: d.name,
         sub: d.interestRate ? el('span', { class: 't-caption', text: `${d.interestRate}% E.A.` }) : null,
@@ -566,7 +484,9 @@ export function renderDashboard() {
               el('h2', { class: 't-h1', text: `Hola, ${s.user}` }),
               el('p', { class: 'page-header__sub', text: 'Tu centro de comando financiero.' }),
             ]),
-            Button('Nuevo movimiento', { variant: 'primary', iconName: 'plus', onClick: () => openTxModal({ mode: 'create' }) }),
+            el('div', { class: 'u-hide-mobile' }, [
+              Button('Nuevo movimiento', { variant: 'primary', iconName: 'plus', onClick: () => openTxModal({ mode: 'create' }) }),
+            ]),
           ]),
         ]),
         fxBanner,
@@ -574,6 +494,7 @@ export function renderDashboard() {
         el('div', { class: 'grid dash-row section' }, [invCard, debtCard, goalsCard]),
         el('div', { class: 'grid dash-row section' }, [upcomingArea, insightsCard, categoryCard]),
         el('div', { class: 'grid grid--2 section' }, [recentCard, netWorthCard]),
+        Fab('Nuevo movimiento', { onClick: () => openTxModal({ mode: 'create' }) }),
       ])
     );
   }

@@ -96,6 +96,26 @@ export function openModal({ title, body, submitLabel = 'Guardar', onSubmit, dang
   return { close: closeModal };
 }
 
+// Bottom sheet de acciones (R0.4 — rediseño fintech). En móvil sube desde
+// abajo (clase modal--sheet); en desktop es un diálogo compacto centrado.
+// actions: [{ label, iconName, danger?, onClick }] — cada acción cierra el sheet
+// antes de ejecutarse (el onClick puede abrir otro modal, p. ej. confirmDialog).
+export function openActionSheet({ title, actions = [] }) {
+  const body = el('div', { class: 'sheet-actions' }, actions.map((a) =>
+    el('button', {
+      class: `sheet-actions__btn${a.danger ? ' sheet-actions__btn--danger' : ''}`,
+      type: 'button',
+      on: { click: () => { closeModal(); setTimeout(() => a.onClick?.(), 130); } },
+    }, [
+      a.iconName ? el('span', { class: 'sheet-actions__ico', html: icon(a.iconName) }) : null,
+      el('span', { text: a.label }),
+    ].filter(Boolean))
+  ));
+  const handle = openModal({ title, body, hideFooter: true });
+  activeOverlay?.querySelector('.modal')?.classList.add('modal--sheet');
+  return handle;
+}
+
 // Diálogo de confirmación (p. ej. eliminar).
 export function confirmDialog({ title = '¿Confirmar?', message, confirmLabel = 'Eliminar', onConfirm }) {
   openModal({
