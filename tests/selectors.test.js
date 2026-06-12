@@ -1962,6 +1962,46 @@ describe('goalOutlook (rediseño — CAMBIO 7: metas inteligentes)', () => {
   });
 });
 
+describe('snapshotDeltas (rediseño R3)', () => {
+  test('sin snapshots → []', () => {
+    assert.deepEqual(selectors.snapshotDeltas(mkState({ netWorthSnapshots: [] })), []);
+  });
+
+  test('primer snapshot sin delta; los siguientes vs el anterior', () => {
+    const s = mkState({ netWorthSnapshots: [
+      { id: 'b', date: '2026-02-15', netWorth: 110 },
+      { id: 'a', date: '2026-01-15', netWorth: 100 },
+      { id: 'c', date: '2026-03-15', netWorth: 99 },
+    ] });
+    const d = selectors.snapshotDeltas(s);
+    assert.deepEqual(d.map((x) => x.id), ['a', 'b', 'c']); // ordena por fecha ASC
+    assert.equal(d[0].deltaPct, null);
+    assert.equal(d[1].deltaAbs, 10);
+    assert.ok(Math.abs(d[1].deltaPct - 10) < 1e-9);
+    assert.equal(d[2].deltaAbs, -11);
+    assert.ok(Math.abs(d[2].deltaPct - (-10)) < 1e-9);
+  });
+
+  test('anterior con netWorth 0 → deltaPct null (sin división por cero)', () => {
+    const s = mkState({ netWorthSnapshots: [
+      { id: 'a', date: '2026-01-15', netWorth: 0 },
+      { id: 'b', date: '2026-02-15', netWorth: 50 },
+    ] });
+    const d = selectors.snapshotDeltas(s);
+    assert.equal(d[1].deltaPct, null);
+    assert.equal(d[1].deltaAbs, 50);
+  });
+
+  test('netWorth negativo: delta usa |anterior| como base', () => {
+    const s = mkState({ netWorthSnapshots: [
+      { id: 'a', date: '2026-01-15', netWorth: -100 },
+      { id: 'b', date: '2026-02-15', netWorth: -50 },
+    ] });
+    const d = selectors.snapshotDeltas(s);
+    assert.ok(Math.abs(d[1].deltaPct - 50) < 1e-9); // mejoró 50% de |−100|
+  });
+});
+
 describe('recurringMonthlyLoad (rediseño R2)', () => {
   before(() => { priceService.update({}, {}); });
   after(() => { priceService.update({}, {}); });

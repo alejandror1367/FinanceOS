@@ -1185,6 +1185,21 @@ export const selectors = {
     return { positions, total, topGainer, topLoser, concentration, distribution };
   },
 
+  // ── Rediseño fintech R3: variación entre snapshots consecutivos ────────────
+  // Devuelve los snapshots ordenados por fecha ASC con deltaAbs/deltaPct vs el
+  // anterior (null para el primero o si el anterior es 0).
+  snapshotDeltas(s) {
+    const snaps = [...(s.netWorthSnapshots || [])].sort((a, b) => (a.date < b.date ? -1 : 1));
+    return snaps.map((sn, i) => {
+      const prev = i > 0 ? snaps[i - 1] : null;
+      const deltaAbs = prev ? (sn.netWorth || 0) - (prev.netWorth || 0) : null;
+      const deltaPct = prev && prev.netWorth
+        ? (((sn.netWorth || 0) - prev.netWorth) / Math.abs(prev.netWorth)) * 100
+        : null;
+      return { ...sn, deltaAbs, deltaPct };
+    });
+  },
+
   // ── Rediseño fintech R2: carga mensual de recurrentes activos ──────────────
   // Normaliza cada frecuencia a su equivalente mensual (daily×30.44, weekly×4.345,
   // monthly×1, yearly÷12) y convierte a moneda base. Recurrentes en divisa sin

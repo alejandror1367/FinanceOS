@@ -7,7 +7,7 @@ import { store } from '../store/store.js';
 import { dataService } from '../services/dataService.js';
 import { apiClient } from '../services/apiClient.js';
 import { formatMoney, formatDate, roundMoney } from '../utils/format.js';
-import { KpiCard, Badge, Trend, ProgressBar, EmptyState, Button } from '../components/ui.js';
+import { Badge, Trend, EmptyState, Button, HeroCard, Fab } from '../components/ui.js';
 import { openModal, confirmDialog } from '../components/modal.js';
 import { field, textInput, numberInput, select, segmented, setFieldError, focusFieldError } from '../components/forms.js';
 import { toast } from '../services/toast.js';
@@ -655,34 +655,46 @@ export function renderInvestments() {
 
     const wrap = el('div', { class: 'stack' });
 
-    // KPIs
-    const kpiRow = [
-      KpiCard({ label: 'Portafolio total', value: formatMoney(pTotal, baseCur), iconName: 'investments', variant: 'accent', hero: true,
-        foot: [Trend(rTotal), el('span', { class: 't-caption', text: ' retorno total' })] }),
-      KpiCard({ label: 'Capital invertido', value: formatMoney(cTotal, baseCur), iconName: 'wallet', variant: 'neutral' }),
-      KpiCard({ label: 'Ganancia / Pérdida', value: formatMoney(gTotal, baseCur), iconName: gTotal >= 0 ? 'arrowUp' : 'arrowDown', variant: gTotal >= 0 ? 'emerald' : 'negative' }),
+    // Héroe (R3): valor total + P&L + XIRR — mismas cifras que el resumen
+    // (pTotal/cTotal/gTotal calculados arriba; solo cambia la presentación).
+    const xirrRate = selectors.portfolioXIRR(s);
+    const heroSplit = [
+      { label: 'Invertido', value: formatMoney(cTotal, baseCur, { compact: true }) },
+      { label: 'P&L', value: `${gTotal >= 0 ? '+' : '−'}${formatMoney(Math.abs(gTotal), baseCur, { compact: true })}`, cls: gTotal >= 0 ? 'text-positive' : 'text-negative' },
+      ...(xirrRate !== null ? [{ label: 'XIRR anual', value: pctFmt(xirrRate * 100), cls: xirrRate >= 0 ? 'text-positive' : 'text-negative' }] : []),
+      ...(closedGroups.length > 0 ? [{ label: 'P&L realizado', value: `${realizedTotal >= 0 ? '+' : '−'}${formatMoney(Math.abs(realizedTotal), baseCur, { compact: true })}`, cls: realizedTotal >= 0 ? 'text-positive' : 'text-negative' }] : []),
     ];
-    if (closedGroups.length > 0) {
-      kpiRow.push(KpiCard({ label: 'P&L Realizado', value: formatMoney(realizedTotal, baseCur), iconName: realizedTotal >= 0 ? 'arrowUp' : 'arrowDown', variant: realizedTotal >= 0 ? 'emerald' : 'negative',
-        foot: [el('span', { class: 't-caption', text: `${closedGroups.length} posición${closedGroups.length > 1 ? 'es' : ''} cerrada${closedGroups.length > 1 ? 's' : ''}` })] }));
-    }
-    wrap.appendChild(el('div', { class: 'grid grid--kpi' }, kpiRow));
+    wrap.appendChild(HeroCard({
+      label: 'Portafolio total',
+      iconName: 'investments',
+      value: formatMoney(pTotal, baseCur),
+      trendRow: [Trend(rTotal), el('span', { class: 't-caption', text: 'retorno total' })],
+      split: heroSplit,
+    }));
 
-    // Distribución
+    // Distribución (R3): barra apilada única + filas de detalle (sin barras
+    // individuales repetidas — la apilada ya comunica el peso).
     if (pTotal > 0) {
+      const DIST_COLORS = { mkt: 'var(--accent)', crypto: 'var(--warning)', fic: 'var(--accent-2)', cdt: 'var(--positive)' };
       const distCard = el('div', { class: 'card card--pad' });
       distCard.appendChild(el('p', { class: 't-caption text-secondary', style: 'margin:0 0 var(--space-3)' }, ['DISTRIBUCIÓN DEL PORTAFOLIO']));
+      distCard.appendChild(el('div', { class: 'dash-dist', role: 'img',
+        'aria-label': 'Distribución: ' + secStats.map((sec) => `${sec.label} ${(pTotal ? sec.totalValue / pTotal * 100 : 0).toFixed(1)}%`).join(', ') },
+        secStats.map((sec) => el('span', {
+          style: { width: `${pTotal ? sec.totalValue / pTotal * 100 : 0}%`, background: DIST_COLORS[sec.id] || 'var(--neutral)' },
+          title: sec.label,
+        }))));
       secStats.forEach((sec) => {
         const w = pTotal ? sec.totalValue / pTotal * 100 : 0;
-        distCard.appendChild(el('div', { class: 'stack', style: 'margin-bottom:var(--space-2)' }, [
-          el('div', { class: 'row-flex between' }, [
-            el('span', { class: 't-caption', text: sec.label }),
-            el('span', { class: 'tabular t-caption' }, [
-              el('span', { class: sec.ret >= 0 ? 'text-positive' : 'text-negative', text: pctFmt(sec.ret) }),
-              el('span', { class: 'text-secondary', text: `  ·  ${formatMoney(sec.totalValue, baseCur)}  ·  ${w.toFixed(1)}%` }),
-            ]),
+        distCard.appendChild(el('div', { class: 'row-flex between', style: 'margin-top:var(--space-2)' }, [
+          el('span', { class: 't-caption' }, [
+            el('span', { class: 'dash-dot', style: `background:${DIST_COLORS[sec.id] || 'var(--neutral)'};display:inline-block;margin-right:8px;vertical-align:middle` }),
+            sec.label,
           ]),
-          ProgressBar(w),
+          el('span', { class: 'tabular t-caption' }, [
+            el('span', { class: sec.ret >= 0 ? 'text-positive' : 'text-negative', text: pctFmt(sec.ret) }),
+            el('span', { class: 'text-secondary', text: `  ·  ${formatMoney(sec.totalValue, baseCur)}  ·  ${w.toFixed(1)}%` }),
+          ]),
         ]));
       });
       wrap.appendChild(distCard);
@@ -913,14 +925,16 @@ export function renderInvestments() {
         ]),
         el('div', { class: 'row-flex', style: 'gap:var(--space-2)' }, [
           Button(refreshing ? 'Actualizando…' : 'Actualizar precios', { variant: 'outline', iconName: 'refresh', onClick: async () => { await refreshPrices(); paintHeader(); } }),
-          Button('Nueva inversión', { variant: 'primary', iconName: 'plus', onClick: () => openPurchaseModal({ defaultType: 'etf' }) }),
+          el('div', { class: 'u-hide-mobile' }, [
+            Button('Nueva inversión', { variant: 'primary', iconName: 'plus', onClick: () => openPurchaseModal({ defaultType: 'etf' }) }),
+          ]),
         ]),
       ])
     );
   }
   paintHeader();
 
-  root.append(headerEl, bodyMount);
+  root.append(headerEl, bodyMount, Fab('Nueva inversión', { onClick: () => openPurchaseModal({ defaultType: 'etf' }) }));
 
   // Guard: si bodyMount ya no está en el DOM (render anterior), ignorar cambios del store.
   store.subscribe(() => { if (bodyMount.isConnected) paint(); });

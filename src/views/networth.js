@@ -8,9 +8,9 @@ import { store } from '../store/store.js';
 import { selectors } from '../store/selectors.js';
 import { dataService } from '../services/dataService.js';
 import { formatMoney, formatDate } from '../utils/format.js';
-import { Card, KpiCard, Badge, BarChart, EmptyState, Button } from '../components/ui.js';
+import { Card, Badge, BarChart, EmptyState, Button, Trend, HeroCard, Fab } from '../components/ui.js';
 import { Donut, Legend, CHART_PALETTE } from '../components/charts.js';
-import { openModal, confirmDialog } from '../components/modal.js';
+import { openModal, confirmDialog, openActionSheet } from '../components/modal.js';
 import { field, textInput, numberInput, select, setFieldError, focusFieldError } from '../components/forms.js';
 import { toast } from '../services/toast.js';
 import { guardedOp, guardedSave } from '../components/crud.js';
@@ -107,23 +107,42 @@ export function openLiabilityModal({ liability = {}, mode = 'create' }) {
   });
 }
 
-function actionButtons(onEdit, onDelete) {
-  return el('div', { class: 'row__actions' }, [
-    el('button', { class: 'icon-btn', 'aria-label': 'Editar', title: 'Editar', on: { click: onEdit }, html: icon('edit') }),
-    el('button', { class: 'icon-btn icon-btn--danger', 'aria-label': 'Eliminar', title: 'Eliminar', on: { click: onDelete }, html: icon('trash') }),
-  ]);
-}
-
-function simpleRow(iconName, title, sub, amount, cls, actions) {
-  return el('div', { class: 'row' }, [
+// R3 móvil: si la fila tiene acciones, el tap abre un bottom sheet (los
+// icon-btns quedan ocultos por CSS en ≤920px — clase nw-row).
+function simpleRow(iconName, title, sub, amount, cls, actionDefs) {
+  const actionsEl = actionDefs?.length
+    ? el('div', { class: 'row__actions' }, actionDefs.map((a) =>
+        el('button', {
+          class: `icon-btn${a.danger ? ' icon-btn--danger' : ''}`,
+          'aria-label': a.label, title: a.label,
+          on: { click: a.onClick }, html: icon(a.iconName),
+        })))
+    : null;
+  return el('div', {
+    class: `row${actionDefs?.length ? ' nw-row' : ''}`,
+    on: actionDefs?.length ? { click: (e) => {
+      if (!window.matchMedia('(max-width: 920px)').matches) return;
+      if (e.target.closest('button, a, input, label')) return;
+      openActionSheet({ title, actions: actionDefs });
+    } } : {},
+  }, [
     el('div', { class: 'row__avatar', html: icon(iconName) }),
     el('div', { class: 'row__main' }, [
       el('div', { class: 'row__title', text: title }),
       sub ? el('div', { class: 'row__sub', text: sub }) : null,
     ].filter(Boolean)),
     el('div', { class: `row__amount tabular ${cls || ''}`, text: amount }),
-    actions || null,
+    actionsEl,
   ].filter(Boolean));
+}
+
+function rowActions(name, onEdit, onDelete, deleteTitle) {
+  return [
+    { label: 'Editar', iconName: 'edit', onClick: onEdit },
+    { label: 'Eliminar', iconName: 'trash', danger: true, onClick: () => confirmDialog({
+      title: deleteTitle, message: `¿Eliminar "${name}"?`, onConfirm: onDelete,
+    }) },
+  ];
 }
 
 async function doSaveSnapshot() {
@@ -163,13 +182,47 @@ export function renderNetWorth() {
     const accountsValue = selectors.sumAccountsInBase(s, liquidAccounts);
     const invValue = selectors.investmentsValue(s);
 
-    // KPIs
-    const kpis = el('div', { class: 'grid grid--kpi' }, [
-      KpiCard({ label: 'Patrimonio neto', value: formatMoney(netWorth, cur), iconName: 'networth', variant: 'accent', hero: true,
-        foot: [el('span', { class: 't-caption', text: `${formatMoney(totalAssets, cur)} activos − ${formatMoney(totalLiabilities, cur)} pasivos` })] }),
-      KpiCard({ label: 'Activos', value: formatMoney(totalAssets, cur), iconName: 'investments', variant: 'emerald' }),
-      KpiCard({ label: 'Pasivos', value: formatMoney(totalLiabilities, cur), iconName: 'debts', variant: totalLiabilities > 0 ? 'negative' : 'neutral' }),
-    ]);
+    // Héroe (R3): mismo formato que el Dashboard — variación mensual + vs
+    // snapshot, sparkline del histórico y split activos/pasivos/liquidez.
+    const snapsAsc = [...(s.netWorthSnapshots || [])].sort((a, b) => (a.date < b.date ? -1 : 1));
+    const lastSnap = snapsAsc.at(-1);
+    const snapTrend = lastSnap?.netWorth
+      ? ((netWorth - lastSnap.netWorth) / Math.abs(lastSnap.netWorth)) * 100
+      : null;
+    const curMonthKey = new Date().toISOString().slice(0, 7);
+    const prevMonthSnap = [...snapsAsc].reverse().find((sn) => String(sn.date).slice(0, 7) < curMonthKey);
+    const monthlyTrend = prevMonthSnap?.netWorth
+      ? ((netWorth - prevMonthSnap.netWorth) / Math.abs(prevMonthSnap.netWorth)) * 100
+      : null;
+
+    const bd = selectors.netWorthBreakdown(s);
+    const hero = HeroCard({
+      label: 'Patrimonio neto',
+      iconName: 'networth',
+      value: formatMoney(netWorth, cur),
+      trendRow: [
+        monthlyTrend !== null ? Trend(monthlyTrend) : null,
+        el('span', { class: 't-caption', text:
+          monthlyTrend !== null ? 'este mes'
+            : snapTrend !== null ? 'sin snapshot del mes anterior' : 'sin comparativa aún' }),
+        snapTrend !== null && monthlyTrend !== snapTrend
+          ? el('span', { class: 't-caption', text: `· ${snapTrend >= 0 ? '+' : '−'}${Math.abs(snapTrend).toFixed(1)}% vs snapshot` })
+          : null,
+      ].filter(Boolean),
+      split: [
+        { label: 'Activos', value: formatMoney(totalAssets, cur, { compact: true }) },
+        { label: 'Pasivos', value: totalLiabilities > 0 ? `−${formatMoney(totalLiabilities, cur, { compact: true })}` : formatMoney(0, cur), cls: totalLiabilities > 0 ? 'text-negative' : '' },
+        { label: 'Liquidez', value: formatMoney(selectors.totalLiquidity(s), cur, { compact: true }) },
+      ],
+      sparkValues: [...snapsAsc.slice(-6).map((sn) => sn.netWorth), netWorth],
+      details: [
+        { label: '+ Cuentas', value: formatMoney(bd.accountsValue, cur) },
+        { label: '+ Inversiones', value: formatMoney(invValue, cur) },
+        ...(bd.otherAssets > 0 ? [{ label: '+ Otros activos', value: formatMoney(bd.otherAssets, cur) }] : []),
+        { label: '− Tarjetas de crédito', value: formatMoney(bd.ccDebt, cur) },
+        ...(bd.liabilitiesDebt > 0 ? [{ label: '− Créditos / deudas', value: formatMoney(bd.liabilitiesDebt, cur) }] : []),
+      ],
+    });
 
     // ── Composición del patrimonio (Asset Allocation) ────────────────────────
     const physicalValue = (s.assets || []).reduce((sum, a) => sum + (a.value || 0), 0);
@@ -197,8 +250,8 @@ export function renderNetWorth() {
         })
       : null;
 
-    // Evolución (snapshots reales)
-    const allSnaps = [...(s.netWorthSnapshots || [])].sort((a, b) => (a.date < b.date ? -1 : 1));
+    // Evolución (snapshots reales) — R3: con variación vs el snapshot anterior.
+    const allSnaps = selectors.snapshotDeltas(s);
     const visibleSnaps = showAllSnaps ? allSnaps : allSnaps.slice(-8);
     const outliers = outlierIds(allSnaps);
 
@@ -231,7 +284,14 @@ export function renderNetWorth() {
           ].filter(Boolean)),
           breakdownEl,
         ].filter(Boolean)),
-        el('div', { class: `row__amount tabular ${sn.netWorth >= 0 ? '' : 'text-negative'}`, text: formatMoney(sn.netWorth, sn.currency || cur) }),
+        el('div', { class: 'row__amount' }, [
+          el('div', { class: `tabular ${sn.netWorth >= 0 ? '' : 'text-negative'}`, text: formatMoney(sn.netWorth, sn.currency || cur) }),
+          sn.deltaPct !== null
+            ? el('div', { class: `t-micro tabular ${sn.deltaPct >= 0 ? 'text-positive' : 'text-negative'}`,
+                style: 'text-align:right',
+                text: `${sn.deltaPct >= 0 ? '+' : '−'}${Math.abs(sn.deltaPct).toFixed(1)}% vs anterior` })
+            : null,
+        ].filter(Boolean)),
         el('button', {
           class: 'icon-btn icon-btn--danger', 'aria-label': 'Eliminar snapshot', title: 'Eliminar snapshot',
           html: icon('trash'),
@@ -293,8 +353,10 @@ export function renderNetWorth() {
     (s.assets || []).forEach((a) => {
       const label = (ASSET_CATEGORIES.find((c) => c.value === a.category) || {}).label || a.category;
       assetItems.push(simpleRow('home', a.name, label, formatMoney(a.value, a.currency || cur), '',
-        actionButtons(() => openAssetModal({ asset: a, mode: 'edit' }),
-          () => confirmDialog({ title: 'Eliminar activo', message: `¿Eliminar "${a.name}"?`, onConfirm: () => guardedOp(() => dataService.remove('assets', a.id), 'Activo eliminado') }))));
+        rowActions(a.name,
+          () => openAssetModal({ asset: a, mode: 'edit' }),
+          () => guardedOp(() => dataService.remove('assets', a.id), 'Activo eliminado'),
+          'Eliminar activo')));
     });
 
     const assetsCard = Card({
@@ -314,8 +376,10 @@ export function renderNetWorth() {
       const typeLabel = (LIABILITY_TYPES.find((t) => t.value === l.type) || {}).label || l.type;
       const sub = `${typeLabel} · ${l.interestRate || 0}%${l.dueDate ? ' · vence ' + formatDate(l.dueDate, 'short') : ''}`;
       return simpleRow('debts', l.name, sub, formatMoney(l.balance, l.currency || cur), 'text-negative',
-        actionButtons(() => openLiabilityModal({ liability: l, mode: 'edit' }),
-          () => confirmDialog({ title: 'Eliminar deuda', message: `¿Eliminar "${l.name}"?`, onConfirm: () => guardedOp(() => dataService.remove('liabilities', l.id), 'Deuda eliminada') })));
+        rowActions(l.name,
+          () => openLiabilityModal({ liability: l, mode: 'edit' }),
+          () => guardedOp(() => dataService.remove('liabilities', l.id), 'Deuda eliminada'),
+          'Eliminar deuda'));
     });
 
     const allLiabRows = [...liabRows, ...ccAccountRows];
@@ -340,10 +404,11 @@ export function renderNetWorth() {
             Badge('Activos − Pasivos', 'info'),
           ]),
         ]),
-        kpis,
+        hero,
         allocationCard ? el('div', { class: 'section' }, [allocationCard]) : null,
         el('div', { class: 'section' }, [evolution]),
         el('div', { class: 'grid grid--2 section' }, [assetsCard, liabsCard]),
+        Fab('Guardar snapshot', { iconName: 'networth', onClick: doSaveSnapshot }),
       ])
     );
   }
