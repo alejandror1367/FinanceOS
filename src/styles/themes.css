@@ -16,36 +16,38 @@
 [data-theme="dark"] {
   color-scheme: dark;
 
-  /* Superficies (4 niveles, sin negro puro) */
-  --bg-app: var(--graphite-900);
-  --bg-sidebar: var(--graphite-850);
-  --bg-surface: var(--graphite-800);
-  --bg-surface-2: #1E2530;
-  --bg-elevated: var(--graphite-750);
-  --bg-hover: rgba(255,255,255,0.04);
-  --bg-active: rgba(255,255,255,0.07);
-  --bg-input: var(--graphite-850);
+  /* Superficies (4 niveles, navy azul profundo — dossier fintech) */
+  --bg-app: var(--navy-950);
+  --bg-sidebar: var(--navy-900);
+  --bg-surface: var(--navy-800);
+  --bg-surface-2: var(--navy-750);
+  --bg-elevated: #1F2A3F;
+  --bg-hover: rgba(167,176,194,0.06);
+  --bg-active: rgba(167,176,194,0.10);
+  --bg-input: var(--navy-850);
 
-  /* Bordes */
-  --border-subtle: rgba(255,255,255,0.05);
-  --border: rgba(255,255,255,0.09);
-  --border-strong: rgba(255,255,255,0.14);
+  /* Bordes (tinte slate frío, glassmorphism sutil) */
+  --border-subtle: rgba(167,176,194,0.07);
+  --border: rgba(167,176,194,0.12);
+  --border-strong: rgba(167,176,194,0.18);
 
   /* Texto */
-  --text-primary: var(--slate-100);
-  --text-secondary: var(--slate-400);
-  --text-tertiary: var(--slate-400);   /* WCAG AA ≥4.5:1 contra --bg-app (#13171E) — era slate-500 (~3.5:1) */
-  --text-inverse: var(--graphite-900);
+  --text-primary: #FFFFFF;
+  --text-secondary: var(--slate-350);
+  --text-tertiary: var(--slate-400);   /* WCAG AA ≥4.5:1 contra --bg-app (#070B14) */
+  --text-inverse: var(--navy-900);
 
-  /* Primario (periwinkle) */
+  /* Primario (periwinkle #8B9CFF) + secundario violeta (gradientes) */
   --accent: var(--periwinkle-500);
   --accent-hover: var(--periwinkle-400);
-  --accent-contrast: #0E1322;
-  --accent-bg: rgba(138,164,255,0.14);
+  --accent-contrast: #0A0F1E;
+  --accent-bg: rgba(139,156,255,0.14);
+  --accent-2: var(--violet-400);
+  --accent-2-bg: rgba(167,139,250,0.14);
 
   /* Emerald — inversiones + tendencia ↑ */
   --positive: var(--emerald-400);
-  --positive-bg: rgba(62,207,142,0.14);
+  --positive-bg: rgba(96,227,183,0.13);
 
   /* Champagne — metas */
   --gold: var(--champagne-400);
@@ -53,30 +55,31 @@
 
   /* Red — tendencia ↓ */
   --negative: var(--red-400);
-  --negative-bg: rgba(229,115,107,0.14);
+  --negative-bg: rgba(255,122,122,0.13);
 
   /* Funcionales */
-  --warning: var(--amber-400);
-  --warning-bg: rgba(224,162,58,0.14);
+  --warning: var(--amber-300);
+  --warning-bg: rgba(245,199,107,0.13);
   --info: var(--periwinkle-500);
-  --info-bg: rgba(138,164,255,0.14);
+  --info-bg: rgba(139,156,255,0.14);
   --neutral: var(--slate-400);
   --neutral-bg: rgba(151,161,178,0.12);
 
-  --focus-ring: rgba(138,164,255,0.55);
+  --focus-ring: rgba(139,156,255,0.55);
   --skeleton: rgba(255,255,255,0.06);
   --skeleton-shine: rgba(255,255,255,0.10);
-  --overlay: rgba(8,10,14,0.62);
+  --overlay: rgba(4,7,13,0.66);
 
-  /* Pulido UI (atmósfera y elevación) — solo decorativo, el color sigue
-     comunicando significado. */
+  /* Pulido UI (atmósfera, glassmorphism sutil y gradiente azul-violeta de
+     marca) — solo decorativo, el color sigue comunicando significado. */
   --app-wash:
-    radial-gradient(1100px 560px at 82% -12%, rgba(138,164,255,0.07), transparent 62%),
-    radial-gradient(900px 520px at -8% 6%, rgba(62,207,142,0.04), transparent 55%);
-  --card-highlight: inset 0 1px 0 rgba(255,255,255,0.045);
-  --hero-glow: 0 18px 50px -28px rgba(138,164,255,0.45);
-  --btn-primary-grad: linear-gradient(180deg, var(--periwinkle-400), var(--periwinkle-500));
-  --btn-primary-shadow: inset 0 1px 0 rgba(255,255,255,0.28), 0 6px 18px -8px rgba(138,164,255,0.55);
+    radial-gradient(1100px 560px at 82% -12%, rgba(139,156,255,0.10), transparent 62%),
+    radial-gradient(900px 520px at -8% 6%, rgba(167,139,250,0.06), transparent 55%);
+  --card-highlight: inset 0 1px 0 rgba(255,255,255,0.05);
+  --hero-glow: 0 18px 50px -28px rgba(139,156,255,0.50);
+  --brand-grad: linear-gradient(135deg, var(--periwinkle-500), var(--violet-400));
+  --btn-primary-grad: linear-gradient(135deg, var(--periwinkle-400), var(--violet-400));
+  --btn-primary-shadow: inset 0 1px 0 rgba(255,255,255,0.28), 0 6px 18px -8px rgba(139,156,255,0.55);
 }
 
 /* ---------- Light ---------- */
@@ -105,7 +108,9 @@
   --accent: var(--periwinkle-700);
   --accent-hover: var(--periwinkle-600);
   --accent-contrast: #FFFFFF;
-  --accent-bg: rgba(80,102,201,0.12);
+  --accent-bg: rgba(82,102,201,0.12);
+  --accent-2: var(--violet-500);
+  --accent-2-bg: rgba(139,108,240,0.12);
 
   --positive: var(--emerald-700);
   --positive-bg: rgba(31,157,107,0.12);
@@ -135,10 +140,11 @@
 
   /* Pulido UI (atmósfera y elevación) */
   --app-wash:
-    radial-gradient(1100px 560px at 82% -12%, rgba(80,102,201,0.06), transparent 62%),
-    radial-gradient(900px 520px at -8% 6%, rgba(31,157,107,0.035), transparent 55%);
+    radial-gradient(1100px 560px at 82% -12%, rgba(82,102,201,0.06), transparent 62%),
+    radial-gradient(900px 520px at -8% 6%, rgba(120,87,219,0.04), transparent 55%);
   --card-highlight: 0 0 0 0 transparent;
-  --hero-glow: 0 18px 44px -26px rgba(80,102,201,0.35);
-  --btn-primary-grad: linear-gradient(180deg, var(--periwinkle-600), var(--periwinkle-700));
-  --btn-primary-shadow: inset 0 1px 0 rgba(255,255,255,0.18), 0 6px 18px -8px rgba(80,102,201,0.50);
+  --hero-glow: 0 18px 44px -26px rgba(82,102,201,0.35);
+  --brand-grad: linear-gradient(135deg, var(--periwinkle-600), var(--violet-500));
+  --btn-primary-grad: linear-gradient(135deg, var(--periwinkle-600), var(--violet-500));
+  --btn-primary-shadow: inset 0 1px 0 rgba(255,255,255,0.18), 0 6px 18px -8px rgba(82,102,201,0.50);
 }

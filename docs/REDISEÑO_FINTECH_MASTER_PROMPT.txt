@@ -1,0 +1,90 @@
+# REDISEÑO INTEGRAL DE APLICACIÓN FINANCIERA
+
+Actúa como Principal Product Designer, Staff Product Manager y Senior Frontend Architect especializado en fintech.
+
+Tu objetivo es rediseñar y mejorar esta aplicación financiera personal manteniendo la identidad visual actual.
+
+NO cambies la marca.
+NO cambies el estilo visual base.
+
+Mantén:
+- Modo oscuro premium
+- Gradientes azul-violeta
+- Glassmorphism sutil
+- Tarjetas redondeadas
+- Apariencia tipo fintech moderna
+
+Tu misión es mejorar:
+- Jerarquía visual
+- UX
+- Escalabilidad
+- Densidad de información
+- Navegación
+- Insights financieros
+- Experiencia premium
+
+CAMBIO 1: Ordenamiento automático de cuentas
+- Ordenar cuentas de mayor saldo a menor saldo.
+- Convertir cuentas en USD a COP y ordenar por valor equivalente.
+- Tarjetas de crédito ordenadas por deuda de mayor a menor.
+
+CAMBIO 2: Corregir bug de gastos
+- Toda eliminación o modificación debe recalcular:
+recalculateDashboard()
+recalculateExpenses()
+recalculateBudgets()
+recalculateCashFlow()
+recalculateForecasts()
+
+CAMBIO 3: Patrimonio como centro del sistema
+- Patrimonio Neto
+- Activos
+- Pasivos
+- Variación mensual
+- Variación versus snapshot
+
+CAMBIO 4: Análisis inteligente del portafolio
+- Eliminar alertas duplicadas.
+- Generar insights accionables.
+
+CAMBIO 5: Vista compacta y expandida de inversiones.
+
+CAMBIO 6: Deudas inteligentes
+- Snowball
+- Avalanche
+- Proyección de pago
+- Costo por intereses
+
+CAMBIO 7: Metas inteligentes
+- Probabilidad de cumplimiento
+- Fecha proyectada
+- Estado de avance
+
+CAMBIO 8: Nuevo Dashboard
+1. Patrimonio Neto
+2. Salud Financiera
+3. Flujo del Mes
+4. Inversiones
+5. Deudas
+6. Metas
+7. Pagos Próximos
+8. Insights IA
+
+CAMBIO 9: Insights automáticos.
+
+CAMBIO 10: Entregables
+- UX completa
+- Wireframes
+- Sistema de diseño
+- Arquitectura frontend
+- Arquitectura de datos
+- Mockups
+- Código listo para producción
+
+Inspiración:
+Monarch Money
+Copilot Money
+Wealthfront
+Empower
+
+Manteniendo la identidad visual actual.

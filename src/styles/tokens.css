@@ -3,12 +3,21 @@
    Solo valores crudos. Los temas (themes.css) mapean estos
    primitivos a tokens semánticos. La UI usa SOLO semánticos.
 
-   Paleta v2: Graphite · Slate · Periwinkle · Emerald · Champagne.
-   Sin negro puro, sin azul saturado.
+   Paleta v3 (rediseño fintech): Navy · Slate · Periwinkle · Violet ·
+   Emerald · Champagne. Fondo azul profundo, gradientes azul-violeta.
    ============================================================ */
 
 :root {
-  /* ---- Graphite (neutros oscuros, base de superficies) ---- */
+  /* ---- Navy (neutros azul profundo, base de superficies dark) ---- */
+  --navy-950: #070B14;
+  --navy-900: #0C1322;
+  --navy-850: #111827;
+  --navy-800: #151D2D;
+  --navy-750: #1A2334;
+  --navy-700: #223048;
+  --navy-650: #2B3A55;
+
+  /* ---- Graphite (legado, neutros sin tinte — aún referenciado) ---- */
   --graphite-950: #0E1116;
   --graphite-900: #13171E;
   --graphite-850: #161B23;
@@ -22,6 +31,7 @@
   --slate-100: #ECEFF4;
   --slate-200: #DCE1EA;
   --slate-300: #C2C9D6;
+  --slate-350: #A7B0C2;
   --slate-400: #97A1B2;
   --slate-500: #6B7686;
   --slate-600: #5A6577;
@@ -31,15 +41,21 @@
   --slate-950: #0F1318;
 
   /* ---- Periwinkle (primario / marca) ---- */
-  --periwinkle-300: #B7C5FF;
-  --periwinkle-400: #A0B3FF;
-  --periwinkle-500: #8AA4FF;
-  --periwinkle-600: #6E8AF0;
-  --periwinkle-700: #5066C9;
+  --periwinkle-300: #BCC6FF;
+  --periwinkle-400: #A3B0FF;
+  --periwinkle-500: #8B9CFF;
+  --periwinkle-600: #6F82E8;
+  --periwinkle-700: #5266C9;
+
+  /* ---- Violet (gradientes de marca azul-violeta) ---- */
+  --violet-300: #C4B0FC;
+  --violet-400: #A78BFA;
+  --violet-500: #8B6CF0;
+  --violet-600: #7857DB;
 
   /* ---- Emerald (crecimiento / inversiones / tendencia ↑) ---- */
-  --emerald-300: #86E6BE;
-  --emerald-400: #5BDAA3;
+  --emerald-300: #84EDC7;
+  --emerald-400: #60E3B7;
   --emerald-500: #3ECF8E;
   --emerald-600: #2BB077;
   --emerald-700: #1F9D6B;
@@ -52,14 +68,14 @@
   --champagne-700: #8A6D3B;
 
   /* ---- Amber (advertencia) ---- */
-  --amber-300: #F1C97A;
-  --amber-400: #E0A23A;
+  --amber-300: #F5C76B;
+  --amber-400: #E8AE45;
   --amber-500: #C98A1E;
   --amber-600: #B07A1E;
 
   /* ---- Red (tendencia ↓ / peligro, desaturado) ---- */
-  --red-300: #F0A39C;
-  --red-400: #E5736B;
+  --red-300: #FFA3A3;
+  --red-400: #FF7A7A;
   --red-500: #D85A50;
   --red-600: #C4493F;
 

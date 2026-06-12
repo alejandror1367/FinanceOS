@@ -59,7 +59,7 @@
   grid-column: span 2;
   background:
     radial-gradient(120% 140% at 100% 0%, var(--accent-bg), transparent 60%),
-    radial-gradient(90% 120% at 0% 100%, color-mix(in srgb, var(--accent) 5%, transparent), transparent 55%),
+    radial-gradient(90% 120% at 0% 100%, color-mix(in srgb, var(--accent-2) 7%, transparent), transparent 55%),
     var(--bg-surface);
   border-color: color-mix(in srgb, var(--accent) 22%, var(--border));
   box-shadow: var(--hero-glow), var(--card-highlight);

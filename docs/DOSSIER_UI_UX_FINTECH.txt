@@ -1,0 +1,88 @@
+# DOSSIER UI/UX FINTECH
+
+OBJETIVO
+
+La aplicación debe sentirse como una fintech premium enfocada en patrimonio, inversiones y crecimiento financiero.
+
+El usuario debe entender en menos de 5 segundos:
+- Qué tengo
+- Qué debo
+- Cómo voy
+- Qué debo hacer después
+
+IDENTIDAD VISUAL
+
+Mantener:
+- Modo oscuro premium
+- Glassmorphism ligero
+- Gradientes azul-violeta
+- Tarjetas elevadas
+
+PALETA
+
+Fondo principal: #070B14
+Superficie: #111827
+Tarjetas: #151D2D
+Primario: #8B9CFF
+Positivo: #60E3B7
+Negativo: #FF7A7A
+Advertencia: #F5C76B
+Texto principal: #FFFFFF
+Texto secundario: #A7B0C2
+
+DASHBOARD IDEAL
+
+PATRIMONIO NETO
+$14.394.374
++11.2% este mes
+
+ACTIVOS Y PASIVOS
+Salud financiera
+Insights IA
+
+INVERSIONES
+
+Vista compacta:
+Ticker
+Nombre
+Valor
+Rentabilidad
+
+Vista expandida:
+Shares
+Cost Basis
+DCA
+Dividendos
+Compras
+Ventas
+Historial
+
+DEUDAS
+Distribución visual por tarjeta.
+Métodos Snowball y Avalanche.
+
+METAS
+Monto ahorrado
+Monto faltante
+Ahorro requerido por mes
+Probabilidad de cumplimiento
+
+INSIGHTS DEL PORTAFOLIO
+- Mayor ganador
+- Mayor pérdida
+- Riesgo de concentración
+- Distribución
+
+EVITAR
+- Tarjetas gigantes
+- Espacios vacíos
+- Métricas repetidas
+- Pantallas redundantes
+
+EXPERIENCIA OBJETIVO
+
+Cada pantalla debe responder:
+¿Qué tengo?
+¿Qué debo?
+¿Qué cambió?
+¿Qué debería hacer ahora?
