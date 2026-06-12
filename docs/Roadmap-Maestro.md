@@ -413,6 +413,21 @@ Amex PESOS/DOLARES + XLSX, RappiCuenta). PDFs reales en `tests/fixtures/import/p
 **SPRINT L ✅ COMPLETO (2026-06-11).** Importación real de los extractos: la hará el dueño
 el próximo mes (decisión: los saldos de las tarjetas aún no se cuadran este mes).
 
+---
+
+### Sprint M — Cuentas avanzadas + UI móvil (2026-06-12, pedido directo del dueño)
+
+| # | Tarea | Estado |
+|---|---|---|
+| M.1 | ARQ Invest → `digital_wallet` (saldo cash a liquidez; 24 posiciones intactas en Inversiones; admite %EA/rendimiento) | ✅ ejecutado en producción vía API |
+| M.2 | Subtipo `cesantias` en cuentas savings: select en el form, badge "Cesantías · no líquida", excluida de `liquidAccounts` (liquidez/score) pero dentro de `totalAssets`. Cuenta "Porvenir Cesantías" creada | ✅ código + cuenta · **⚠ deploy pendiente: `Config.gs`+`Accounts.gs` + `setupDatabase()` (columna subtype)** |
+| M.3 | Pulido UI: atmósfera radial, elevación de cards, hero glow, CTA con gradiente, nav activo entintado, stagger de entrada | ✅ `a1ea4bf` |
+| M.4 | Móvil estilo ARQ: bottom-nav flotante (píldora, blur, sombra, safe-area) + indicador del ítem activo | ✅ `b14dd73` |
+| M.5 | Fix filtros de Transacciones superpuestos en móvil (flex→grid 2 col) | ✅ `b14dd73` |
+
+**Pendiente del dueño:** deploy backend (M.2) → después editar "Porvenir Cesantías" y
+confirmar el subtipo en el modal (o lo re-aplica el agente); poner el saldo real de cesantías.
+
 **Decisiones del dueño (2026-06-11):** D1 ✅ cuotas → valor TOTAL en fecha de compra ·
 D2 ✅ pagos/abonos del extracto → saltarlos · D3 ✅ PDF de RappiCard TC subido
 (es de Davivienda; mismo password). Los 4 PDFs comparten contraseña (la conoce el dueño;
