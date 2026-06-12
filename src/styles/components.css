@@ -404,6 +404,13 @@ select.input { appearance: none; cursor: pointer;
 .search__icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--text-tertiary); pointer-events: none; }
 .search__icon svg { width: 18px; height: 18px; }
 .toolbar .input { width: auto; min-width: 130px; }
+/* Móvil: el flex con min-width hacía que los filtros se montaran unos sobre otros.
+   Grid de 2 columnas — búsqueda a lo ancho, selects en pares parejos. */
+@media (max-width: 600px) {
+  .toolbar { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+  .toolbar .search { grid-column: 1 / -1; min-width: 0; }
+  .toolbar .input, .toolbar select.input { width: 100%; min-width: 0; }
+}
 
 /* acciones de fila/tarjeta — siempre visibles (en táctil), con énfasis al hover en escritorio */
 .row__actions { display: flex; gap: 2px; }

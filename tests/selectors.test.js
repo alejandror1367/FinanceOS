@@ -224,6 +224,27 @@ describe('totalLiquidity', () => {
     assert.equal(selectors.totalLiquidity(s), 1_000_000);
   });
 
+  test('excluye savings con subtype cesantias (fondo bloqueado, p. ej. Porvenir)', () => {
+    const s = mkState({
+      accounts: [
+        acc('1', 1_000_000, 'bank'),
+        acc('2', 4_000_000, 'savings', { subtype: 'cesantias' }),
+        acc('3', 250_000, 'savings'), // ahorro normal sí es líquido
+      ],
+    });
+    assert.equal(selectors.totalLiquidity(s), 1_250_000);
+  });
+
+  test('las cesantías SÍ cuentan en totalAssets (patrimonio, no liquidez)', () => {
+    const s = mkState({
+      accounts: [
+        acc('1', 1_000_000, 'bank'),
+        acc('2', 4_000_000, 'savings', { subtype: 'cesantias' }),
+      ],
+    });
+    assert.equal(selectors.totalAssets(s), 5_000_000);
+  });
+
   test('excluye tarjetas de crédito (deuda no es liquidez)', () => {
     const s = mkState({
       accounts: [

@@ -150,7 +150,10 @@ function lastMonths(n) {
 
 export const selectors = {
   liquidAccounts(s) {
-    return s.accounts.filter((a) => !a.isArchived && a.type !== 'investment' && a.type !== 'credit_card');
+    // subtype 'cesantias' (p. ej. Porvenir): fondo NO retirable libremente — se
+    // excluye de la liquidez, pero sigue contando en totalAssets/patrimonio.
+    return s.accounts.filter((a) =>
+      !a.isArchived && a.type !== 'investment' && a.type !== 'credit_card' && a.subtype !== 'cesantias');
   },
 
   totalLiquidity(s) {

@@ -47,6 +47,8 @@ const PRESETS = [
   { label: 'Daviplata',         type: 'digital_wallet', institution: 'Daviplata',   currency: 'COP' },
   { label: 'Global66',          type: 'bank',           institution: 'Global66',    currency: 'USD' },
   { label: 'RappiCuenta',       type: 'savings',        institution: 'Rappi',       currency: 'COP', interestRate: 9 },
+  { label: 'Porvenir Cesantías', type: 'savings',       institution: 'Porvenir',    currency: 'COP', subtype: 'cesantias' },
+  { label: 'ARQ Invest',        type: 'digital_wallet', institution: 'ARQ Invest',  currency: 'USD' },
   { label: 'Caja menor',        type: 'cash',           institution: '',            currency: 'COP' },
   { label: 'Visa Bancolombia',  type: 'credit_card',    institution: 'Bancolombia', currency: 'COP' },
   { label: 'MC NuBank',         type: 'credit_card',    institution: 'NuBank',      currency: 'COP' },
@@ -100,6 +102,19 @@ function accountForm(existing) {
       extra.appendChild(el('div', { class: 'field-row' }, [
         field('Tasa E.A. % (rendimiento)', numberInput({ name: 'interestRate', value: existing?.interestRate ?? '', placeholder: '0' })),
       ]));
+      // Subtipo (solo ahorro): "Cesantías" marca fondos NO retirables libremente
+      // (p. ej. Porvenir) — se excluyen de los activos líquidos, pero el saldo
+      // sigue contando en el patrimonio.
+      if (t === 'savings') {
+        extra.appendChild(field('Subtipo', select({
+          name: 'subtype',
+          value: existing?.subtype || '',
+          options: [
+            { value: '', label: 'Cuenta de ahorro normal' },
+            { value: 'cesantias', label: 'Cesantías — bloqueada de los activos líquidos' },
+          ],
+        })));
+      }
     }
   }
 
@@ -116,10 +131,14 @@ function accountForm(existing) {
             curEl.value   = p.currency;
             instEl.value  = p.institution;
             typeEl.dispatchEvent(new Event('change'));
-            // El campo de tasa lo crea paintExtra tras el change; setearlo después.
+            // Los campos extra los crea paintExtra tras el change; setearlos después.
             if (p.interestRate != null) {
               const ir = extra.querySelector('[name="interestRate"]');
               if (ir) ir.value = p.interestRate;
+            }
+            if (p.subtype) {
+              const st = extra.querySelector('[name="subtype"]');
+              if (st) st.value = p.subtype;
             }
           }},
         })
@@ -169,6 +188,8 @@ export function openAccountModal(existing, { defaults = null } = {}) {
       } else if (isYieldType(data.type)) {
         // Cuenta remunerada: tasa EA para el rendimiento estimado (Sprint D).
         data.interestRate = Number(get('interestRate')?.value) || 0;
+        // Subtipo solo aplica a savings; al cambiar de tipo se limpia explícitamente.
+        data.subtype = data.type === 'savings' ? (get('subtype')?.value || '') : '';
       }
       if (!data.name) { focusFieldError(get('name')); return setFieldError(get('name'), 'El nombre es obligatorio'); }
       return guardedSave(
@@ -269,6 +290,8 @@ function accountRow(a) {
         a.name, ' ', Badge(typeLabel(a.type), isCC ? 'negative' : 'info'),
         isYield ? ' ' : null,
         isYield ? Badge(`${a.interestRate}% EA`, 'positive') : null,
+        a.subtype === 'cesantias' ? ' ' : null,
+        a.subtype === 'cesantias' ? Badge('Cesantías · no líquida', 'gold') : null,
       ].filter(Boolean)),
       el('div', { class: 'row__sub', text: subParts.join(' · ') }),
       util !== null ? el('div', { class: 'util-bar' }, [

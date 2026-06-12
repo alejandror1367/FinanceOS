@@ -31,6 +31,7 @@ function createAccount_(d) {
     paymentDay:   toAmount_(d.paymentDay   || 0, 'paymentDay'),
     minPayment:   toAmount_(d.minPayment   || 0, 'minPayment'),
     totalDue:     toAmount_(d.totalDue     || 0, 'totalDue'),
+    subtype:      validateSubtype_(d.subtype),
   });
   logAudit_('create', 'Accounts', rec.id, 'Cuenta creada: ' + rec.name);
   return rec;
@@ -52,9 +53,19 @@ function updateAccount_(d) {
   if (d.paymentDay    !== undefined) patch.paymentDay    = toAmount_(d.paymentDay,   'paymentDay');
   if (d.minPayment    !== undefined) patch.minPayment    = toAmount_(d.minPayment,   'minPayment');
   if (d.totalDue      !== undefined) patch.totalDue      = toAmount_(d.totalDue,     'totalDue');
+  if (d.subtype       !== undefined) patch.subtype       = validateSubtype_(d.subtype);
   var rec = repoUpdate_('Accounts', d.id, patch);
   logAudit_('update', 'Accounts', rec.id, 'Cuenta actualizada: ' + rec.name);
   return rec;
+}
+
+// Subtipos permitidos de cuenta. 'cesantias' (fondo bloqueado, p. ej. Porvenir):
+// el saldo NO cuenta en liquidez pero SÍ en patrimonio (lógica en el frontend).
+function validateSubtype_(v) {
+  var s = sanitizeString_(v || '', 30).toLowerCase();
+  if (!s) return '';
+  if (['cesantias'].indexOf(s) === -1) throw new Error('Subtipo de cuenta inválido: ' + s);
+  return s;
 }
 
 function deleteAccount_(d) {

@@ -59,6 +59,10 @@ var SCHEMAS = {
     // reordena). Última fecha hasta la que se registró rendimiento de una cuenta
     // remunerada; el frontend acumula el interés desde aquí (idempotencia por período).
     { key: 'lastYieldDate', type: 'd' },
+    // Subtipo de cuenta (APPEND-ONLY). Hoy solo 'cesantias' en cuentas savings:
+    // marca fondos NO retirables libremente (Porvenir) que se EXCLUYEN de la
+    // liquidez (selectors.liquidAccounts) pero siguen sumando al patrimonio.
+    { key: 'subtype', type: 's' },
   ],
   Transactions: [
     { key: 'id', type: 's' },
