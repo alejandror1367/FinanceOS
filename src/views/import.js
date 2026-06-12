@@ -43,6 +43,11 @@ export function renderImport() {
 
   // ---------- render: reemplaza contenido del root de una vez ----------
   function render() {
+    // L.6/TD-57: el re-render global de app.js (onStoreChange, p. ej. un sync de
+    // fondo cada 30 s) re-monta la vista y BORRARÍA el preview/contraseña a mitad
+    // de una importación. Mientras haya un flujo activo, marcamos el root para que
+    // onStoreChange lo respete (mismo espíritu que el guard de modal/typing).
+    root.toggleAttribute('data-import-busy', state.phase !== 'idle');
     let body;
     if (state.phase === 'idle')           body = buildIdle();
     else if (state.phase === 'analyzing') body = buildAnalyzing();

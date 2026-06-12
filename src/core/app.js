@@ -180,9 +180,12 @@ function onStoreChange() {
   const ae = document.activeElement;
   const typing = ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT');
   const modalOpen = document.body.classList.contains('modal-open');
+  // L.6/TD-57: una importación en curso (#/import con preview/contraseña abiertos) es
+  // estado local de la vista; re-montarla por un sync de fondo la perdería.
+  const importBusy = !!document.querySelector('[data-import-busy]');
 
   // Re-renderiza la vista activa cuando hay datos (sin animación ni reset de scroll).
-  if (s.ready && shellRefs && currentRoute && !typing && !modalOpen) {
+  if (s.ready && shellRefs && currentRoute && !typing && !modalOpen && !importBusy) {
     renderView(routes[s.ui.route], { animate: false });
   }
 }
