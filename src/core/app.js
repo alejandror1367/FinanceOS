@@ -101,10 +101,14 @@ function renderView(route, opts = {}) {
   mount(shellRefs.content, route.render(state));
   if (opts.animate) {
     shellRefs.content.scrollTop = 0;
-    shellRefs.content.firstElementChild?.animate?.(
+    const first = shellRefs.content.firstElementChild;
+    first?.animate?.(
       [{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'none' }],
       { duration: 220, easing: 'cubic-bezier(0.16,1,0.3,1)' },
     );
+    // Stagger CSS de tarjetas/secciones SOLO al navegar: los re-renders de
+    // onStoreChange (animate:false) no llevan la clase → sin re-disparos de fondo.
+    first?.classList.add('view-anim');
   }
 }
 

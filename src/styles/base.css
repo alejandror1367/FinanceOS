@@ -14,7 +14,11 @@ body {
   line-height: var(--lh-normal);
   font-weight: var(--fw-regular);
   color: var(--text-primary);
+  /* Atmósfera: lavado radial sutil de marca sobre el fondo plano (por tema). */
   background-color: var(--bg-app);
+  background-image: var(--app-wash);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   transition: background-color var(--dur-base) var(--ease-out),
