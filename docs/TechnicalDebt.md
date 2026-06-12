@@ -177,6 +177,13 @@ La deuda se concentra en **tres temas de fondo**: (1) **modelo contable** (el le
 | TD-55 ✅ | **`.row__actions` (≈307px) desborda el viewport a 375px** en Presupuestos y Metas — `document.scrollWidth` llegaba a 500px. Causa raíz: la regla móvil `.row__actions { flex: 0 0 100% }` asume un parent con wrap (`.row`), pero los headers de card de budgets/goals usan `.row-flex.between` sin wrap → basis 100% + shrink 0 empuja fuera del viewport | QA I.1 (Playwright, prod v0.2.108) | Scroll horizontal accidental en móvil | S | **HECHO** (2026-06-10): `.card > .row-flex.between:first-child { flex-wrap: wrap }` en el media ≤600px de `components.css`. Verificado en prod v0.2.110: 16/16 rutas sin overflow a 375px |
 | TD-56 ✅ | **`.topbar__actions` (164px) sobresalía 2–4px del viewport a 375px** en Transacciones y Exportaciones. Causa raíz: `.topbar__title` ("Transacciones" — una sola palabra) no podía encoger (min-width auto del flex item) | QA I.1 (Playwright, prod v0.2.108) | Micro-scroll lateral; cosmético | S | **HECHO** (2026-06-10): `.topbar__title` con `min-width: 0` + `nowrap` + elipsis (`layout.css`) y `gap: var(--space-3)` del topbar en móvil. Verificado en prod v0.2.110: sin overflow |
 
+## TD nuevos — Sprint L en vivo 2026-06-11 (TD-57, TD-58)
+
+| ID | Problema | Origen | Impacto | Esf | Estado |
+|----|----------|--------|---------|-----|--------|
+| TD-57 ✅ | **`onStoreChange` re-renderizaba la vista activa en cada cambio del store** (sync 30s, precios) y `#/import` es stateful → el preview/campo de contraseña se borraba a mitad de flujo (reproducido: el preview Amex desaparecía a los ~2 s) | Verificación L.6 | Pérdida de estado de importación en curso | S | **HECHO** (`0fcda39`): la vista marca `data-import-busy` mientras `phase !== 'idle'` y el re-render global lo respeta (mismo patrón que modal/typing) |
+| TD-58 ✅ | **`dupKey` comparaba la fecha completa con hora** — las tx de EmailCapture (`2026-06-07T14:34:54`) nunca matcheaban contra extractos (fecha sola) → compras ya capturadas por email se re-importarían | Verificación L.5 | Duplicados silenciosos al importar extractos | S | **HECHO** (`106fc14`): `slice(0,10)` en la fecha. Verificado en vivo con la tx real (`match: true`) |
+
 > **Hallazgo colateral del deploy (corregido en `14dd401`):** el precache del SW
 > (`cache.addAll`) pasaba por el HTTP cache del navegador; con `max-age=600` de
 > GitHub Pages, una versión nueva del SW podía fijar CSS/JS de hasta 10 min de

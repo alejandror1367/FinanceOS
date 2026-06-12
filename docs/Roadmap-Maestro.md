@@ -407,8 +407,11 @@ Amex PESOS/DOLARES + XLSX, RappiCuenta). PDFs reales en `tests/fixtures/import/p
 | L.3 ✅ | Amex por XLSX: `parseExcelRaw` (todas las hojas crudas) + `EXCEL_PROFILES`/`detectExcelBank` — perfil `amex_bancolombia`: solo "Movimientos durante el periodo", el signo decide (abonos/reversos fuera, D2), valor TOTAL de compras en cuotas (D1), hoja DOLARES → items USD. Test real: 11 items del XLSX verdadero | M |
 | L.4 | Perfil Nu TC (PDF): fecha en 2 líneas, cuotas (valor total en fecha de compra — D1 ✅), ignorar sub-filas de mora | M |
 | L.4b | Perfil RappiCard TC (PDF Davivienda, `00200001...CREDIT_CARD_STATEMENT.pdf`): filas `Virtual/- · YYYY-MM-DD · comercio · $valor · n de m`; comercio puede partirse en 2 líneas; negativos = pagos (saltar — D2 ✅) | M |
-| L.5 | K.7: dedup contra tx `gm_` de email (normalización de descripción si hace falta) | S |
-| L.6 | Verificación en vivo con los PDFs reales en `#/import` (password + preview + 0 duplicados) | S |
+| L.5 ✅ | K.7: dedup email↔extracto — **bug real cazado y corregido** (`106fc14`): las tx de EmailCapture llevan hora y `dupKey` comparaba el string completo → jamás matcheaba contra extractos; ahora `slice(0,10)`. Verificado en vivo con la tx real de Amazon Prime Video (`match: true`) | S |
+| L.6 ✅ | Verificación EN VIVO en prod (2026-06-11, solo-preview, CERO importaciones por decisión del dueño — los saldos se cuadran el próximo mes): Amex XLSX → 11 tx exactas (2 omitidas) · Nu PDF → contraseña pedida + incorrecta detectada + 4 compras · RappiCard PDF → contraseña + 10 compras (descripción envuelta OK, pago PSE fuera) · RappiCuenta PDF → contraseña + 2 ingresos. **Bug colateral corregido** (`0fcda39`): el re-render global por sync de fondo re-montaba `#/import` y borraba el preview a mitad de flujo (guard `data-import-busy`) | S |
+
+**SPRINT L ✅ COMPLETO (2026-06-11).** Importación real de los extractos: la hará el dueño
+el próximo mes (decisión: los saldos de las tarjetas aún no se cuadran este mes).
 
 **Decisiones del dueño (2026-06-11):** D1 ✅ cuotas → valor TOTAL en fecha de compra ·
 D2 ✅ pagos/abonos del extracto → saltarlos · D3 ✅ PDF de RappiCard TC subido
