@@ -7,7 +7,7 @@ import { store } from '../store/store.js';
 import { selectors } from '../store/selectors.js';
 import { dataService } from '../services/dataService.js';
 import { formatMoney } from '../utils/format.js';
-import { Button, Badge, KpiCard, ProgressBar, EmptyState } from '../components/ui.js';
+import { Button, Badge, ProgressBar, EmptyState, HeroCard, ScoreRing, Fab } from '../components/ui.js';
 import { openModal, confirmDialog } from '../components/modal.js';
 import { field, numberInput, select, segmented, textInput, setFieldError, focusFieldError } from '../components/forms.js';
 import { toast } from '../services/toast.js';
@@ -127,6 +127,9 @@ function budgetCard(s, b, catMap, cur) {
   const near = st.pct >= 80 && !over;
   const variant = over ? 'negative' : near ? 'warning' : '';
   const availClass = st.available < 0 ? 'text-negative' : 'text-positive';
+  // R2: la proyección al cierre se calcula desde antes (budgetStats.projected)
+  // pero solo se mostraba como texto plano — ahora alerta cuando supera el límite.
+  const projOver = st.projected > st.amount && !over;
 
   return el('div', { class: 'card card--pad-sm' }, [
     el('div', { class: 'row-flex between' }, [
@@ -152,9 +155,28 @@ function budgetCard(s, b, catMap, cur) {
       el('span', { class: `t-caption ${availClass}`, text: `${st.available < 0 ? 'Excedido ' : 'Disponible '}${formatMoney(Math.abs(st.available), cur)}` }),
     ]),
     st.projected !== st.consumed
-      ? el('div', { class: 't-caption text-secondary mt-2', text: `Proyección al cierre: ${formatMoney(st.projected, cur)}` })
+      ? el('div', { class: 'row-flex mt-2', style: 'gap: var(--space-2); flex-wrap: wrap' }, [
+          el('span', { class: 't-caption text-secondary', text: `Proyección al cierre: ${formatMoney(st.projected, cur)}` }),
+          projOver ? Badge(`supera el límite en ${formatMoney(st.projected - st.amount, cur, { compact: true })}`, 'warning') : null,
+        ].filter(Boolean))
       : null,
   ].filter(Boolean));
+}
+
+// R2: período visible — navegable mes a mes (los datos históricos siempre
+// estuvieron en la BD vía periodKey; antes solo se listaba todo junto).
+const VIEW = { monthKey: curMonthKey };
+
+function shiftMonth(key, delta) {
+  const [y, m] = key.split('-').map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function monthTitle(key) {
+  const [y, m] = key.split('-').map(Number);
+  const str = new Intl.DateTimeFormat('es-CO', { month: 'long', year: 'numeric' }).format(new Date(y, m - 1, 1));
+  return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
 export function renderBudgets() {
@@ -164,44 +186,110 @@ export function renderBudgets() {
     const s = store.get();
     const cur = s.baseCurrency;
     const catMap = {}; (s.categories || []).forEach((c) => { catMap[c.id] = c; });
-    const budgets = [...(s.budgets || [])];
+
+    // Presupuestos del período visible: mensuales del mes + anuales del año.
+    const monthKey = VIEW.monthKey;
+    const yearKey  = monthKey.slice(0, 4);
+    const budgets = (s.budgets || []).filter((b) => {
+      const isMonthly = b.period !== 'annual';
+      const key = parsePeriodKey(b.periodKey, isMonthly);
+      return isMonthly ? key === monthKey : key === yearKey;
+    });
     budgets.sort((a, b) => selectors.budgetStats(s, b).pct - selectors.budgetStats(s, a).pct);
 
     const totalBudget = budgets.reduce((sum, b) => sum + (b.amount || 0), 0);
     const totalConsumed = budgets.reduce((sum, b) => sum + selectors.budgetConsumed(s, b), 0);
     const available = Math.max(0, totalBudget - totalConsumed);
     const consumedPct = totalBudget ? Math.round(totalConsumed / totalBudget * 100) : 0;
-    const kpiVariant = consumedPct >= 100 ? 'negative' : consumedPct >= 80 ? 'warning' : 'emerald';
+    const gaugeVariant = consumedPct >= 100 ? 'negative' : consumedPct >= 80 ? 'warning' : 'positive';
+    const nearCount = budgets.filter((b) => selectors.budgetStats(s, b).pct >= 80).length;
+
+    // Navegación de período ← Mes →
+    const periodNav = el('div', { class: 'period-nav' }, [
+      Button('‹', { variant: 'ghost', iconOnly: true, ariaLabel: 'Mes anterior',
+        onClick: () => { VIEW.monthKey = shiftMonth(VIEW.monthKey, -1); repaint(); } }),
+      el('span', { class: 'period-nav__label', text: monthTitle(monthKey) }),
+      Button('›', { variant: 'ghost', iconOnly: true, ariaLabel: 'Mes siguiente',
+        onClick: () => { VIEW.monthKey = shiftMonth(VIEW.monthKey, 1); repaint(); } }),
+      monthKey !== curMonthKey
+        ? Button('Hoy', { variant: 'ghost', size: 'sm', onClick: () => { VIEW.monthKey = curMonthKey; repaint(); } })
+        : null,
+    ].filter(Boolean));
 
     const header = el('div', { class: 'page-header' }, [
       el('div', { class: 'row-flex between' }, [
         el('div', {}, [
           el('h2', { class: 't-h1', text: 'Presupuestos' }),
-          el('p', { class: 'page-header__sub', text: budgets.length ? `${budgets.length} presupuesto${budgets.length !== 1 ? 's' : ''} · ${curMonthKey.slice(0, 7)}` : 'Define límites por categoría.' }),
+          el('p', { class: 'page-header__sub', text: budgets.length ? `${budgets.length} presupuesto${budgets.length !== 1 ? 's' : ''} en ${monthTitle(monthKey)}` : 'Define límites por categoría.' }),
         ]),
-        Button('Nuevo presupuesto', { variant: 'primary', iconName: 'plus', onClick: () => openBudgetModal({ mode: 'create' }) }),
+        el('div', { class: 'u-hide-mobile' }, [
+          Button('Nuevo presupuesto', { variant: 'primary', iconName: 'plus', onClick: () => openBudgetModal({ mode: 'create' }) }),
+        ]),
       ]),
     ]);
 
-    const children = [header];
+    const children = [header, periodNav];
 
     if (budgets.length) {
-      children.push(el('div', { class: 'grid grid--kpi' }, [
-        KpiCard({ label: 'Total presupuestado', value: formatMoney(totalBudget, cur), iconName: 'budgets', variant: 'accent' }),
-        KpiCard({ label: 'Consumido', value: formatMoney(totalConsumed, cur), iconName: 'analytics', variant: kpiVariant,
-          foot: [el('span', { class: 't-caption', text: `${consumedPct}% del total` })] }),
-        KpiCard({ label: 'Disponible', value: formatMoney(available, cur), iconName: 'accounts', variant: 'emerald' }),
-        KpiCard({ label: 'Presupuestos activos', value: String(budgets.length), iconName: 'recurring', variant: 'neutral',
-          foot: [el('span', { class: 't-caption', text: `${budgets.filter((b) => { const st = selectors.budgetStats(s, b); return st.pct >= 80; }).length} cerca del límite` })] }),
+      // Héroe (R2): disponible + gauge de consumo global
+      children.push(el('div', { class: 'grid budget-hero' }, [
+        HeroCard({
+          label: 'Disponible',
+          iconName: 'budgets',
+          value: formatMoney(available, cur),
+          trendRow: [
+            Badge(`${consumedPct}% consumido`, consumedPct >= 100 ? 'negative' : consumedPct >= 80 ? 'warning' : 'positive'),
+            nearCount ? el('span', { class: 't-caption', text: `${nearCount} cerca del límite` }) : null,
+          ].filter(Boolean),
+          split: [
+            { label: 'Presupuestado', value: formatMoney(totalBudget, cur, { compact: true }) },
+            { label: 'Consumido', value: formatMoney(totalConsumed, cur, { compact: true }), cls: consumedPct >= 100 ? 'text-negative' : '' },
+          ],
+        }),
+        el('div', { class: 'card dash-health' }, [
+          ScoreRing(consumedPct, gaugeVariant, { ariaLabel: `${consumedPct}% del presupuesto consumido` }),
+          el('div', { class: 'dash-health__rows' }, [
+            el('div', { class: 'dash-health__row' }, [
+              el('span', { class: 't-caption', text: 'Consumo global' }),
+              el('span', { class: 'tabular', text: `${consumedPct}%` }),
+            ]),
+            el('div', { class: 'dash-health__row' }, [
+              el('span', { class: 't-caption', text: 'Al límite (≥80%)' }),
+              el('span', { class: `tabular ${nearCount ? 'dash-warn' : 'text-positive'}`, text: String(nearCount) }),
+            ]),
+          ]),
+        ]),
       ]));
       children.push(el('div', { class: 'grid grid--2 mt-4' }, budgets.map((b) => budgetCard(s, b, catMap, cur))));
     } else {
+      // R2: empty state inteligente — sugiere presupuestos desde el gasto real
+      // del mes anterior (top 3 categorías).
+      const prevSpend = selectors.categorySpend(s, shiftMonth(monthKey, -1))
+        .filter((c) => c.category)
+        .slice(0, 3);
+      const suggestions = prevSpend.length
+        ? el('div', { class: 'budget-suggestions' }, [
+            el('p', { class: 't-caption text-secondary', text: 'Sugerencias según tu gasto del mes anterior:' }),
+            el('div', { class: 'row-flex', style: 'flex-wrap: wrap; gap: var(--space-2)' }, prevSpend.map((c) =>
+              Button(`${c.category.name} (~${formatMoney(c.amount, cur, { compact: true })})`, {
+                variant: 'ghost', size: 'sm', iconName: 'plus',
+                onClick: () => openBudgetModal({ mode: 'create', budget: {
+                  categoryId: c.category.id, amount: Math.round(c.amount), period: 'monthly', periodKey: monthKey,
+                } }),
+              }))),
+          ])
+        : null;
       children.push(el('div', { class: 'card' }, [EmptyState({
-        title: 'Sin presupuestos', message: 'Crea tu primer presupuesto mensual o anual.', iconName: 'budgets',
-        action: Button('Nuevo presupuesto', { variant: 'primary', iconName: 'plus', onClick: () => openBudgetModal({ mode: 'create' }) }),
+        title: monthKey === curMonthKey ? 'Sin presupuestos' : `Sin presupuestos en ${monthTitle(monthKey)}`,
+        message: 'Crea tu primer presupuesto mensual o anual.', iconName: 'budgets',
+        action: el('div', { class: 'stack' }, [
+          Button('Nuevo presupuesto', { variant: 'primary', iconName: 'plus', onClick: () => openBudgetModal({ mode: 'create' }) }),
+          suggestions,
+        ].filter(Boolean)),
       })]));
     }
 
+    children.push(Fab('Nuevo presupuesto', { onClick: () => openBudgetModal({ mode: 'create' }) }));
     root.replaceChildren(...children);
   }
 

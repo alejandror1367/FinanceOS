@@ -1962,6 +1962,64 @@ describe('goalOutlook (rediseño — CAMBIO 7: metas inteligentes)', () => {
   });
 });
 
+describe('recurringMonthlyLoad (rediseño R2)', () => {
+  before(() => { priceService.update({}, {}); });
+  after(() => { priceService.update({}, {}); });
+
+  const rec = (id, opts = {}) => ({
+    id, type: opts.type || 'expense', amount: opts.amount ?? 100_000,
+    frequency: opts.frequency || 'monthly', currency: opts.currency || 'COP',
+    isActive: opts.isActive !== false, ...opts,
+  });
+
+  test('sin recurrentes → ceros', () => {
+    assert.deepEqual(selectors.recurringMonthlyLoad(mkState({ recurring: [] })),
+      { expense: 0, income: 0, net: 0, unconvertedCount: 0 });
+  });
+
+  test('mensual cuenta 1:1; anual se divide entre 12', () => {
+    const s = mkState({ recurring: [
+      rec('m', { amount: 120_000, frequency: 'monthly' }),
+      rec('y', { amount: 1_200_000, frequency: 'yearly' }),
+    ] });
+    const load = selectors.recurringMonthlyLoad(s);
+    assert.equal(load.expense, 120_000 + 100_000);
+  });
+
+  test('semanal ×4.345 y diaria ×30.44', () => {
+    const s = mkState({ recurring: [
+      rec('w', { amount: 10_000, frequency: 'weekly' }),
+      rec('d', { amount: 1_000, frequency: 'daily' }),
+    ] });
+    const load = selectors.recurringMonthlyLoad(s);
+    assert.ok(Math.abs(load.expense - (43_450 + 30_440)) < 1);
+  });
+
+  test('pausadas y transferencias no cuentan; ingresos van aparte', () => {
+    const s = mkState({ recurring: [
+      rec('e', { amount: 200_000 }),
+      rec('p', { amount: 999_999, isActive: false }),
+      rec('t', { amount: 500_000, type: 'transfer' }),
+      rec('i', { amount: 300_000, type: 'income' }),
+    ] });
+    const load = selectors.recurringMonthlyLoad(s);
+    assert.equal(load.expense, 200_000);
+    assert.equal(load.income, 300_000);
+    assert.equal(load.net, 100_000);
+  });
+
+  test('divisa sin tasa FX se excluye y flaggea (A.3)', () => {
+    priceService.update({}, {});
+    const s = mkState({ recurring: [
+      rec('cop', { amount: 100_000 }),
+      rec('usd', { amount: 50, currency: 'USD' }),
+    ] });
+    const load = selectors.recurringMonthlyLoad(s);
+    assert.equal(load.expense, 100_000);
+    assert.equal(load.unconvertedCount, 1);
+  });
+});
+
 describe('portfolioAlerts dedup (rediseño — CAMBIO 4)', () => {
   before(() => { priceService.update({}, {}); });
   after(() => { priceService.update({}, {}); });

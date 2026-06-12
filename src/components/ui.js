@@ -189,8 +189,9 @@ export function DetailsBlock(rows, label = 'Detalle') {
 
 // Tarjeta héroe — cifra dominante de la vista (patrón del Dashboard).
 // trendRow: nodos bajo el valor (Trend + captions) · split: [{ label, value, cls }]
-// sparkValues: serie para el sparkline decorativo · details: filas de desglose.
-export function HeroCard({ label, iconName, value, trendRow, split, sparkValues, details, detailsLabel } = {}) {
+// sparkValues: serie para el sparkline decorativo · extra: nodos tras el split
+// (p. ej. barra de distribución) · details: filas de desglose.
+export function HeroCard({ label, iconName, value, trendRow, split, sparkValues, extra, details, detailsLabel } = {}) {
   return el('article', { class: 'card dash-hero' }, [
     el('div', { class: 'dash-hero__top' }, [
       el('span', { class: 'kpi__label', text: label }),
@@ -202,6 +203,7 @@ export function HeroCard({ label, iconName, value, trendRow, split, sparkValues,
       el('div', { class: 'dash-hero__k', text: it.label }),
       el('div', { class: `dash-hero__v tabular${it.cls ? ' ' + it.cls : ''}`, text: it.value }),
     ]))) : null,
+    ...(extra ? (Array.isArray(extra) ? extra : [extra]) : []),
     sparkValues?.length >= 3 ? el('div', { class: 'dash-hero__spark', html: sparklineSvg(sparkValues) }) : null,
     DetailsBlock(details, detailsLabel),
   ].filter(Boolean));

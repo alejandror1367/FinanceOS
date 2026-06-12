@@ -655,6 +655,36 @@ body.modal-open { overflow: hidden; }
 /* P3: el total del grupo es una métrica — jerarquía sobre la etiqueta. */
 .acct-group__total { font-size: var(--fs-body); font-weight: var(--fw-semibold); color: var(--text-primary); font-variant-numeric: tabular-nums; }
 
+/* R2: header de grupo colapsable (botón full-width) + chevron */
+.acct-group__header--toggle { width: 100%; cursor: pointer; align-items: center; border-radius: var(--radius-xs); }
+.acct-group__header--toggle:hover .acct-group__label { color: var(--text-secondary); }
+.acct-group__label { display: inline-flex; align-items: center; gap: var(--space-1); }
+.acct-group__chev { display: inline-flex; transition: transform var(--dur-fast) var(--ease-out); }
+.acct-group__chev svg { width: 12px; height: 12px; }
+.acct-group__chev--closed { transform: rotate(-90deg); }
+@media (max-width: 920px) {
+  /* R2 móvil: acciones por fila → bottom sheet */
+  .acct-row .row__actions, .rec-row .row__actions { display: none; }
+  .acct-row, .rec-row { cursor: pointer; }
+}
+
+/* R2: recurrente pausado — atenuado */
+.rec-row--paused .row__main, .rec-row--paused .row__amount { opacity: 0.55; }
+
+/* R2: navegación de período (Presupuestos) */
+.period-nav {
+  display: flex; align-items: center; gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+.period-nav__label {
+  font-size: var(--fs-h3); font-weight: var(--fw-semibold);
+  min-width: 150px; text-align: center;
+}
+
+/* R2: héroe de Presupuestos (hero + gauge) */
+.budget-hero { grid-template-columns: 1.6fr 1fr; }
+@media (max-width: 720px) { .budget-hero { grid-template-columns: 1fr; } }
+
 /* Cuentas — chips de presets en modal "Nueva cuenta" */
 .preset-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); padding-bottom: var(--space-4); border-bottom: 1px solid var(--border-subtle); margin-bottom: var(--space-4); }
 .preset-chip { font-size: var(--fs-caption); font-weight: var(--fw-medium); padding: var(--space-1) var(--space-3); border-radius: var(--radius-full); border: 1px solid var(--border); background: var(--bg-surface); color: var(--text-secondary); cursor: pointer; transition: background var(--dur-fast), color var(--dur-fast), border-color var(--dur-fast); white-space: nowrap; }

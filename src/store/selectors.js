@@ -1185,6 +1185,27 @@ export const selectors = {
     return { positions, total, topGainer, topLoser, concentration, distribution };
   },
 
+  // ── Rediseño fintech R2: carga mensual de recurrentes activos ──────────────
+  // Normaliza cada frecuencia a su equivalente mensual (daily×30.44, weekly×4.345,
+  // monthly×1, yearly÷12) y convierte a moneda base. Recurrentes en divisa sin
+  // tasa FX se excluyen y se cuentan en unconvertedCount (A.3 — nunca 1:1).
+  recurringMonthlyLoad(s) {
+    const FACTOR = { daily: 30.44, weekly: 4.345, monthly: 1, yearly: 1 / 12 };
+    const fx   = priceService.fxRates;
+    const base = s.baseCurrency || 'COP';
+    let expense = 0, income = 0, unconvertedCount = 0;
+    for (const r of (s.recurring || [])) {
+      if (r.isActive === false) continue;
+      const factor = FACTOR[r.frequency] ?? 1;
+      const amt = convertToBase((Number(r.amount) || 0) * factor, r.currency, base, fx);
+      if (amt === null) { unconvertedCount++; continue; }
+      if (r.type === 'income') income += amt;
+      else if (r.type === 'expense') expense += amt;
+      // transfers: movimiento interno — no es carga ni ingreso
+    }
+    return { expense, income, net: income - expense, unconvertedCount };
+  },
+
   // ── Rediseño fintech: metas inteligentes (probabilidad + fecha proyectada) ──
   // monthlyContribution: aporte mensual disponible para ESTA meta (p. ej. del
   // goalSavingsSplit). Devuelve { remaining, months, projectedDate,

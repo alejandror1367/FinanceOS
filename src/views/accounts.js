@@ -7,11 +7,12 @@ import { store } from '../store/store.js';
 import { selectors } from '../store/selectors.js';
 import { dataService } from '../services/dataService.js';
 import { formatMoney, formatDate } from '../utils/format.js';
-import { Button, Badge, EmptyState, KpiCard } from '../components/ui.js';
-import { openModal, confirmDialog } from '../components/modal.js';
+import { Button, Badge, EmptyState, HeroCard, Fab } from '../components/ui.js';
+import { openModal, confirmDialog, openActionSheet } from '../components/modal.js';
 import { field, textInput, numberInput, select, setFieldError, focusFieldError } from '../components/forms.js';
 import { toast } from '../services/toast.js';
 import { guardedOp, guardedSave } from '../components/crud.js';
+import { openTxModal } from './transactions.js';
 
 const TYPES = [
   { value: 'cash',           label: 'Efectivo',          icon: 'wallet' },
@@ -271,6 +272,29 @@ export function openYieldModal(a) {
   });
 }
 
+// ---------- Acciones de una cuenta (iconos desktop + sheet móvil, R2) ----------
+function accountActions(a) {
+  const isCC = a.type === 'credit_card';
+  const isYield = isYieldType(a.type) && Number(a.interestRate) > 0;
+  return [
+    // Transferencia rápida desde la cuenta (CC excluida como origen: el pago de
+    // tarjeta se hace COMO transferencia HACIA la CC desde otra cuenta).
+    !isCC ? { label: 'Transferir', iconName: 'transactions',
+      onClick: () => openTxModal({ tx: { type: 'transfer', accountId: a.id }, mode: 'create' }) } : null,
+    isYield ? { label: 'Registrar rendimiento', iconName: 'budgets', onClick: () => openYieldModal(a) } : null,
+    { label: 'Editar', iconName: 'edit', onClick: () => openAccountModal(a) },
+    { label: 'Archivar', iconName: 'archive', onClick: () => confirmDialog({
+      title: 'Archivar cuenta',
+      message: `¿Archivar "${a.name}"? Sus transacciones se conservan.`,
+      onConfirm: () => guardedOp(() => dataService.update('accounts', a.id, { isArchived: true }), 'Cuenta archivada', 'Error al archivar'),
+    }) },
+    { label: 'Eliminar', iconName: 'trash', danger: true, onClick: () => confirmDialog({
+      title: 'Eliminar cuenta', message: `¿Eliminar "${a.name}"? Esta acción es permanente.`,
+      onConfirm: () => guardedOp(() => dataService.remove('accounts', a.id), 'Cuenta eliminada'),
+    }) },
+  ].filter(Boolean);
+}
+
 // ---------- Fila de cuenta ----------
 function accountRow(a) {
   const util    = utilization(a);
@@ -283,7 +307,14 @@ function accountRow(a) {
   const displayBal  = isCC ? -Math.abs(rawBal) : rawBal;
   const amtCls      = isCC && rawBal !== 0 ? 'row__amount tabular text-negative' : 'row__amount tabular';
 
-  return el('div', { class: 'row' }, [
+  const actions = accountActions(a);
+
+  // R2 móvil: la fila abre un bottom sheet con las acciones (icon-btns ocultos por CSS).
+  return el('div', { class: 'row acct-row', on: { click: (e) => {
+    if (!window.matchMedia('(max-width: 920px)').matches) return;
+    if (e.target.closest('button, a')) return;
+    openActionSheet({ title: a.name, actions });
+  } } }, [
     el('div', { class: 'row__avatar', html: icon(typeIcon(a.type)) }),
     el('div', { class: 'row__main' }, [
       el('div', { class: 'row__title' }, [
@@ -299,27 +330,26 @@ function accountRow(a) {
       ]) : null,
     ].filter(Boolean)),
     el('div', { class: amtCls, text: formatMoney(displayBal, a.currency) }),
-    el('div', { class: 'row__actions' }, [
-      isYield ? el('button', { class: 'icon-btn', 'aria-label': 'Registrar rendimiento', title: 'Registrar rendimiento',
-        on: { click: () => openYieldModal(a) }, html: icon('budgets') }) : null,
-      el('button', { class: 'icon-btn', 'aria-label': 'Editar', title: 'Editar',
-        on: { click: () => openAccountModal(a) }, html: icon('edit') }),
-      el('button', { class: 'icon-btn', 'aria-label': 'Archivar', title: 'Archivar',
-        on: { click: () => confirmDialog({
-          title: 'Archivar cuenta',
-          message: `¿Archivar "${a.name}"? Sus transacciones se conservan.`,
-          onConfirm: () => guardedOp(() => dataService.update('accounts', a.id, { isArchived: true }), 'Cuenta archivada', 'Error al archivar'),
-        }) }, html: icon('archive') }),
-      el('button', { class: 'icon-btn icon-btn--danger', 'aria-label': 'Eliminar', title: 'Eliminar',
-        on: { click: () => confirmDialog({
-          title: 'Eliminar cuenta', message: `¿Eliminar "${a.name}"? Esta acción es permanente.`,
-          onConfirm: () => guardedOp(() => dataService.remove('accounts', a.id), 'Cuenta eliminada'),
-        }) }, html: icon('trash') }),
-    ]),
+    el('div', { class: 'row__actions' }, actions.map((ac) =>
+      el('button', {
+        class: `icon-btn${ac.danger ? ' icon-btn--danger' : ''}`,
+        'aria-label': ac.label, title: ac.label,
+        on: { click: ac.onClick }, html: icon(ac.iconName),
+      }))),
   ]);
 }
 
 // ---------- Vista ----------
+// R2: colapso de grupos persistido (preferencia de UI → localStorage).
+const COLLAPSE_KEY = 'financeos.ui.acctGroupsCollapsed';
+function readCollapsed() {
+  try { return new Set(JSON.parse(localStorage.getItem(COLLAPSE_KEY) || '[]')); }
+  catch { return new Set(); }
+}
+function writeCollapsed(set) {
+  localStorage.setItem(COLLAPSE_KEY, JSON.stringify([...set]));
+}
+
 export function renderAccounts() {
   const root = el('div');
 
@@ -327,13 +357,14 @@ export function renderAccounts() {
   // (o todos). Reduce el scroll vertical y facilita explorar activos en móvil.
   // Persiste entre repaints de la vista (variable del closure), vuelve a "Todas" al navegar.
   let groupFilter = 'all';
+  const collapsed = readCollapsed();
 
   function repaint() {
     const s        = store.get();
     const cur      = s.baseCurrency;
     const accounts = (s.accounts || []).filter((a) => !a.isArchived);
 
-    // KPIs
+    // Héroe (R2): liquidez + split crédito/deuda + distribución por grupo
     const liquid      = selectors.totalLiquidity(s);
     const ccDebt      = selectors.creditCardDebt(s);
     const creditAvail = selectors.sumAccountsInBase(
@@ -342,11 +373,36 @@ export function renderAccounts() {
       (a) => Math.max(0, (a.creditLimit || 0) - Math.abs(a.balance || 0)),
     );
 
-    const kpis = el('div', { class: 'grid grid--kpi' }, [
-      KpiCard({ label: 'Activos líquidos', value: formatMoney(liquid, cur), iconName: 'wallet', variant: 'emerald' }),
-      KpiCard({ label: 'Crédito disponible', value: creditAvail > 0 ? formatMoney(creditAvail, cur) : '—', iconName: 'accounts', variant: 'neutral' }),
-      KpiCard({ label: 'Deuda CC', value: ccDebt > 0 ? formatMoney(ccDebt, cur) : '—', iconName: 'debts', variant: ccDebt > 0 ? 'negative' : 'neutral' }),
-    ]);
+    // Distribución de activos por grupo (CC excluidas: son deuda, no activo).
+    const GROUP_COLORS = { bank: 'var(--accent)', cash: 'var(--warning)', digital: 'var(--accent-2)', invest: 'var(--positive)' };
+    const distParts = GROUPS
+      .filter((g) => g.key !== 'credit')
+      .map((g) => ({
+        key: g.key, label: g.label,
+        value: selectors.sumAccountsInBase(s, accounts.filter((a) => g.types.includes(a.type))),
+      }))
+      .filter((p) => p.value > 0);
+    const distTotal = distParts.reduce((acc, p) => acc + p.value, 0) || 1;
+    const distBar = distParts.length >= 2
+      ? el('div', { class: 'dash-dist', style: { marginTop: 'var(--space-3)' }, role: 'img',
+          'aria-label': 'Distribución de activos: ' + distParts.map((p) => `${p.label} ${Math.round((p.value / distTotal) * 100)}%`).join(', ') },
+          distParts.map((p) => el('span', {
+            style: { width: `${(p.value / distTotal) * 100}%`, background: GROUP_COLORS[p.key] || 'var(--neutral)' },
+            title: `${p.label}: ${Math.round((p.value / distTotal) * 100)}%`,
+          })))
+      : null;
+
+    const hero = HeroCard({
+      label: 'Activos líquidos',
+      iconName: 'wallet',
+      value: formatMoney(liquid, cur),
+      trendRow: [el('span', { class: 't-caption', text: `${accounts.length} cuenta${accounts.length !== 1 ? 's' : ''} activa${accounts.length !== 1 ? 's' : ''}` })],
+      split: [
+        { label: 'Crédito disponible', value: creditAvail > 0 ? formatMoney(creditAvail, cur, { compact: true }) : '—' },
+        { label: 'Deuda CC', value: ccDebt > 0 ? `−${formatMoney(ccDebt, cur, { compact: true })}` : '—', cls: ccDebt > 0 ? 'text-negative' : '' },
+      ],
+      extra: distBar,
+    });
 
     // Chips de navegación por categoría (con conteo). "Todas" restaura la vista completa.
     const chipDefs = [{ key: 'all', label: 'Todas', count: accounts.length }]
@@ -383,15 +439,29 @@ export function renderAccounts() {
         const rawTotal = selectors.sumAccountsInBase(s, items);
         const total    = isCcGrp ? -Math.abs(rawTotal) : rawTotal;
         const totalCls = isCcGrp && rawTotal !== 0 ? 'acct-group__total tabular text-negative' : 'acct-group__total tabular';
+        // R2: grupo colapsable — el header es un botón; el estado persiste en localStorage.
+        const groupKey = GROUPS.find((g) => g.label === label)?.key || label;
+        const isCollapsed = collapsed.has(groupKey);
         return el('div', { class: 'acct-group' }, [
-          el('div', { class: 'acct-group__header' }, [
-            el('span', { class: 'acct-group__label', text: label }),
+          el('button', {
+            class: 'acct-group__header acct-group__header--toggle', type: 'button',
+            'aria-expanded': String(!isCollapsed),
+            on: { click: () => {
+              if (collapsed.has(groupKey)) collapsed.delete(groupKey); else collapsed.add(groupKey);
+              writeCollapsed(collapsed);
+              repaint();
+            } },
+          }, [
+            el('span', { class: 'acct-group__label' }, [
+              el('span', { class: `acct-group__chev${isCollapsed ? ' acct-group__chev--closed' : ''}`, html: icon('chevronDown') }),
+              el('span', { text: `${label} · ${items.length}` }),
+            ]),
             el('span', { class: totalCls, text: formatMoney(total, cur) }),
           ]),
-          el('div', { class: 'card card--pad-sm' }, [
+          isCollapsed ? null : el('div', { class: 'card card--pad-sm' }, [
             el('div', { class: 'row-list' }, items.map(accountRow)),
           ]),
-        ]);
+        ].filter(Boolean));
       })
       .filter(Boolean);
 
@@ -410,12 +480,15 @@ export function renderAccounts() {
               el('h2', { class: 't-h1', text: 'Cuentas' }),
               el('p', { class: 'page-header__sub', text: `${accounts.length} cuenta${accounts.length !== 1 ? 's' : ''}` }),
             ]),
-            Button('Nueva cuenta', { variant: 'primary', iconName: 'plus', onClick: () => openAccountModal(null) }),
+            el('div', { class: 'u-hide-mobile' }, [
+              Button('Nueva cuenta', { variant: 'primary', iconName: 'plus', onClick: () => openAccountModal(null) }),
+            ]),
           ]),
         ]),
-        kpis,
+        hero,
         accounts.length ? groupChips : null,
         content,
+        Fab('Nueva cuenta', { onClick: () => openAccountModal(null) }),
       ].filter(Boolean))
     );
   }
