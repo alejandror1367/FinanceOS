@@ -98,18 +98,15 @@ export function renderDashboard() {
       .map((a) => ({ label: a.name, value: formatMoney(a.balance || 0, a.currency || cur) }));
 
     const detailsNetWorth = (() => {
-      const normalSum = s.accounts
-        .filter((a) => !a.isArchived && a.type !== 'investment' && a.type !== 'credit_card')
-        .reduce((sum, a) => sum + (a.balance || 0), 0);
-      const otherSum = (s.assets || []).reduce((sum, a) => sum + (a.value || 0), 0);
-      const ccDebt = selectors.creditCardAccounts(s).reduce((sum, a) => sum + Math.abs(a.balance || 0), 0);
-      const liabDebt = (s.liabilities || []).filter((l) => l.type !== 'credit_card').reduce((sum, l) => sum + (l.balance || 0), 0);
+      // Desglose FX-correcto y consistente con totalAssets/totalLiabilities —
+      // antes sumaba saldos crudos y las cuentas USD entraban 1:1.
+      const bd = selectors.netWorthBreakdown(s);
       return [
-        { label: '+ Cuentas', value: formatMoney(normalSum, cur) },
+        { label: '+ Cuentas', value: formatMoney(bd.accountsValue, cur) },
         { label: '+ Inversiones', value: formatMoney(invValue, cur) },
-        ...(otherSum > 0 ? [{ label: '+ Otros activos', value: formatMoney(otherSum, cur) }] : []),
-        { label: '− Tarjetas de crédito', value: formatMoney(ccDebt, cur) },
-        ...(liabDebt > 0 ? [{ label: '− Créditos / deudas', value: formatMoney(liabDebt, cur) }] : []),
+        ...(bd.otherAssets > 0 ? [{ label: '+ Otros activos', value: formatMoney(bd.otherAssets, cur) }] : []),
+        { label: '− Tarjetas de crédito', value: formatMoney(bd.ccDebt, cur) },
+        ...(bd.liabilitiesDebt > 0 ? [{ label: '− Créditos / deudas', value: formatMoney(bd.liabilitiesDebt, cur) }] : []),
       ];
     })();
 

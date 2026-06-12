@@ -235,6 +235,41 @@ describe('totalLiquidity', () => {
     assert.equal(selectors.totalLiquidity(s), 1_250_000);
   });
 
+  test('sumAccountsInBase convierte USD con FX y nunca suma 1:1 (bug grupos Cuentas)', () => {
+    priceService.update({}, { USD: 4000 });
+    const s = mkState({
+      accounts: [
+        acc('1', 100_000, 'digital_wallet'),
+        acc('2', 10, 'digital_wallet', { currency: 'USD' }), // US$10 → 40.000 COP
+      ],
+    });
+    assert.equal(selectors.sumAccountsInBase(s, s.accounts), 140_000);
+    priceService.update({}, {});
+  });
+
+  test('netWorthBreakdown: componentes FX-correctos y consistentes con totalAssets/Liabilities', () => {
+    priceService.update({}, { USD: 4000 });
+    const s = mkState({
+      accounts: [
+        acc('1', 1_000_000, 'bank'),
+        acc('2', 100, 'digital_wallet', { currency: 'USD' }), // 400.000 COP
+        acc('3', 50, 'credit_card', { currency: 'USD' }),     // deuda US$50 → 200.000
+        acc('4', 500_000, 'investment'),                      // excluida (doble conteo)
+      ],
+      assets: [{ id: 'a1', value: 300_000, currency: 'COP' }],
+      liabilities: [{ id: 'l1', type: 'loan', balance: 250_000, currency: 'COP' }],
+    });
+    const bd = selectors.netWorthBreakdown(s);
+    assert.equal(bd.accountsValue, 1_400_000);
+    assert.equal(bd.otherAssets, 300_000);
+    assert.equal(bd.ccDebt, 200_000);
+    assert.equal(bd.liabilitiesDebt, 250_000);
+    // Consistencia: el desglose reconstruye exactamente los totales oficiales.
+    assert.equal(bd.accountsValue + bd.investmentsValue + bd.otherAssets, selectors.totalAssets(s));
+    assert.equal(bd.ccDebt + bd.liabilitiesDebt, selectors.totalLiabilities(s));
+    priceService.update({}, {});
+  });
+
   test('las cesantías SÍ cuentan en totalAssets (patrimonio, no liquidez)', () => {
     const s = mkState({
       accounts: [

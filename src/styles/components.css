@@ -34,7 +34,8 @@
 }
 @media (pointer: coarse) { .kpi:hover { transform: none; } }
 .kpi__top { display: flex; align-items: center; justify-content: space-between; }
-.kpi__label { font-size: var(--fs-caption); color: var(--text-secondary); font-weight: var(--fw-medium); }
+/* P4: etiqueta de KPI como "metric label" (micro uppercase) — el VALOR domina la jerarquía. */
+.kpi__label { font-size: var(--fs-micro); color: var(--text-tertiary); font-weight: var(--fw-semibold); text-transform: uppercase; letter-spacing: var(--tracking-wide); }
 .kpi__icon {
   width: 34px; height: 34px; border-radius: var(--radius-sm);
   display: grid; place-items: center; flex: 0 0 auto;
@@ -412,6 +413,42 @@ select.input { appearance: none; cursor: pointer;
   .toolbar .input, .toolbar select.input { width: 100%; min-width: 0; }
 }
 
+/* ---------- Chips de categorías (Cuentas — P2) ----------
+   Rail horizontal de píldoras con conteo; en móvil hace scroll lateral sin
+   romper el layout (patrón fintech). El activo usa el acento de marca. */
+.group-chips {
+  display: flex; gap: var(--space-2); margin: var(--space-6) 0 var(--space-5);
+  overflow-x: auto; padding-bottom: 2px;
+  scrollbar-width: none;
+}
+.group-chips::-webkit-scrollbar { display: none; }
+.group-chip {
+  display: inline-flex; align-items: center; gap: var(--space-2);
+  height: 36px; padding: 0 var(--space-4);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-size: var(--fs-caption); font-weight: var(--fw-medium);
+  white-space: nowrap; flex: 0 0 auto;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out),
+              border-color var(--dur-fast) var(--ease-out);
+}
+.group-chip:hover { background: var(--bg-hover); color: var(--text-primary); }
+.group-chip:active { transform: scale(0.97); }
+.group-chip--active {
+  background: var(--accent-bg);
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+  color: var(--accent);
+  font-weight: var(--fw-semibold);
+}
+.group-chip__count {
+  font-size: var(--fs-micro); font-weight: var(--fw-semibold);
+  padding: 1px 7px; border-radius: var(--radius-full);
+  background: var(--bg-surface-2); color: var(--text-tertiary);
+}
+.group-chip--active .group-chip__count { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); }
+
 /* acciones de fila/tarjeta — siempre visibles (en táctil), con énfasis al hover en escritorio */
 .row__actions { display: flex; gap: 2px; }
 @media (hover: hover) {
@@ -604,6 +641,7 @@ body.modal-open { overflow: hidden; }
 
 /* utilidades flex */
 .stack { display: flex; flex-direction: column; gap: var(--space-3); }
+.stack--lg { gap: var(--space-6); } /* P3: secciones/grupos respiran más que las filas */
 .row-flex { display: flex; align-items: center; gap: var(--space-3); }
 .between { justify-content: space-between; }
 .mt-2 { margin-top: var(--space-2); }
@@ -611,9 +649,10 @@ body.modal-open { overflow: hidden; }
 
 /* Cuentas — agrupación por tipo */
 .acct-group { display: flex; flex-direction: column; gap: var(--space-2); }
-.acct-group__header { display: flex; align-items: center; justify-content: space-between; padding: 0 var(--space-1); }
-.acct-group__label { font-size: var(--fs-caption); font-weight: var(--fw-semibold); color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
-.acct-group__total { font-size: var(--fs-caption); color: var(--text-secondary); }
+.acct-group__header { display: flex; align-items: baseline; justify-content: space-between; padding: 0 var(--space-1); }
+.acct-group__label { font-size: var(--fs-micro); font-weight: var(--fw-semibold); color: var(--text-tertiary); text-transform: uppercase; letter-spacing: var(--tracking-wide); }
+/* P3: el total del grupo es una métrica — jerarquía sobre la etiqueta. */
+.acct-group__total { font-size: var(--fs-body); font-weight: var(--fw-semibold); color: var(--text-primary); font-variant-numeric: tabular-nums; }
 
 /* Cuentas — chips de presets en modal "Nueva cuenta" */
 .preset-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); padding-bottom: var(--space-4); border-bottom: 1px solid var(--border-subtle); margin-bottom: var(--space-4); }

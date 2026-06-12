@@ -131,17 +131,9 @@ async function doSaveSnapshot() {
   // Pass live-price values to the backend — priceService runs in the frontend,
   // not in Apps Script, so the backend can't compute investmentsValue accurately.
   const s = store.get();
-  const payload = {
-    investmentsValue: selectors.investmentsValue(s),
-    accountsValue: s.accounts
-      .filter((a) => !a.isArchived && a.type !== 'investment' && a.type !== 'credit_card')
-      .reduce((sum, a) => sum + (a.balance || 0), 0),
-    otherAssets: (s.assets || []).reduce((sum, a) => sum + (a.value || 0), 0),
-    ccDebt: selectors.creditCardAccounts(s).reduce((sum, a) => sum + Math.abs(a.balance || 0), 0),
-    liabilitiesDebt: (s.liabilities || [])
-      .filter((l) => l.type !== 'credit_card')
-      .reduce((sum, l) => sum + (l.balance || 0), 0),
-  };
+  // Desglose FX-correcto (netWorthBreakdown) — el snapshot persiste estas cifras,
+  // así que el bug de sumas crudas sin conversión contaminaba el histórico.
+  const payload = selectors.netWorthBreakdown(s);
   await guardedOp(() => dataService.saveSnapshot(payload), 'Snapshot guardado', 'No se pudo guardar');
 }
 
@@ -166,8 +158,9 @@ export function renderNetWorth() {
     const totalAssets = selectors.totalAssets(s);
     const totalLiabilities = selectors.totalLiabilities(s);
     // Cuentas líquidas: excluye inversiones (doble conteo) y CC (son pasivos).
+    // Total en moneda base con FX (antes: suma cruda, USD 1:1).
     const liquidAccounts = s.accounts.filter((a) => !a.isArchived && a.type !== 'investment' && a.type !== 'credit_card');
-    const accountsValue = liquidAccounts.reduce((sum, a) => sum + (a.balance || 0), 0);
+    const accountsValue = selectors.sumAccountsInBase(s, liquidAccounts);
     const invValue = selectors.investmentsValue(s);
 
     // KPIs

@@ -101,6 +101,10 @@
 
 .page-header { margin-bottom: var(--space-6); }
 .page-header__sub { color: var(--text-secondary); margin-top: var(--space-1); }
+/* P3: import.js usa view-header/view-title — alineados al mismo ritmo que page-header
+   (mismo tamaño/peso de h1 y mismo margen inferior) para consistencia entre vistas. */
+.view-header { margin-bottom: var(--space-6); }
+.view-title { font-size: var(--fs-h1); font-weight: var(--fw-bold); line-height: var(--lh-tight); letter-spacing: var(--tracking-tight); }
 
 /* Grillas reutilizables */
 .grid { display: grid; gap: var(--space-4); }

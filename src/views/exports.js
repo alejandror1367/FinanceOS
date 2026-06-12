@@ -90,10 +90,8 @@ function monthlyReport(s) {
 
 function netWorthStatement(s) {
   const cur = s.baseCurrency;
-  // Mismo filtro que totalAssets: excluye investment (evita doble conteo) y credit_card (son pasivos).
-  const accountsValue = (s.accounts || [])
-    .filter((a) => !a.isArchived && a.type !== 'investment' && a.type !== 'credit_card')
-    .reduce((sum, a) => sum + (a.balance || 0), 0);
+  // Mismo filtro que totalAssets — vía netWorthBreakdown (FX-correcto, no sumas crudas).
+  const accountsValue = selectors.netWorthBreakdown(s).accountsValue;
   const invValue = selectors.investmentsValue(s);
   const otherAssets = (s.assets || []).reduce((sum, a) => sum + (a.value || 0), 0);
   const totalAssets = selectors.totalAssets(s);

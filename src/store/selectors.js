@@ -270,6 +270,38 @@ export const selectors = {
     return selectors.totalAssets(s) - selectors.totalLiabilities(s);
   },
 
+  // Suma saldos de una lista de cuentas EN MONEDA BASE (política FX A.3: convertir
+  // o excluir, nunca 1:1). Fuente única para totales de grupos/vistas — las vistas
+  // NO deben volver a hacer `reduce(balance)` crudo mezclando divisas.
+  sumAccountsInBase(s, list, pick = (a) => a.balance) {
+    const base = s.baseCurrency || 'COP';
+    return sumInBase(list || [], pick, (a) => a.currency, base, priceService.fxRates);
+  },
+
+  // Desglose patrimonial completo en moneda base — los MISMOS componentes (y filtros)
+  // que totalAssets/totalLiabilities, expuestos para el detalle del KPI (dashboard),
+  // el payload del snapshot (networth) y el estado de cuenta (exports). Antes cada
+  // vista lo recalculaba con sumas crudas sin FX (bug con cuentas USD).
+  netWorthBreakdown(s) {
+    const base = s.baseCurrency || 'COP';
+    const fx = priceService.fxRates;
+    const accountsValue = sumInBase(
+      (s.accounts || []).filter((a) => !a.isArchived && a.type !== 'investment' && a.type !== 'credit_card'),
+      (a) => a.balance, (a) => a.currency, base, fx);
+    const otherAssets = sumInBase(s.assets || [], (a) => a.value, (a) => a.currency, base, fx);
+    const ccDebt = selectors.creditCardDebt(s);
+    const liabilitiesDebt = sumInBase(
+      (s.liabilities || []).filter((l) => l.type !== 'credit_card'),
+      (l) => l.balance, (l) => l.currency, base, fx);
+    return {
+      accountsValue,
+      investmentsValue: selectors.investmentsValue(s),
+      otherAssets,
+      ccDebt,
+      liabilitiesDebt,
+    };
+  },
+
   monthlyIncome(s, ref) {
     const base = s.baseCurrency || 'COP';
     return s.transactions

@@ -323,6 +323,11 @@ function accountRow(a) {
 export function renderAccounts() {
   const root = el('div');
 
+  // P2 (UX): filtro por categoría — chips segmentados que muestran un solo grupo
+  // (o todos). Reduce el scroll vertical y facilita explorar activos en móvil.
+  // Persiste entre repaints de la vista (variable del closure), vuelve a "Todas" al navegar.
+  let groupFilter = 'all';
+
   function repaint() {
     const s        = store.get();
     const cur      = s.baseCurrency;
@@ -331,9 +336,11 @@ export function renderAccounts() {
     // KPIs
     const liquid      = selectors.totalLiquidity(s);
     const ccDebt      = selectors.creditCardDebt(s);
-    const creditAvail = (s.accounts || [])
-      .filter((a) => !a.isArchived && a.type === 'credit_card' && (a.creditLimit || 0) > 0)
-      .reduce((sum, a) => sum + Math.max(0, (a.creditLimit || 0) - Math.abs(a.balance || 0)), 0);
+    const creditAvail = selectors.sumAccountsInBase(
+      s,
+      (s.accounts || []).filter((a) => !a.isArchived && a.type === 'credit_card' && (a.creditLimit || 0) > 0),
+      (a) => Math.max(0, (a.creditLimit || 0) - Math.abs(a.balance || 0)),
+    );
 
     const kpis = el('div', { class: 'grid grid--kpi' }, [
       KpiCard({ label: 'Activos líquidos', value: formatMoney(liquid, cur), iconName: 'wallet', variant: 'emerald' }),
@@ -341,13 +348,32 @@ export function renderAccounts() {
       KpiCard({ label: 'Deuda CC', value: ccDebt > 0 ? formatMoney(ccDebt, cur) : '—', iconName: 'debts', variant: ccDebt > 0 ? 'negative' : 'neutral' }),
     ]);
 
-    // Secciones agrupadas por tipo
+    // Chips de navegación por categoría (con conteo). "Todas" restaura la vista completa.
+    const chipDefs = [{ key: 'all', label: 'Todas', count: accounts.length }]
+      .concat(GROUPS
+        .map((g) => ({ key: g.key, label: g.label, count: accounts.filter((a) => g.types.includes(a.type)).length }))
+        .filter((g) => g.count > 0));
+    if (!chipDefs.some((c) => c.key === groupFilter)) groupFilter = 'all';
+    const groupChips = el('div', { class: 'group-chips', role: 'tablist', 'aria-label': 'Categorías de cuentas' },
+      chipDefs.map((c) => el('button', {
+        class: `group-chip${groupFilter === c.key ? ' group-chip--active' : ''}`,
+        role: 'tab', 'aria-selected': String(groupFilter === c.key),
+        on: { click: () => { groupFilter = c.key; repaint(); } },
+      }, [
+        el('span', { text: c.label }),
+        el('span', { class: 'group-chip__count', text: String(c.count) }),
+      ])));
+
+    // Secciones agrupadas por tipo (filtradas por el chip activo)
     const groupEls = GROUPS
+      .filter((g) => groupFilter === 'all' || g.key === groupFilter)
       .map(({ label, types }) => {
         const items = accounts.filter((a) => types.includes(a.type));
         if (!items.length) return null;
         const isCcGrp  = types.includes('credit_card');
-        const rawTotal = items.reduce((sum, a) => sum + (a.balance || 0), 0);
+        // Total del grupo EN MONEDA BASE (FX): antes sumaba saldos crudos y una
+        // billetera/cuenta en USD se mezclaba 1:1 con las de COP.
+        const rawTotal = selectors.sumAccountsInBase(s, items);
         const total    = isCcGrp ? -Math.abs(rawTotal) : rawTotal;
         const totalCls = isCcGrp && rawTotal !== 0 ? 'acct-group__total tabular text-negative' : 'acct-group__total tabular';
         return el('div', { class: 'acct-group' }, [
@@ -363,7 +389,7 @@ export function renderAccounts() {
       .filter(Boolean);
 
     const content = accounts.length
-      ? el('div', { class: 'stack' }, groupEls)
+      ? el('div', { class: 'stack stack--lg' }, groupEls)
       : el('div', { class: 'card' }, [EmptyState({
           title: 'Sin cuentas', message: 'Crea tu primera cuenta para empezar.', iconName: 'accounts',
           action: Button('Nueva cuenta', { variant: 'primary', iconName: 'plus', onClick: () => openAccountModal(null) }),
@@ -381,8 +407,9 @@ export function renderAccounts() {
           ]),
         ]),
         kpis,
+        accounts.length ? groupChips : null,
         content,
-      ])
+      ].filter(Boolean))
     );
   }
 
