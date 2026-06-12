@@ -34,7 +34,10 @@ function normDesc(s) {
   return String(s || '').toLowerCase().replace(/[^a-z0-9áéíóúñ]/g, '').slice(0, 16);
 }
 export function dupKey(item) {
-  return `${item.date}|${Math.abs(item.amount || 0).toFixed(0)}|${normDesc(item.description)}`;
+  // L.5/K.7: solo el DÍA — las tx capturadas por email (EmailCapture) llevan fecha con
+  // hora ("2026-06-07T14:34:54") y los extractos solo el día; sin el slice, una compra
+  // ya capturada por correo se re-importaría como "nueva" desde el extracto.
+  return `${String(item.date || '').slice(0, 10)}|${Math.abs(item.amount || 0).toFixed(0)}|${normDesc(item.description)}`;
 }
 
 // Exportada para tests (F.1). F.4: filtra filas sin monto válido (0/NaN) — evita

@@ -184,6 +184,11 @@ describe('applyProfile', () => {
 // ── dupKey (F.2) ────────────────────────────────────────────────────────────────
 
 describe('dupKey', () => {
+  test('L.5/K.7: fecha con hora (email-capture) matchea contra fecha sola (extracto)', () => {
+    const fromEmail = { date: '2026-06-07T14:34:54', amount: 27700.73, description: 'Amazon Prime Video' };
+    const fromStatement = { date: '2026-06-07', amount: 27700.73, description: 'Amazon Prime Video' };
+    assert.equal(dupKey(fromEmail), dupKey(fromStatement));
+  });
   test('misma fecha+monto+descripción → misma clave', () => {
     const a = { date: '2026-05-03', amount: 45000, description: 'Rappi comida' };
     const b = { date: '2026-05-03', amount: 45000, description: 'RAPPI COMIDA ' };
