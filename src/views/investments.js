@@ -913,7 +913,8 @@ export function renderInvestments() {
         `⚠ ${fxExcludedCount} posición${fxExcludedCount > 1 ? 'es' : ''} en divisa extranjera excluida${fxExcludedCount > 1 ? 's' : ''} de los totales por falta de tasa de cambio. Pulsa "Actualizar precios".`,
       ]));
     }
-    wrap.appendChild(summaryCard);
+    // El resumen global ponderado se agrega al FINAL (tras análisis y operaciones
+    // cerradas) — ver wrap.appendChild(summaryCard) antes del mount.
 
     // ── Sección Análisis — alertas determinísticas de portafolio (R4 / I7a) ──
     const alerts = selectors.portfolioAlerts(s);
@@ -1048,6 +1049,9 @@ export function renderInvestments() {
       }
       wrap.appendChild(closedEl);
     }
+
+    // Resumen global ponderado al final de todo.
+    wrap.appendChild(summaryCard);
 
     mount(bodyMount, wrap);
   }
