@@ -7,8 +7,8 @@ import { store } from '../store/store.js';
 import { selectors } from '../store/selectors.js';
 import { dataService } from '../services/dataService.js';
 import { formatMoney, formatDate } from '../utils/format.js';
-import { KpiCard, Badge, EmptyState, Button } from '../components/ui.js';
-import { openModal, confirmDialog } from '../components/modal.js';
+import { Badge, EmptyState, Button, HeroCard, Fab } from '../components/ui.js';
+import { openModal, confirmDialog, openActionSheet } from '../components/modal.js';
 import { field, textInput, numberInput, select, setFieldError, focusFieldError } from '../components/forms.js';
 import { openLiabilityModal, LIABILITY_TYPE_LIST } from './networth.js';
 import { openTxModal } from './transactions.js';
@@ -132,6 +132,27 @@ function projectionCard(debtList, cur) {
       ]));
     }
     footer.appendChild(row2);
+  }
+
+  // Fila 3 (R4): comparativo Avalanche vs Snowball — diferencia en intereses
+  // del plan encadenado entre ambos órdenes (mismas deudas, distinta prioridad).
+  if (!hasInfinity && rows.length > 1) {
+    const aval = selectors.chainedPayoff(orderBy(rows, 'avalanche'));
+    const snow = selectors.chainedPayoff(orderBy(rows, 'snowball'));
+    if (aval.months !== Infinity && snow.months !== Infinity) {
+      const diff = Math.round(snow.totalInterest - aval.totalInterest);
+      if (Math.abs(diff) >= 1) {
+        const row3 = el('div', { class: 'row-flex', style: 'flex-wrap:wrap;gap:var(--space-2);padding-top:var(--space-1);border-top:1px solid var(--border-subtle)' });
+        row3.appendChild(el('span', { class: 't-caption' }, [
+          el('span', { class: 'text-secondary', text: 'Avalanche vs Snowball: ' }),
+          diff > 0
+            ? el('b', { class: 'text-positive', text: `Avalanche paga ${formatMoney(diff, cur)} menos en intereses` })
+            : el('b', { class: 'text-positive', text: `Snowball paga ${formatMoney(-diff, cur)} menos en intereses` }),
+          el('span', { class: 'text-tertiary', text: ` · Avalanche ${formatMoney(aval.totalInterest, cur)} / Snowball ${formatMoney(snow.totalInterest, cur)}` }),
+        ]));
+        footer.appendChild(row3);
+      }
+    }
   }
 
   card.appendChild(footer);
@@ -288,30 +309,46 @@ function creditCardPanel(a, cur) {
 }
 
 // ── Fila de deuda (lista priorizada Snowball/Avalanche) ─────────────────────────
-function debtRow(d, rank, cur) {
+// R4: payoffMonths — mes en que esta deuda queda en cero dentro del plan
+// encadenado (timeline de liquidación visible en cada fila).
+function debtActions(d) {
   const isCard = d.source === 'account';
-  const sub = `${typeLabel(d.type)} · ${pct(d.interestRate)} · cuota ${formatMoney(d.minPayment || 0, d.currency || cur)}${d.dueDate ? ' · vence ' + formatDate(d.dueDate, 'short') : ''}`;
+  return [
+    { label: 'Abonar', iconName: 'plus', onClick: () => openAbono(d) },
+    { label: 'Editar', iconName: 'edit', onClick: () => isCard ? openAccountModal(d.raw) : openLiabilityModal({ liability: d.raw, mode: 'edit' }) },
+    !isCard ? { label: 'Eliminar', iconName: 'trash', danger: true, onClick: () => confirmDialog({
+      title: 'Eliminar deuda', message: `¿Eliminar "${d.name}"?`,
+      onConfirm: () => guardedOp(() => dataService.remove('liabilities', d.id), 'Deuda eliminada'),
+    }) } : null,
+  ].filter(Boolean);
+}
 
-  const actions = [
-    el('button', { class: 'icon-btn', 'aria-label': 'Abonar', title: 'Registrar abono', on: { click: () => openAbono(d) }, html: icon('plus') }),
-    el('button', { class: 'icon-btn', 'aria-label': 'Editar', title: 'Editar', on: { click: () => isCard ? openAccountModal(d.raw) : openLiabilityModal({ liability: d.raw, mode: 'edit' }) }, html: icon('edit') }),
-  ];
-  if (!isCard) {
-    actions.push(el('button', {
-      class: 'icon-btn icon-btn--danger', 'aria-label': 'Eliminar', title: 'Eliminar',
-      on: { click: () => confirmDialog({ title: 'Eliminar deuda', message: `¿Eliminar "${d.name}"?`, onConfirm: () => guardedOp(() => dataService.remove('liabilities', d.id), 'Deuda eliminada') }) },
-      html: icon('trash'),
-    }));
-  }
+function debtRow(d, rank, cur, payoffMonths) {
+  const isCard = d.source === 'account';
+  const freeLabel = payoffMonths ? payoffDateLabel(payoffMonths) : null;
+  const sub = `${typeLabel(d.type)} · ${pct(d.interestRate)} · cuota ${formatMoney(d.minPayment || 0, d.currency || cur)}`
+    + (d.dueDate ? ' · vence ' + formatDate(d.dueDate, 'short') : '')
+    + (freeLabel ? ` · libre en ${freeLabel}` : '');
 
-  return el('div', { class: 'row' }, [
+  const actions = debtActions(d);
+
+  return el('div', { class: 'row debt-row', on: { click: (e) => {
+    if (!window.matchMedia('(max-width: 920px)').matches) return;
+    if (e.target.closest('button, a')) return;
+    openActionSheet({ title: d.name, actions });
+  } } }, [
     el('div', { class: 'row__avatar', html: rank === 1 ? icon('bolt') : icon('debts'), style: rank === 1 ? { background: 'var(--negative-bg)', color: 'var(--negative)' } : {} }),
     el('div', { class: 'row__main' }, [
       el('div', { class: 'row__title' }, [d.name, ' ', rank === 1 ? Badge('Atacar primero', 'negative') : null, isCard ? Badge('Tarjeta', 'info') : null].filter(Boolean)),
       el('div', { class: 'row__sub', text: sub }),
     ]),
     el('div', { class: 'row__amount tabular text-negative', text: formatMoney(d.balance, d.currency || cur) }),
-    el('div', { class: 'row__actions' }, actions),
+    el('div', { class: 'row__actions' }, actions.map((a) =>
+      el('button', {
+        class: `icon-btn${a.danger ? ' icon-btn--danger' : ''}`,
+        'aria-label': a.label, title: a.label,
+        on: { click: a.onClick }, html: icon(a.iconName),
+      }))),
   ]);
 }
 
@@ -340,20 +377,39 @@ export function renderDebts() {
           el('h2', { class: 't-h1', text: 'Deudas' }),
           el('p', { class: 'page-header__sub', text: 'Tarjetas, créditos e hipotecas. Plan de pago Snowball y Avalanche.' }),
         ]),
-        Button('Nueva deuda', { variant: 'primary', iconName: 'plus', onClick: () => openLiabilityModal({ mode: 'create' }) }),
+        el('div', { class: 'u-hide-mobile' }, [
+          Button('Nueva deuda', { variant: 'primary', iconName: 'plus', onClick: () => openLiabilityModal({ mode: 'create' }) }),
+        ]),
       ]),
     ]);
 
-    const kpis = el('div', { class: 'grid grid--kpi' }, [
-      KpiCard({ label: 'Deuda total', value: formatMoney(stats.total, cur), iconName: 'debts', variant: 'negative', hero: true,
-        foot: [el('span', { class: 't-caption', text: `${stats.count} deuda${stats.count !== 1 ? 's' : ''}` })] }),
-      KpiCard({ label: 'Tarjetas de crédito', value: formatMoney(ccDebt, cur), iconName: 'accounts', variant: 'negative',
-        foot: [el('span', { class: 't-caption', text: `${ccCount} tarjeta${ccCount !== 1 ? 's' : ''}` })] }),
-      KpiCard({ label: 'Cuota mínima/mes', value: formatMoney(stats.minPayment, cur), iconName: 'calendar', variant: 'neutral' }),
-      KpiCard({ label: 'Tasa promedio', value: pct(stats.avgRate), iconName: 'analytics', variant: 'warning' }),
-    ]);
+    // Héroe (R4): deuda total + distribución visual + split tarjetas/cuota/tasa.
+    const distPalette = ['var(--negative)', 'var(--warning)', 'var(--accent)', 'var(--accent-2)', 'var(--neutral)'];
+    const distList = [...stats.list].sort((a, b) => b.balance - a.balance).slice(0, 5);
+    const distTotal = distList.reduce((acc, d) => acc + d.balance, 0) || 1;
+    const distBar = distList.length >= 2
+      ? el('div', { class: 'dash-dist', style: { marginTop: 'var(--space-3)' }, role: 'img',
+          'aria-label': 'Distribución de deudas: ' + distList.map((d) => `${d.name} ${Math.round((d.balance / distTotal) * 100)}%`).join(', ') },
+          distList.map((d, i) => el('span', {
+            style: { width: `${(d.balance / distTotal) * 100}%`, background: distPalette[i % distPalette.length] },
+            title: `${d.name}: ${Math.round((d.balance / distTotal) * 100)}%`,
+          })))
+      : null;
 
-    const children = [header, kpis];
+    const hero = HeroCard({
+      label: 'Deuda total',
+      iconName: 'debts',
+      value: formatMoney(stats.total, cur),
+      trendRow: [el('span', { class: 't-caption', text: `${stats.count} deuda${stats.count !== 1 ? 's' : ''}` })],
+      split: [
+        { label: 'Tarjetas', value: ccDebt > 0 ? formatMoney(ccDebt, cur, { compact: true }) : '—', cls: ccDebt > 0 ? 'text-negative' : '' },
+        { label: 'Cuota mínima/mes', value: formatMoney(stats.minPayment, cur, { compact: true }) },
+        { label: 'Tasa promedio', value: pct(stats.avgRate) },
+      ],
+      extra: distBar,
+    });
+
+    const children = [header, hero];
 
     // Panel de tarjetas (estado detallado).
     if (ccAccounts.length) {
@@ -380,6 +436,11 @@ export function renderDebts() {
         ? 'Snowball: liquidas primero la deuda de menor saldo (motivación rápida).'
         : 'Avalanche: liquidas primero la deuda de mayor tasa (ahorras más en intereses).';
 
+      // R4: timeline de liquidación — mes en que cada deuda queda en cero según
+      // el plan encadenado de la estrategia activa (visible en cada fila).
+      const chainedCur = selectors.chainedPayoff(ordered);
+      const payoffMap = new Map((chainedCur.perDebt || []).map((p) => [p.id, p.months]));
+
       children.push(el('div', { class: 'section' }, [
         el('h3', { class: 't-h2 mb-4', text: 'Plan de pago' }),
         el('div', { class: 'card card--pad-sm' }, [
@@ -391,11 +452,12 @@ export function renderDebts() {
             el('span', { class: 't-caption text-secondary', text: explain }),
           ]),
         ]),
-        el('div', { class: 'card card--pad-sm mt-4' }, [el('div', { class: 'row-list' }, ordered.map((d, i) => debtRow(d, i + 1, cur)))]),
+        el('div', { class: 'card card--pad-sm mt-4' }, [el('div', { class: 'row-list' }, ordered.map((d, i) => debtRow(d, i + 1, cur, payoffMap.get(d.id))))]),
         projectionCard(ordered, cur),
       ].filter(Boolean)));
     }
 
+    children.push(Fab('Nueva deuda', { onClick: () => openLiabilityModal({ mode: 'create' }) }));
     root.replaceChildren(...children);
   }
 

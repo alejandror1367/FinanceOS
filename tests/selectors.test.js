@@ -1092,7 +1092,8 @@ describe('amortize (FIN-007)', () => {
 
 describe('chainedPayoff (FIN-007)', () => {
   test('lista vacía → 0 meses', () => {
-    assert.deepEqual(selectors.chainedPayoff([]), { months: 0, totalInterest: 0 });
+    // R4: chainedPayoff ahora incluye perDebt (timeline) — semántica previa intacta.
+    assert.deepEqual(selectors.chainedPayoff([]), { months: 0, totalInterest: 0, perDebt: [] });
   });
 
   test('una sola deuda: idéntico a amortize fija', () => {
@@ -1959,6 +1960,34 @@ describe('goalOutlook (rediseño — CAMBIO 7: metas inteligentes)', () => {
     const o = selectors.goalOutlook(mkState(), g, 100_000, TODAY);
     assert.equal(o.probability, null);
     assert.equal(o.requiredMonthly, null);
+  });
+});
+
+describe('chainedPayoff.perDebt (rediseño R4 — timeline de liquidación)', () => {
+  test('sin deudas válidas → perDebt []', () => {
+    const r = selectors.chainedPayoff([]);
+    assert.deepEqual(r.perDebt, []);
+    assert.equal(r.months, 0);
+  });
+
+  test('cada deuda reporta el mes en que queda en cero; la primera antes que la última', () => {
+    const r = selectors.chainedPayoff([
+      { id: 'a', balance: 1_000_000, interestRate: 20, minPayment: 200_000 },
+      { id: 'b', balance: 5_000_000, interestRate: 15, minPayment: 300_000 },
+    ]);
+    const a = r.perDebt.find((d) => d.id === 'a');
+    const b = r.perDebt.find((d) => d.id === 'b');
+    assert.ok(a.months > 0 && b.months > 0);
+    assert.ok(a.months < b.months, 'la deuda priorizada se liquida antes');
+    assert.equal(r.months, Math.max(a.months, b.months), 'months global = última en liquidarse');
+  });
+
+  test('cuota insuficiente → Infinity y perDebt vacío (sin timeline fiable)', () => {
+    const r = selectors.chainedPayoff([
+      { id: 'x', balance: 10_000_000, interestRate: 80, minPayment: 1_000 },
+    ]);
+    assert.equal(r.months, Infinity);
+    assert.deepEqual(r.perDebt, []);
   });
 });
 

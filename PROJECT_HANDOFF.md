@@ -57,7 +57,47 @@ Centraliza: patrimonio neto, presupuestos, flujo de caja, inversiones, metas, de
 | TD-39 recurrentes automáticos | ✅ `recurringService` materializa vencidos al cargar — `d37a938` |
 | App-lock J.4 + J.4b | ✅ PIN (PBKDF2) + huella/Face ID (WebAuthn) — `53083b3` · `57ac36c` |
 | Cuentas remuneradas ampliadas | ✅ `YIELD_TYPES`: savings · bank · digital_wallet · investment — `461c156` |
+| Rediseño fintech (2026-06-12/15) | ✅ Paleta navy v3 + Dashboard 8 bloques + sprints R0–R4 de las 9 vistas — ver §"Rediseño fintech" |
 | Pendiente | **Sprint K** (compras desde Gmail, P2 — espera fixtures K.1 del dueño) · J.3 (Groq, opcional) — Sprint F ✅ · TD-54 ✅ · J.5 ✅ · I.1 ✅ · verificaciones ✅ · TD-55/56 ✅ |
+
+---
+
+## Rediseño fintech (sesiones 2026-06-12 a 2026-06-15)
+
+Rediseño integral según `docs/DOSSIER_UI_UX_FINTECH.txt` + `docs/REDISEÑO_FINTECH_MASTER_PROMPT.txt`,
+aprobado por el dueño con mockup (`docs/mockups/redesign-preview.html`). Plan en
+`docs/Roadmap-Rediseno-Vistas-2026-06-12.md`. Tests **198/198**.
+
+- **Paleta navy v3** (`d29912d`): fondos azul profundo (#070B14/#111827/#151D2D),
+  primario #8B9CFF, positivo #60E3B7, negativo #FF7A7A, gradiente azul-violeta de
+  marca (`--brand-grad`, `--accent-2`). Solo cambió `tokens.css`/`themes.css` + PWA
+  theme-color; las vistas no se tocaron (todo vía tokens semánticos).
+- **Dashboard 8 bloques** (`b433b10`): Patrimonio héroe, Salud (gauge), Flujo,
+  Inversiones, Deudas (Avalanche), Metas (probabilidad), Pagos, Insights. Selectors
+  nuevos: `portfolioOverview`, `goalOutlook`; dedup en `portfolioAlerts`.
+- **R0 componentes compartidos** (`0f01888`): `HeroCard`, `ScoreRing`, `MiniRow`,
+  `DetailsBlock`, `sparklineSvg`, `Fab`, `FilterBar` en `ui.js`; `openActionSheet`
+  (bottom sheet móvil) en `modal.js`. FAB ≤920px sobre la bottom-nav.
+- **R1 Hoy + Transacciones** (`0e9a5e6`): Hoy con semáforo en el héroe, quick-add
+  Gasto/Ingreso, "Para hoy" accionable. Transacciones con resumen de barras vivo,
+  filtros sticky, paginación (50/pág), fila→sheet móvil.
+- **R2 Cuentas + Presupuestos + Recurrentes** (`bfd2b77`): grupos colapsables
+  persistidos, distribución, transferir por fila · navegación de período + gauge +
+  proyección + sugerencias · `recurringMonthlyLoad` + timeline + toggle pausar.
+- **R3 Patrimonio + Inversiones** (`a914366`): héroe con sparkline + `snapshotDeltas`
+  (variación entre snapshots) · Inversiones con XIRR en el héroe + barra apilada
+  (solo presentación; cifras idénticas verificadas).
+- **R4 Metas + Deudas + QA** (este commit): Metas con héroe/gauge + orden
+  Avance/Riesgo · Deudas con héroe/distribución + timeline de liquidación por fila
+  (`chainedPayoff.perDebt`) + comparativo Avalanche vs Snowball. QA: 10 rutas ×
+  dark/light × desktop/390px, 0 errores de consola.
+
+**Selectors nuevos (todos con tests):** `portfolioOverview`, `goalOutlook`,
+`recurringMonthlyLoad`, `snapshotDeltas`, `chainedPayoff.perDebt`.
+
+**Patrón móvil unificado:** fila tappable → `openActionSheet` (clases `.acct-row`,
+`.rec-row`, `.nw-row`, `.debt-row`, `.goal-card`, `.tx-row`); FAB por vista; CTA del
+header oculto en móvil vía `.u-hide-mobile`.
 
 ---
 

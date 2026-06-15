@@ -857,17 +857,22 @@ export const selectors = {
   },
 
   // ── FIN-007: simulación encadenada Snowball/Avalanche ──
-  // debtList debe estar ya ordenado por estrategia: [{ balance, interestRate, minPayment }].
+  // debtList debe estar ya ordenado por estrategia: [{ id?, balance, interestRate, minPayment }].
   // Cuando una deuda queda en cero, su cuota mínima se redirige a la siguiente en lista.
-  // Devuelve { months, totalInterest } del portafolio completo.
+  // Devuelve { months, totalInterest, perDebt } del portafolio completo.
+  // R4: perDebt = [{ id, months }] — mes en que cada deuda queda en cero dentro
+  // de la simulación encadenada (timeline de liquidación). Retrocompatible:
+  // months/totalInterest no cambian de semántica.
   chainedPayoff(debtList) {
     const valid = debtList.filter((d) => d.balance > 0 && d.minPayment > 0);
-    if (!valid.length) return { months: 0, totalInterest: 0 };
+    if (!valid.length) return { months: 0, totalInterest: 0, perDebt: [] };
     const debts = valid.map((d) => ({
+      id:   d.id,
       bal:  d.balance,
       rate: d.interestRate > 0 ? Math.pow(1 + d.interestRate / 100, 1 / 12) - 1 : 0,
       pay:  d.minPayment,
       done: false,
+      doneMonth: null,
     }));
     let months = 0; let totalInterest = 0; let freedBudget = 0;
     while (debts.some((d) => !d.done) && months < 600) {
@@ -880,12 +885,16 @@ export const selectors = {
         totalInterest += interest;
         const payment = i === prioIdx ? d.pay + freedBudget : d.pay;
         const capital  = payment - interest;
-        if (capital <= 0) return { months: Infinity, totalInterest: Infinity };
+        if (capital <= 0) return { months: Infinity, totalInterest: Infinity, perDebt: [] };
         d.bal = Math.max(0, d.bal - capital);
-        if (d.bal <= 0.01 && !d.done) { d.done = true; freedBudget += d.pay; }
+        if (d.bal <= 0.01 && !d.done) { d.done = true; d.doneMonth = months; freedBudget += d.pay; }
       }
     }
-    return { months, totalInterest: Math.round(totalInterest) };
+    return {
+      months,
+      totalInterest: Math.round(totalInterest),
+      perDebt: debts.map((d) => ({ id: d.id, months: d.doneMonth })),
+    };
   },
 
   // ── FIN-013 (TD-38): rentabilidad anualizada — XIRR y CAGR ───────────────────

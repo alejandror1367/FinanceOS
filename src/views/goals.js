@@ -7,8 +7,8 @@ import { store } from '../store/store.js';
 import { selectors } from '../store/selectors.js';
 import { dataService } from '../services/dataService.js';
 import { formatMoney, formatDate } from '../utils/format.js';
-import { Card, Badge, ProgressBar, EmptyState, Button } from '../components/ui.js';
-import { openModal, confirmDialog } from '../components/modal.js';
+import { Badge, ProgressBar, EmptyState, Button, HeroCard, ScoreRing, Fab } from '../components/ui.js';
+import { openModal, confirmDialog, openActionSheet } from '../components/modal.js';
 import { field, textInput, numberInput, select, setFieldError, focusFieldError } from '../components/forms.js';
 import { toast } from '../services/toast.js';
 import { guardedOp, guardedSave } from '../components/crud.js';
@@ -177,7 +177,21 @@ function goalCard(g, cur, monthlySavings) {
     }
   }
 
-  return el('div', { class: 'card card--pad-sm' }, [
+  // R4: acciones declarativas (iconos desktop + bottom sheet móvil).
+  const actions = [
+    { label: 'Aportar', iconName: 'plus', onClick: () => openContributeModal(g) },
+    { label: 'Editar', iconName: 'edit', onClick: () => openGoalModal({ goal: g, mode: 'edit' }) },
+    { label: 'Eliminar', iconName: 'trash', danger: true, onClick: () => confirmDialog({
+      title: 'Eliminar meta', message: `¿Eliminar "${g.name}"?`,
+      onConfirm: () => guardedOp(() => dataService.remove('goals', g.id), 'Meta eliminada'),
+    }) },
+  ];
+
+  return el('div', { class: 'card card--pad-sm goal-card', on: { click: (e) => {
+    if (!window.matchMedia('(max-width: 920px)').matches) return;
+    if (e.target.closest('button, a')) return;
+    openActionSheet({ title: g.name, actions });
+  } } }, [
     el('div', { class: 'row-flex between' }, [
       el('div', { class: 'row-flex' }, [
         el('span', { class: 'row__avatar', html: icon(typeMeta(g.type).icon) }),
@@ -186,11 +200,12 @@ function goalCard(g, cur, monthlySavings) {
           el('div', { class: 'row__sub', text: typeMeta(g.type).label + (g.targetDate ? ` · ${formatDate(g.targetDate, 'medium')}` : '') }),
         ]),
       ]),
-      el('div', { class: 'row__actions' }, [
-        el('button', { class: 'icon-btn', 'aria-label': 'Aportar', title: 'Aportar', on: { click: () => openContributeModal(g) }, html: icon('plus') }),
-        el('button', { class: 'icon-btn', 'aria-label': 'Editar', title: 'Editar', on: { click: () => openGoalModal({ goal: g, mode: 'edit' }) }, html: icon('edit') }),
-        el('button', { class: 'icon-btn icon-btn--danger', 'aria-label': 'Eliminar', title: 'Eliminar', on: { click: () => confirmDialog({ title: 'Eliminar meta', message: `¿Eliminar "${g.name}"?`, onConfirm: () => guardedOp(() => dataService.remove('goals', g.id), 'Meta eliminada') }) }, html: icon('trash') }),
-      ]),
+      el('div', { class: 'row__actions' }, actions.map((a) =>
+        el('button', {
+          class: `icon-btn${a.danger ? ' icon-btn--danger' : ''}`,
+          'aria-label': a.label, title: a.label,
+          on: { click: a.onClick }, html: icon(a.iconName),
+        }))),
     ]),
     el('div', { class: 'mt-4' }, [ProgressBar(st.pct, done ? '' : 'gold')]),
     el('div', { class: 'row-flex between mt-2' }, [
@@ -201,18 +216,77 @@ function goalCard(g, cur, monthlySavings) {
   ].filter(Boolean));
 }
 
+// R4: orden de metas — por avance (default) o por riesgo (probabilidad ascendente,
+// las que peligran primero). Las completadas van al final en ambos modos.
+const GOALS_STATE = { sort: 'progress' };
+function sortGoals(goals, mode, s, savingsPerGoal) {
+  const done = (g) => g.status === 'completed' || goalStats(g).pct >= 100;
+  return [...goals].sort((a, b) => {
+    if (done(a) !== done(b)) return done(a) ? 1 : -1;
+    if (mode === 'risk') {
+      const pa = selectors.goalOutlook(s, a, savingsPerGoal).probability ?? 999;
+      const pb = selectors.goalOutlook(s, b, savingsPerGoal).probability ?? 999;
+      return pa - pb;
+    }
+    return goalStats(b).pct - goalStats(a).pct;
+  });
+}
+
 export function renderGoals() {
   const root = el('div');
 
   function repaint() {
     const s = store.get();
     const cur = s.baseCurrency;
-    const goals = [...(s.goals || [])].sort((a, b) => goalStats(b).pct - goalStats(a).pct);
-    const totalTarget = goals.reduce((sum, g) => sum + (g.targetAmount || 0), 0);
-    const totalCurrent = goals.reduce((sum, g) => sum + (g.currentAmount || 0), 0);
+    const allGoals = s.goals || [];
     // FIN-011 (TD-52): repartir el ahorro mensual entre las metas activas con saldo
     // pendiente (selector goalSavingsSplit). Sin reparto, cada meta asume el 100%.
     const savingsPerGoal = selectors.goalSavingsSplit(s);
+    const goals = sortGoals(allGoals, GOALS_STATE.sort, s, savingsPerGoal);
+    const totalTarget = goals.reduce((sum, g) => sum + (g.targetAmount || 0), 0);
+    const totalCurrent = goals.reduce((sum, g) => sum + (g.currentAmount || 0), 0);
+    const globalPct = totalTarget ? Math.round((totalCurrent / totalTarget) * 100) : 0;
+
+    // Héroe (R4): total ahorrado + gauge de avance global + aporte mensual disponible.
+    const heroBlock = goals.length
+      ? el('div', { class: 'grid budget-hero' }, [
+          HeroCard({
+            label: 'Ahorrado en metas',
+            iconName: 'goals',
+            value: formatMoney(totalCurrent, cur),
+            trendRow: [
+              Badge(`${globalPct}% del objetivo`, globalPct >= 70 ? 'positive' : globalPct >= 40 ? 'warning' : 'info'),
+              el('span', { class: 't-caption', text: `${goals.length} meta${goals.length !== 1 ? 's' : ''}` }),
+            ],
+            split: [
+              { label: 'Objetivo total', value: formatMoney(totalTarget, cur, { compact: true }) },
+              { label: 'Falta', value: formatMoney(Math.max(0, totalTarget - totalCurrent), cur, { compact: true }) },
+              { label: 'Ahorro/mes disp.', value: formatMoney(savingsPerGoal, cur, { compact: true }), cls: savingsPerGoal > 0 ? 'text-positive' : '' },
+            ],
+          }),
+          el('div', { class: 'card dash-health' }, [
+            ScoreRing(globalPct, globalPct >= 70 ? 'positive' : globalPct >= 40 ? 'warning' : 'info', { ariaLabel: `${globalPct}% del objetivo global` }),
+            el('div', { class: 'dash-health__rows' }, [
+              el('div', { class: 'dash-health__row' }, [
+                el('span', { class: 't-caption', text: 'Avance global' }),
+                el('span', { class: 'tabular', text: `${globalPct}%` }),
+              ]),
+              el('div', { class: 'dash-health__row' }, [
+                el('span', { class: 't-caption', text: 'Aporte mensual' }),
+                el('span', { class: 'tabular', text: formatMoney(savingsPerGoal, cur, { compact: true }) }),
+              ]),
+            ]),
+          ]),
+        ])
+      : null;
+
+    // Segmented: orden por Avance | Riesgo.
+    const sortSeg = goals.length > 1
+      ? el('div', { class: 'seg', style: { width: 'auto' } }, [
+          el('button', { class: 'seg__btn', 'aria-pressed': String(GOALS_STATE.sort === 'progress'), text: 'Avance', on: { click: () => { GOALS_STATE.sort = 'progress'; repaint(); } } }),
+          el('button', { class: 'seg__btn', 'aria-pressed': String(GOALS_STATE.sort === 'risk'), text: 'Riesgo', on: { click: () => { GOALS_STATE.sort = 'risk'; repaint(); } } }),
+        ])
+      : null;
 
     mount(root,
       el('div', {}, [
@@ -222,14 +296,22 @@ export function renderGoals() {
               el('h2', { class: 't-h1', text: 'Metas' }),
               el('p', { class: 'page-header__sub', text: goals.length ? `${formatMoney(totalCurrent, cur)} de ${formatMoney(totalTarget, cur)} ahorrado` : 'Define tus objetivos financieros.' }),
             ]),
-            Button('Nueva meta', { variant: 'primary', iconName: 'plus', onClick: () => openGoalModal({ mode: 'create' }) }),
+            el('div', { class: 'u-hide-mobile' }, [
+              Button('Nueva meta', { variant: 'primary', iconName: 'plus', onClick: () => openGoalModal({ mode: 'create' }) }),
+            ]),
           ]),
         ]),
+        heroBlock,
+        sortSeg ? el('div', { class: 'row-flex between section', style: 'align-items:center' }, [
+          el('span', { class: 't-caption text-secondary', text: GOALS_STATE.sort === 'risk' ? 'Las metas en riesgo aparecen primero.' : 'Ordenadas por avance.' }),
+          sortSeg,
+        ]) : null,
         goals.length
-          ? el('div', { class: goals.length === 1 ? 'stack' : 'grid grid--2' }, goals.map((g) => goalCard(g, cur, savingsPerGoal)))
+          ? el('div', { class: goals.length === 1 ? 'stack' : 'grid grid--2', style: sortSeg ? '' : 'margin-top:var(--space-6)' }, goals.map((g) => goalCard(g, cur, savingsPerGoal)))
           : el('div', { class: 'card' }, [EmptyState({ title: 'Sin metas', message: 'Crea tu primera meta financiera.', iconName: 'goals',
               action: Button('Nueva meta', { variant: 'primary', iconName: 'plus', onClick: () => openGoalModal({ mode: 'create' }) }) })]),
-      ])
+        Fab('Nueva meta', { onClick: () => openGoalModal({ mode: 'create' }) }),
+      ].filter(Boolean))
     );
   }
 

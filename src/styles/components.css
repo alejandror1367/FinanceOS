@@ -663,9 +663,10 @@ body.modal-open { overflow: hidden; }
 .acct-group__chev svg { width: 12px; height: 12px; }
 .acct-group__chev--closed { transform: rotate(-90deg); }
 @media (max-width: 920px) {
-  /* R2/R3 móvil: acciones por fila → bottom sheet */
-  .acct-row .row__actions, .rec-row .row__actions, .nw-row .row__actions { display: none; }
-  .acct-row, .rec-row, .nw-row { cursor: pointer; }
+  /* R2/R3/R4 móvil: acciones por fila → bottom sheet */
+  .acct-row .row__actions, .rec-row .row__actions, .nw-row .row__actions,
+  .debt-row .row__actions, .goal-card .row__actions { display: none; }
+  .acct-row, .rec-row, .nw-row, .debt-row, .goal-card { cursor: pointer; }
 }
 
 /* R2: recurrente pausado — atenuado */
