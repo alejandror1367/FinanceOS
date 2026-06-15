@@ -252,7 +252,12 @@ export const dataService = {
   // coll: clave de ENTITIES. Devuelve el registro optimista.
   async create(coll, data) {
     const cfg = ENTITIES[coll];
-    const record = stamp({ id: data.id || newId(), ...data });
+    // El id debe ir DESPUÉS del spread: si el caller pasa `id: undefined` explícito
+    // (p. ej. la venta parcial de inversiones hace `{ ...lote, id: undefined }`),
+    // un `id` antes del spread sería pisado por ese undefined → el put a IndexedDB
+    // falla ("key path yielded a value that is not a valid key"). Aquí el id
+    // generado siempre gana cuando data.id es falsy.
+    const record = stamp({ ...data, id: data.id || newId() });
     // TD-54 (escritor): al CREAR una tx en divisa extranjera, sellar la conversión
     // histórica con la tasa spot del momento (es la tasa vigente a la fecha de
     // creación). Sin este sello, la tx queda excluida de cashflow/presupuestos
