@@ -922,8 +922,13 @@ export function renderInvestments() {
     }
     wrap.appendChild(analysisEl);
 
-    // ── Operaciones cerradas (posiciones totalmente vendidas) ─────────────────
-    if (closedGroups.length > 0) {
+    // ── Operaciones cerradas — una fila POR VENTA (no agrupadas por ticker) ────
+    // Lista plana de cada lote vendido con su fecha, cantidad y P&L individual.
+    const soldLots = closedGroups
+      .flatMap((g) => g.sold.map((p) => ({ p, g })))
+      .sort((a, b) => String(b.p.soldDate || '').localeCompare(String(a.p.soldDate || '')));
+
+    if (soldLots.length > 0) {
       const isClosedCollapsed = _collapsed.has('closed');
       const closedEl = el('div', { class: 'section' });
 
@@ -938,7 +943,7 @@ export function renderInvestments() {
       });
       closedHead.appendChild(el('div', { class: 'inv-section-title' }, [
         el('span', { class: 't-h2', text: 'Operaciones cerradas' }),
-        Badge(String(closedGroups.length), 'info'),
+        Badge(String(soldLots.length), 'info'),
       ]));
       closedHead.appendChild(
         el('span', { class: `inv-section-chevron${isClosedCollapsed ? ' is-collapsed' : ''}`, html: icon('chevronDown') })
@@ -947,30 +952,38 @@ export function renderInvestments() {
 
       if (!isClosedCollapsed) {
         const closedList = el('div', { class: 'card card--pad-sm' });
-        closedList.appendChild(el('div', { class: 'row-list' }, closedGroups.map((g) => {
-          const soldDate = g.sold.map((p) => p.soldDate).sort().at(-1) || '';
-          // A.3 (FIN-005/TD-02): sin tasa FX, mostrar el P&L en su divisa nativa
-          // (etiqueta correcta) en lugar de fingir que el monto nativo es COP.
-          const soldPnLBase = toCOP(g.realizedPnL, g.currency, fxRates);
-          const soldPnL    = soldPnLBase !== null ? soldPnLBase : g.realizedPnL;
-          const soldPnLCur = soldPnLBase !== null ? baseCur : (g.currency || baseCur);
-          const pnlPct = g.sold.reduce((s, p) => s + (Number(p.quantity)||0) * (Number(p.purchasePrice||p.avgCost)||0), 0);
-          const pnlPctVal = pnlPct ? g.realizedPnL / pnlPct * 100 : 0;
-          const isPos = g.realizedPnL >= 0;
+        closedList.appendChild(el('div', { class: 'row-list' }, soldLots.map(({ p, g }) => {
+          const trivial  = isTrivial(g.assetType);
+          // P&L individual del lote (selectors.lotRealizedPnL: comisiones + retención).
+          const pnlNative = selectors.lotRealizedPnL(p, g.withholdingRate);
+          const pnlBase   = toCOP(pnlNative, g.currency, fxRates);
+          const pnl       = pnlBase !== null ? pnlBase : pnlNative;
+          const pnlCur    = pnlBase !== null ? baseCur : (g.currency || baseCur);
+          // Cost basis del lote vendido para el % (cantidad vendida × precio compra + comisión prorrateada).
+          const qtyVend   = Number(p.soldQuantity || p.quantity) || 0;
+          const qtyLote   = Number(p.quantity) || qtyVend || 1;
+          const buyPrice  = Number(p.purchasePrice || p.avgCost) || 0;
+          const costBasis = qtyVend * buyPrice + (Number(p.commission) || 0) * (qtyVend / qtyLote);
+          const pctVal    = costBasis ? (pnlNative / costBasis) * 100 : 0;
+          const isPos     = pnlNative >= 0;
+          const fecha     = p.soldDate ? String(p.soldDate).slice(0, 10) : '';
+          const sub = trivial
+            ? `${g.assetType === 'cdt' ? 'Redimido' : 'Rescatado'} ${fecha} · recibido ${fmtI(qtyVend * (Number(p.soldPrice) || 0), g.currency)}`
+            : `Vendido ${fecha} · ${qtyVend % 1 === 0 ? qtyVend : qtyVend.toFixed(4)} @ ${fmtI(Number(p.soldPrice) || 0, g.currency)}`;
           return el('div', { class: 'row' }, [
             el('div', { class: 'row__avatar', html: icon('investments') }),
             el('div', { class: 'row__main' }, [
               el('div', { class: 'row__title' }, [g.symbol || g.name, ' ', Badge(typeLabel(g.assetType), 'info')]),
-              el('div', { class: 'row__sub', text: `Vendido ${soldDate ? soldDate.slice(0, 10) : ''} · ${g.sold.length} compra${g.sold.length > 1 ? 's' : ''}` }),
+              el('div', { class: 'row__sub', text: sub }),
             ]),
             el('div', { class: `row__amount tabular ${isPos ? 'text-positive' : 'text-negative'}` }, [
-              `${isPos ? '+' : ''}${formatMoney(soldPnL, soldPnLCur)}  ${pctFmt(pnlPctVal)}`,
+              `${isPos ? '+' : ''}${formatMoney(pnl, pnlCur)}  ${pctFmt(pctVal)}`,
             ]),
             el('div', { class: 'row__actions' }, [
-              el('button', { class: 'icon-btn icon-btn--danger', 'aria-label': 'Eliminar registros', title: 'Eliminar registros de venta',
-                on: { click: () => confirmDialog({ title: 'Eliminar operación cerrada',
-                  message: `¿Eliminar todos los registros de ${g.symbol || g.name}?`,
-                  onConfirm: () => guardedOp(async () => { for (const p of g.sold) await dataService.remove('investments', p.id); }, 'Registros eliminados'),
+              el('button', { class: 'icon-btn icon-btn--danger', 'aria-label': 'Eliminar venta', title: 'Eliminar este registro de venta',
+                on: { click: () => confirmDialog({ title: 'Eliminar venta',
+                  message: `¿Eliminar esta venta de ${g.symbol || g.name} del ${fecha}?`,
+                  onConfirm: () => guardedOp(() => dataService.remove('investments', p.id), 'Venta eliminada'),
                 }) }, html: icon('trash') }),
             ]),
           ]);
