@@ -588,6 +588,30 @@ body.modal-open { overflow: hidden; }
 .inv-metric__label { font-size: var(--fs-micro); color: var(--text-secondary); text-transform: uppercase; letter-spacing: .05em; font-weight: var(--fw-semibold); }
 .inv-metric__value { font-size: var(--fs-caption); font-weight: var(--fw-semibold); color: var(--text-primary); }
 .inv-card__actions { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+.inv-card__body { display: flex; flex-direction: column; gap: var(--space-3); }
+/* Chevron de expansión: oculto en desktop (la card siempre muestra todo). */
+.inv-card__chev { display: none; }
+
+/* Móvil: cada posición es una fila compacta; el cuerpo (métricas + acciones)
+   se despliega al tocar el header. Reduce drásticamente el scroll. */
+@media (max-width: 920px) {
+  .inv-card { padding: var(--space-3) var(--space-4); gap: 0; }
+  .inv-card__head { cursor: pointer; align-items: center; }
+  .inv-card__head:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; border-radius: var(--radius-sm); }
+  .inv-card__title-wrap { flex-direction: row; align-items: baseline; gap: var(--space-2); flex-wrap: wrap; }
+  /* En la fila colapsada, el nombre y los badges secundarios estorban: prioriza ticker + valor. */
+  .inv-card__name { font-size: var(--fs-micro); }
+  .inv-card__chev {
+    display: inline-flex; align-self: center; color: var(--text-tertiary);
+    transition: transform var(--dur-fast) var(--ease-out); margin-left: var(--space-2);
+  }
+  .inv-card__chev svg { width: 16px; height: 16px; }
+  .inv-card.is-open .inv-card__chev { transform: rotate(180deg); }
+  /* Cuerpo colapsado por defecto; se muestra al expandir */
+  .inv-card__body { display: none; margin-top: var(--space-3); }
+  .inv-card.is-open .inv-card__body { display: flex; }
+  /* "Hoy %" del header se mantiene; el desglose va dentro del cuerpo */
+}
 .gap-2 { gap: var(--space-2); }
 .inv-section-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-2); margin-bottom: var(--space-4); padding-bottom: var(--space-3); border-bottom: 1px solid var(--border-subtle); }
 .inv-section-title { display: flex; align-items: center; gap: var(--space-2); }

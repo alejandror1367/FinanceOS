@@ -52,6 +52,11 @@ function _saveCollapsed() {
   try { localStorage.setItem('financeOS:inv:collapsed', JSON.stringify([..._collapsed])); } catch (_) {}
 }
 
+// Posiciones expandidas en móvil (key de grupo). En móvil cada card se muestra
+// como fila compacta; el detalle (métricas + acciones) se despliega al tocarla.
+// Estado en memoria: se reinicia al recargar (no es preferencia persistente).
+const _expandedPos = new Set();
+
 const typeLabel  = (v) => (ASSET_TYPES.find((t) => t.value === v) || {}).label || v;
 const pctFmt     = (n) => `${n >= 0 ? '+' : ''}${Number(n).toFixed(2)}%`;
 const today      = () => new Date().toISOString().slice(0, 10);
@@ -401,7 +406,7 @@ function purchasesTable(group, livePrice) {
 
 // ─── Card de posición agrupada ─────────────────────────────────────────────
 function positionCard(group, livePrice, fxRates, baseCur) {
-  const { symbol, name, assetType, totalQty, totalCost, weightedAvg, currency, purchases, totalCommission, withholdingRate } = group;
+  const { key, symbol, name, assetType, totalQty, totalCost, weightedAvg, currency, purchases, totalCommission, withholdingRate } = group;
   const { value: nativeValue, hasPrice } = groupValue(group, { [(symbol || '').toUpperCase()]: livePrice });
   const gain    = hasPrice && nativeValue !== null ? nativeValue - totalCost : null;
   const gainPct = gain !== null && totalCost ? gain / totalCost * 100 : null;
@@ -415,10 +420,25 @@ function positionCard(group, livePrice, fxRates, baseCur) {
     toggleWrap.appendChild(purchasesTable(group, livePrice));
   }
 
-  const card = el('div', { class: 'inv-card' });
+  const isOpen = _expandedPos.has(key);
+  const card = el('div', { class: `inv-card${isOpen ? ' is-open' : ''}` });
 
-  // ── Header ──
-  const head = el('div', { class: 'inv-card__head' });
+  // ── Header ── (en móvil es el disparador de expansión: muestra/oculta el cuerpo)
+  const head = el('div', {
+    class: 'inv-card__head',
+    role: 'button', tabindex: '0',
+    'aria-expanded': String(isOpen),
+    on: {
+      click: (e) => {
+        if (!window.matchMedia('(max-width: 920px)').matches) return; // desktop: siempre abierto
+        if (e.target.closest('button, a')) return;
+        if (_expandedPos.has(key)) _expandedPos.delete(key); else _expandedPos.add(key);
+        card.classList.toggle('is-open');
+        head.setAttribute('aria-expanded', String(card.classList.contains('is-open')));
+      },
+      keydown: (e) => { if ((e.key === 'Enter' || e.key === ' ') && window.matchMedia('(max-width: 920px)').matches) { e.preventDefault(); head.click(); } },
+    },
+  });
   const titleWrap = el('div', { class: 'inv-card__title-wrap' });
   if (symbol) titleWrap.appendChild(el('span', { class: 'inv-card__ticker' }, [symbol]));
   titleWrap.appendChild(el('span', { class: 'inv-card__name' }, [name || symbol || '—']));
@@ -444,7 +464,12 @@ function positionCard(group, livePrice, fxRates, baseCur) {
     valWrap.appendChild(el('div', { class: 't-caption text-tertiary' }, ['Pulsa "Actualizar precios"']));
   }
   head.appendChild(valWrap);
+  // Chevron indicador de expansión (solo visible en móvil vía CSS).
+  head.appendChild(el('span', { class: 'inv-card__chev', html: icon('chevronDown') }));
   card.appendChild(head);
+
+  // ── Cuerpo (métricas + compras + acciones): colapsable en móvil ──
+  const body = el('div', { class: 'inv-card__body' });
 
   // ── Métricas ──
   const metrics = el('div', { class: 'inv-card__metrics' });
@@ -473,8 +498,8 @@ function positionCard(group, livePrice, fxRates, baseCur) {
     if (p0?.interestRate) metrics.appendChild(m('Tasa E.A.', `${p0.interestRate}%`));
     if (p0?.maturityDate) metrics.appendChild(m('Vencimiento', p0.maturityDate));
   }
-  card.appendChild(metrics);
-  card.appendChild(toggleWrap);
+  body.appendChild(metrics);
+  body.appendChild(toggleWrap);
 
   // ── Acciones ──
   const actions = el('div', { class: 'inv-card__actions' });
@@ -506,7 +531,8 @@ function positionCard(group, livePrice, fxRates, baseCur) {
     actions.appendChild(Button(assetType === 'cdt' ? 'Redimir' : 'Rescatar', { variant: 'outline', size: 'sm',
       onClick: () => openRedeemModal(group, livePrice) }));
   }
-  card.appendChild(actions);
+  body.appendChild(actions);
+  card.appendChild(body);
   renderPurchases();
   return card;
 }
