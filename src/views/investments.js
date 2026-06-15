@@ -499,9 +499,75 @@ function positionCard(group, livePrice, fxRates, baseCur) {
     actions.appendChild(Button('Actualizar valor', { variant: 'outline', size: 'sm',
       onClick: () => openPurchaseModal({ inv: purchases[0] }) }));
   }
+  // CDT/fondos se liquidan (no se venden por precio×cantidad): Redimir / Rescatar.
+  if (isTrivial(assetType) && totalQty > 0) {
+    actions.appendChild(Button(assetType === 'cdt' ? 'Redimir' : 'Rescatar', { variant: 'outline', size: 'sm',
+      onClick: () => openRedeemModal(group, livePrice) }));
+  }
   card.appendChild(actions);
   renderPurchases();
   return card;
+}
+
+// ─── Modal de liquidación: Redimir CDT / Rescatar fondo ──────────────────────
+// CDT/fondos no se "venden" por precio×cantidad (modelo isTrivial: quantity=1,
+// el monto vive en purchasePrice). Se liquidan a un monto recibido: marca cada
+// lote como cerrado (soldDate) con soldPrice = monto/quantity (precio unitario,
+// para que selectors.lotRealizedPnL — que hace soldQuantity×soldPrice — calcule
+// el P&L correcto independientemente de la convención de quantity).
+function openRedeemModal(group, livePrice) {
+  const { assetType, symbol, name, currency, purchases, totalCost } = group;
+  const esCdt = assetType === 'cdt';
+  // Valor sugerido: CDT capitalizado a hoy; fondo a su valor actual registrado.
+  const { value: sugerido } = groupValue(group, { [(symbol || '').toUpperCase()]: livePrice });
+  const valorSugerido = sugerido !== null ? Math.round(sugerido) : totalCost;
+
+  const amountEl = numberInput({ name: 'amount', value: valorSugerido || '', placeholder: 'Monto recibido' });
+  const dateEl   = textInput({ name: 'date', value: today(), type: 'date' });
+  const commEl   = numberInput({ name: 'commission', value: '', placeholder: 'Opcional' });
+
+  const body = el('div', {}, [
+    el('p', { class: 't-caption text-secondary', text:
+      `${esCdt ? 'Redención del CDT' : 'Rescate del fondo'} "${name || symbol}". Costo invertido: ${fmtI(totalCost, currency)}.` }),
+    field(`Monto recibido (${currency})`, amountEl),
+    el('div', { class: 'field-row' }, [field('Fecha', dateEl), field(`Comisión / retención (${currency})`, commEl)]),
+    el('p', { class: 't-caption text-tertiary', text:
+      esCdt ? 'Sugerido = capital capitalizado a hoy. Ajústalo al valor real recibido.'
+            : 'Sugerido = valor actual registrado. Ajústalo al valor real rescatado.' }),
+  ]);
+
+  openModal({
+    title: esCdt ? `Redimir ${name || symbol}` : `Rescatar ${name || symbol}`,
+    body,
+    submitLabel: esCdt ? 'Registrar redención' : 'Registrar rescate',
+    onSubmit: async () => {
+      const monto    = Number(amountEl.value) || 0;
+      const soldDate = dateEl.value;
+      const totalComm = Number(commEl.value) || 0;
+      if (monto <= 0)  { focusFieldError(amountEl); return setFieldError(amountEl, 'Ingresa el monto recibido'); }
+      if (!soldDate)   { focusFieldError(dateEl);   return setFieldError(dateEl, 'Selecciona una fecha'); }
+
+      // Distribuir el monto y la comisión entre lotes proporcional a su costo
+      // (normalmente 1 solo lote en CDT/fondos).
+      const costTotal = purchases.reduce((sp, p) =>
+        sp + (Number(p.quantity) || 0) * (Number(p.purchasePrice || p.avgCost) || 0), 0) || 1;
+
+      return guardedSave(async () => {
+        for (const p of purchases) {
+          const qty = Number(p.quantity) || 0;
+          const loteCost = qty * (Number(p.purchasePrice || p.avgCost) || 0);
+          const share = costTotal ? loteCost / costTotal : (1 / purchases.length);
+          const montoLote = monto * share;
+          const soldCommission = totalComm * share;
+          // soldPrice unitario: lotRealizedPnL multiplica por soldQuantity (=qty).
+          const soldPrice = qty > 0 ? montoLote / qty : montoLote;
+          await dataService.update('investments', p.id, {
+            ...p, soldPrice, soldDate, soldQuantity: qty, soldCommission,
+          });
+        }
+      }, `${esCdt ? 'Redención' : 'Rescate'} de ${name || symbol} registrado`, 'Error al registrar');
+    },
+  });
 }
 
 // ─── Modal de dividendo ───────────────────────────────────────────────────────

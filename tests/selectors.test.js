@@ -997,6 +997,20 @@ describe('cdtCurrentValue (FIN-008)', () => {
     assert.ok(Math.abs(value - expected) < 1, `esperaba ~${expected.toFixed(0)}, recibí ${value}`);
   });
 
+  // Convención del formulario (isTrivial): quantity=1, capital en purchasePrice.
+  // Antes daba valor ≈ 1 (capitalizaba quantity=1) → CDT roto con −100%.
+  test('convención formulario (quantity=1, purchasePrice=monto) capitaliza el monto', () => {
+    const purchaseDate = '2025-01-01';
+    const todayMs = new Date('2026-01-01').getTime();
+    const inv = { quantity: 1, purchasePrice: 5_000_000, interestRate: 10, purchaseDate };
+    const value = selectors.cdtCurrentValue(inv, todayMs);
+    assert.ok(Math.abs(value - 5_500_000) < 1, `esperaba ~5.500.000, recibí ${value}`);
+  });
+
+  test('convención formulario sin tasa: devuelve el monto (purchasePrice)', () => {
+    assert.equal(selectors.cdtCurrentValue({ quantity: 1, purchasePrice: 5_000_000 }), 5_000_000);
+  });
+
   // Caso base: sin tasa o sin fecha → devuelve el capital
   test('sin interestRate: devuelve capital sin capitalizar', () => {
     const inv = { quantity: 500_000, purchaseDate: '2025-01-01' }; // sin interestRate

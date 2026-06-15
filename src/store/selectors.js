@@ -821,9 +821,19 @@ export const selectors = {
   //   todayMs       — timestamp de "hoy" en ms (permite tests deterministas; por defecto Date.now())
   // Devuelve el valor actual capitalizado.
   cdtCurrentValue(inv, todayMs) {
-    if (!inv?.interestRate || !inv?.purchaseDate) return Number(inv?.quantity) || 0;
+    // Capital invertido robusto a ambas convenciones del modelo:
+    //  - Formulario actual (isTrivial): quantity=1, purchasePrice=monto invertido.
+    //  - Datos legacy/import: quantity=capital, sin purchasePrice.
+    // Sin esto, un CDT creado por el formulario capitalizaba quantity=1 → mostraba
+    // valor ≈ $1 y −100% (BUG: cualquier CDT de la app salía roto).
+    const cdtCapital = (i) => {
+      const qty = Number(i?.quantity) || 0;
+      const px  = Number(i?.purchasePrice || i?.avgCost) || 0;
+      return px > 0 ? qty * px : qty;
+    };
+    if (!inv?.interestRate || !inv?.purchaseDate) return cdtCapital(inv);
     const now = todayMs !== undefined ? todayMs : Date.now();
-    const capital = Number(inv.quantity) || 0;
+    const capital = cdtCapital(inv);
     const diasDesdeCompra = (now - new Date(inv.purchaseDate).getTime()) / 86400000;
     let days = diasDesdeCompra;
     if (inv.maturityDate) {
