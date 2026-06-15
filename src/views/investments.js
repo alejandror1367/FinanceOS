@@ -52,9 +52,9 @@ function _saveCollapsed() {
   try { localStorage.setItem('financeOS:inv:collapsed', JSON.stringify([..._collapsed])); } catch (_) {}
 }
 
-// Posiciones expandidas en móvil (key de grupo). En móvil cada card se muestra
-// como fila compacta; el detalle (métricas + acciones) se despliega al tocarla.
-// Estado en memoria: se reinicia al recargar (no es preferencia persistente).
+// Posiciones expandidas (key de grupo). Cada posición se muestra como fila
+// compacta (móvil y desktop); el detalle (métricas + acciones) se despliega al
+// tocarla. Estado en memoria: se reinicia al recargar (no es preferencia persistente).
 const _expandedPos = new Set();
 
 const typeLabel  = (v) => (ASSET_TYPES.find((t) => t.value === v) || {}).label || v;
@@ -423,20 +423,20 @@ function positionCard(group, livePrice, fxRates, baseCur) {
   const isOpen = _expandedPos.has(key);
   const card = el('div', { class: `inv-card${isOpen ? ' is-open' : ''}` });
 
-  // ── Header ── (en móvil es el disparador de expansión: muestra/oculta el cuerpo)
+  // ── Header ── (disparador de expansión: la posición es una fila compacta y al
+  //               tocar el header se muestra/oculta el cuerpo — móvil y desktop)
   const head = el('div', {
     class: 'inv-card__head',
     role: 'button', tabindex: '0',
     'aria-expanded': String(isOpen),
     on: {
       click: (e) => {
-        if (!window.matchMedia('(max-width: 920px)').matches) return; // desktop: siempre abierto
         if (e.target.closest('button, a')) return;
         if (_expandedPos.has(key)) _expandedPos.delete(key); else _expandedPos.add(key);
         card.classList.toggle('is-open');
         head.setAttribute('aria-expanded', String(card.classList.contains('is-open')));
       },
-      keydown: (e) => { if ((e.key === 'Enter' || e.key === ' ') && window.matchMedia('(max-width: 920px)').matches) { e.preventDefault(); head.click(); } },
+      keydown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); head.click(); } },
     },
   });
   const titleWrap = el('div', { class: 'inv-card__title-wrap' });
