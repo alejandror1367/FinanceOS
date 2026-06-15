@@ -57,6 +57,11 @@ function _saveCollapsed() {
 // tocarla. Estado en memoria: se reinicia al recargar (no es preferencia persistente).
 const _expandedPos = new Set();
 
+// Orden de las posiciones dentro de cada sección: por valor de mercado (default)
+// o por rentabilidad (retorno %). Persiste en localStorage.
+let _sortBy = (() => { try { return localStorage.getItem('financeOS:inv:sortBy') || 'value'; } catch (_) { return 'value'; } })();
+function _setSortBy(v) { _sortBy = v; try { localStorage.setItem('financeOS:inv:sortBy', v); } catch (_) {} }
+
 const typeLabel  = (v) => (ASSET_TYPES.find((t) => t.value === v) || {}).label || v;
 const pctFmt     = (n) => `${n >= 0 ? '+' : ''}${Number(n).toFixed(2)}%`;
 const today      = () => new Date().toISOString().slice(0, 10);
@@ -798,6 +803,31 @@ export function renderInvestments() {
       wrap.appendChild(distCard);
     }
 
+    // Métrica por grupo (valor de mercado y retorno %) para ordenar posiciones.
+    const groupMetric = (g) => {
+      const lp = livePrices[(g.symbol || '').toUpperCase()];
+      const { value, cost, hasPrice } = groupValue(g, { [(g.symbol || '').toUpperCase()]: lp });
+      const rawVal = hasPrice && value !== null ? value : cost;
+      const vBase = toCOP(rawVal, g.currency, fxRates) ?? 0;
+      const cBase = toCOP(cost,   g.currency, fxRates) ?? 0;
+      return { value: vBase, ret: cBase ? (vBase - cBase) / cBase * 100 : 0 };
+    };
+    const sortGroups = (groups) => [...groups].sort((a, b) => {
+      const ma = groupMetric(a), mb = groupMetric(b);
+      return _sortBy === 'return' ? mb.ret - ma.ret : mb.value - ma.value;
+    });
+
+    // Control de orden de posiciones (valor de mercado / rentabilidad).
+    if (secStats.some((sec) => sec.groups.length > 1)) {
+      wrap.appendChild(el('div', { class: 'inv-sort' }, [
+        el('span', { class: 'inv-sort__label', text: 'Ordenar por' }),
+        el('div', { class: 'seg', style: { width: 'auto' } }, [
+          el('button', { class: 'seg__btn', 'aria-pressed': String(_sortBy === 'value'),  text: 'Valor',        on: { click: () => { _setSortBy('value');  paint(false); } } }),
+          el('button', { class: 'seg__btn', 'aria-pressed': String(_sortBy === 'return'), text: 'Rentabilidad', on: { click: () => { _setSortBy('return'); paint(false); } } }),
+        ]),
+      ]));
+    }
+
     // Secciones con cards (desplegables)
     secStats.forEach((sec) => {
       const isCollapsed = _collapsed.has(sec.id);
@@ -825,7 +855,7 @@ export function renderInvestments() {
 
       if (!isCollapsed) {
         const grid = el('div', { class: 'inv-cards-grid' });
-        sec.groups.forEach((g) => {
+        sortGroups(sec.groups).forEach((g) => {
           const lp = livePrices[(g.symbol || '').toUpperCase()];
           grid.appendChild(positionCard(g, lp || null, fxRates, baseCur));
         });
