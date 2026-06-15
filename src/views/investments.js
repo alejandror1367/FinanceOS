@@ -452,17 +452,20 @@ function positionCard(group, livePrice, fxRates, baseCur) {
   if (withholdingRate > 0) titleWrap.appendChild(Badge(`Ret. ${withholdingRate}%`, 'warning'));
   head.appendChild(titleWrap);
 
+  const dailyPct = livePrice?.changePct;
   const valWrap = el('div', { class: 'inv-card__value-wrap' });
   if (hasPrice && nativeValue !== null) {
     valWrap.appendChild(el('div', { class: 'inv-card__value tabular' }, [fmtI(nativeValue, currency)]));
-    if (gain !== null) {
+    // La línea de % del header depende del orden activo: en modo "Día" muestra el
+    // cambio diario; en cualquier otro, el rendimiento total. El dato no usado
+    // sigue disponible en el detalle (métricas del cuerpo).
+    if (_sortBy === 'daily' && dailyPct !== undefined) {
+      valWrap.appendChild(el('div', { class: `inv-card__gain ${dailyPct >= 0 ? 'text-positive' : 'text-negative'}` },
+        [`Hoy ${pctFmt(dailyPct)}`]));
+    } else if (gain !== null) {
       const isPos = gain >= 0;
       valWrap.appendChild(el('div', { class: `inv-card__gain ${isPos ? 'text-positive' : 'text-negative'}` },
         [`${isPos ? '+' : ''}${fmtI(Math.abs(gain), currency)}  ${pctFmt(gainPct)}`]));
-    }
-    if (livePrice?.changePct !== undefined) {
-      valWrap.appendChild(el('div', { class: `t-caption inv-card__today ${livePrice.changePct >= 0 ? 'text-positive' : 'text-negative'}` },
-        [`Hoy: ${pctFmt(livePrice.changePct)}`]));
     }
   } else {
     valWrap.appendChild(el('div', { class: 'inv-card__value tabular text-secondary' }, ['— sin precio —']));
@@ -478,10 +481,10 @@ function positionCard(group, livePrice, fxRates, baseCur) {
 
   // ── Métricas ──
   const metrics = el('div', { class: 'inv-card__metrics' });
-  const m = (lbl, val) => {
+  const m = (lbl, val, valCls = '') => {
     const d = el('div', { class: 'inv-metric' });
     d.appendChild(el('span', { class: 'inv-metric__label' }, [lbl]));
-    d.appendChild(el('span', { class: 'inv-metric__value tabular' }, [val]));
+    d.appendChild(el('span', { class: `inv-metric__value tabular ${valCls}` }, [val]));
     return d;
   };
 
@@ -489,6 +492,10 @@ function positionCard(group, livePrice, fxRates, baseCur) {
     metrics.appendChild(m('Shares totales', totalQty % 1 === 0 ? String(totalQty) : totalQty.toFixed(6).replace(/0+$/, '')));
     metrics.appendChild(m('Cost basis (avg)', fmtI(weightedAvg, currency)));
     if (hasPrice && livePrice?.price) metrics.appendChild(m('Precio actual', fmtI(livePrice.price, currency)));
+    // El % diario solo aparece cuando el orden activo es "Día" (en modo
+    // valor/rentabilidad hace ruido visual). En modo "Día" el header muestra el
+    // cambio diario y el rendimiento total pasa al detalle.
+    if (_sortBy === 'daily' && gainPct !== null) metrics.appendChild(m('Rendimiento total', pctFmt(gainPct), gainPct >= 0 ? 'text-positive' : 'text-negative'));
     if (purchases.length > 1) metrics.appendChild(m('Compras (DCA)', `${purchases.length} ops.`));
   }
   metrics.appendChild(m('Total invertido', fmtI(totalCost, currency)));
@@ -803,27 +810,30 @@ export function renderInvestments() {
       wrap.appendChild(distCard);
     }
 
-    // Métrica por grupo (valor de mercado y retorno %) para ordenar posiciones.
+    // Métrica por grupo (valor, retorno total %, cambio diario %) para ordenar.
     const groupMetric = (g) => {
       const lp = livePrices[(g.symbol || '').toUpperCase()];
       const { value, cost, hasPrice } = groupValue(g, { [(g.symbol || '').toUpperCase()]: lp });
       const rawVal = hasPrice && value !== null ? value : cost;
       const vBase = toCOP(rawVal, g.currency, fxRates) ?? 0;
       const cBase = toCOP(cost,   g.currency, fxRates) ?? 0;
-      return { value: vBase, ret: cBase ? (vBase - cBase) / cBase * 100 : 0 };
+      return { value: vBase, ret: cBase ? (vBase - cBase) / cBase * 100 : 0, daily: lp?.changePct ?? -Infinity };
     };
     const sortGroups = (groups) => [...groups].sort((a, b) => {
       const ma = groupMetric(a), mb = groupMetric(b);
-      return _sortBy === 'return' ? mb.ret - ma.ret : mb.value - ma.value;
+      if (_sortBy === 'return') return mb.ret - ma.ret;
+      if (_sortBy === 'daily')  return mb.daily - ma.daily;
+      return mb.value - ma.value;
     });
 
-    // Control de orden de posiciones (valor de mercado / rentabilidad).
+    // Control de orden de posiciones (valor / rentabilidad total / cambio diario).
     if (secStats.some((sec) => sec.groups.length > 1)) {
       wrap.appendChild(el('div', { class: 'inv-sort' }, [
         el('span', { class: 'inv-sort__label', text: 'Ordenar por' }),
         el('div', { class: 'seg', style: { width: 'auto' } }, [
           el('button', { class: 'seg__btn', 'aria-pressed': String(_sortBy === 'value'),  text: 'Valor',        on: { click: () => { _setSortBy('value');  paint(false); } } }),
           el('button', { class: 'seg__btn', 'aria-pressed': String(_sortBy === 'return'), text: 'Rentabilidad', on: { click: () => { _setSortBy('return'); paint(false); } } }),
+          el('button', { class: 'seg__btn', 'aria-pressed': String(_sortBy === 'daily'),  text: 'Día',          on: { click: () => { _setSortBy('daily');  paint(false); } } }),
         ]),
       ]));
     }
