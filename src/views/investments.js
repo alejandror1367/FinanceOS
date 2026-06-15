@@ -43,8 +43,10 @@ const CURRENCIES = ['USD', 'COP', 'EUR', 'GBP', 'BRL'].map((c) => ({ value: c, l
 
 // Estado de colapso de secciones — nivel de módulo para sobrevivir re-renders reactivos.
 // Default: 'closed' colapsado (sección secundaria); las activas abiertas.
+// Por defecto NADA colapsado: "Operaciones cerradas" debe verse sin tener que
+// buscarla (antes salía colapsada y el P&L realizado quedaba escondido).
 const _collapsed = new Set(
-  (() => { try { return JSON.parse(localStorage.getItem('financeOS:inv:collapsed') || '["closed"]'); } catch (_) { return ['closed']; } })()
+  (() => { try { return JSON.parse(localStorage.getItem('financeOS:inv:collapsed') || '[]'); } catch (_) { return []; } })()
 );
 function _saveCollapsed() {
   try { localStorage.setItem('financeOS:inv:collapsed', JSON.stringify([..._collapsed])); } catch (_) {}
