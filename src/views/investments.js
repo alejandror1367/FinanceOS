@@ -492,10 +492,14 @@ function positionCard(group, livePrice, fxRates, baseCur) {
     metrics.appendChild(m('Shares totales', totalQty % 1 === 0 ? String(totalQty) : totalQty.toFixed(6).replace(/0+$/, '')));
     metrics.appendChild(m('Cost basis (avg)', fmtI(weightedAvg, currency)));
     if (hasPrice && livePrice?.price) metrics.appendChild(m('Precio actual', fmtI(livePrice.price, currency)));
-    // El % diario solo aparece cuando el orden activo es "Día" (en modo
-    // valor/rentabilidad hace ruido visual). En modo "Día" el header muestra el
-    // cambio diario y el rendimiento total pasa al detalle.
-    if (_sortBy === 'daily' && gainPct !== null) metrics.appendChild(m('Rendimiento total', pctFmt(gainPct), gainPct >= 0 ? 'text-positive' : 'text-negative'));
+    // El dato que NO muestra el header va al detalle (sin duplicar): en modo
+    // normal el header muestra el total → el detalle lleva "Cambio hoy"; en modo
+    // "Día" el header muestra el diario → el detalle lleva "Rendimiento total".
+    if (_sortBy === 'daily') {
+      if (gainPct !== null) metrics.appendChild(m('Rendimiento total', pctFmt(gainPct), gainPct >= 0 ? 'text-positive' : 'text-negative'));
+    } else if (dailyPct !== undefined) {
+      metrics.appendChild(m('Cambio hoy', pctFmt(dailyPct), dailyPct >= 0 ? 'text-positive' : 'text-negative'));
+    }
     if (purchases.length > 1) metrics.appendChild(m('Compras (DCA)', `${purchases.length} ops.`));
   }
   metrics.appendChild(m('Total invertido', fmtI(totalCost, currency)));

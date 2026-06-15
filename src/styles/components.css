@@ -619,7 +619,6 @@ body.modal-open { overflow: hidden; }
   .inv-card:not(.is-open) .inv-card__title-wrap .badge { display: none; }
   .inv-card__value-wrap { text-align: right; flex-shrink: 0; }
   .inv-card__value { font-size: var(--fs-body); font-weight: var(--fw-bold); }
-  .inv-card__today { display: none; }
   .inv-card__chev { top: 50%; transform: translateY(-50%); right: var(--space-3); }
   .inv-card.is-open .inv-card__chev { transform: translateY(-50%) rotate(180deg); }
   /* al expandir, los badges pasan a su propia línea bajo el ticker/nombre */
