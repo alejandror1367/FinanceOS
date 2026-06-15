@@ -669,9 +669,13 @@ export function renderInvestments() {
     const s = store.get();
     const baseCur = s.baseCurrency || 'COP';
     const allGroups = groupByTicker(s.investments);
-    // Grupos con posiciones activas (purchases no vacío) vs. completamente vendidos
+    // Grupos con posiciones activas (lotes sin vender).
     const activeGroups = allGroups.filter((g) => g.purchases.length > 0);
-    const closedGroups = allGroups.filter((g) => g.purchases.length === 0 && g.sold.length > 0);
+    // Operaciones de venta: cualquier grupo con lotes vendidos, INCLUYE ventas
+    // PARCIALES. Antes exigía purchases.length===0 (ticker 100% liquidado), así
+    // que una venta parcial nunca aparecía en "Operaciones cerradas" y su P&L
+    // realizado se perdía de la vista y del total.
+    const closedGroups = allGroups.filter((g) => g.sold.length > 0);
 
     if (!allGroups.length) {
       mount(bodyMount, el('div', { class: 'card' }, [EmptyState({
