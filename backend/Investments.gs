@@ -28,6 +28,15 @@ function createInvestment_(d) {
     interestRate:  toAmount_(d.interestRate || 0, 'interestRate'),
     maturityDate:  sanitizeString_(d.maturityDate || '', 10),
     currency:      sanitizeString_(d.currency || APP.baseCurrency, 3),
+    // Campos de venta/comisión (Sprint 5). Sin esto, una venta PARCIAL (que crea
+    // un lote cerrado vía create) perdía soldDate en el backend → al sincronizar
+    // el lote reaparecía como compra activa.
+    commission:      toAmount_(d.commission || 0, 'commission'),
+    soldPrice:       toAmount_(d.soldPrice || 0, 'soldPrice'),
+    soldDate:        sanitizeString_(d.soldDate || '', 10),
+    soldQuantity:    toAmount_(d.soldQuantity || 0, 'soldQuantity'),
+    soldCommission:  toAmount_(d.soldCommission || 0, 'soldCommission'),
+    withholdingRate: toAmount_(d.withholdingRate || 0, 'withholdingRate'),
   });
   logAudit_('create', 'Investments', rec.id, 'Inversión: ' + rec.name);
   return rec;
@@ -50,6 +59,15 @@ function updateInvestment_(d) {
   if (d.interestRate  !== undefined) patch.interestRate  = toAmount_(d.interestRate,  'interestRate');
   if (d.maturityDate  !== undefined) patch.maturityDate  = sanitizeString_(d.maturityDate, 10);
   if (d.currency      !== undefined) patch.currency      = sanitizeString_(d.currency, 3);
+  // Campos de venta/comisión (Sprint 5). BUG: faltaban aquí → al VENDER (update con
+  // soldDate/soldPrice/...) el backend los ignoraba y guardaba el lote sin venta;
+  // el siguiente pull lo devolvía como compra activa y se perdía el P&L realizado.
+  if (d.commission      !== undefined) patch.commission      = toAmount_(d.commission,      'commission');
+  if (d.soldPrice       !== undefined) patch.soldPrice       = toAmount_(d.soldPrice,       'soldPrice');
+  if (d.soldDate        !== undefined) patch.soldDate        = sanitizeString_(d.soldDate, 10);
+  if (d.soldQuantity    !== undefined) patch.soldQuantity    = toAmount_(d.soldQuantity,    'soldQuantity');
+  if (d.soldCommission  !== undefined) patch.soldCommission  = toAmount_(d.soldCommission,  'soldCommission');
+  if (d.withholdingRate !== undefined) patch.withholdingRate = toAmount_(d.withholdingRate, 'withholdingRate');
   var rec = repoUpdate_('Investments', d.id, patch);
   logAudit_('update', 'Investments', rec.id, 'Inversión actualizada: ' + rec.name);
   return rec;
