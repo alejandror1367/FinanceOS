@@ -601,17 +601,26 @@ body.modal-open { overflow: hidden; }
 .inv-metric__value { font-size: var(--fs-caption); font-weight: var(--fw-semibold); color: var(--text-primary); }
 .inv-card__actions { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
 
-/* Móvil: filas a ancho completo (header horizontal: ticker+valor en una línea). */
+/* Móvil: filas a ancho completo. Header limpio de 2 líneas por lado —
+   izquierda ticker/nombre, derecha valor/rendimiento — alineadas al centro.
+   Se ocultan badges y "Hoy %" de la fila (redundantes/ruido); el detalle
+   completo aparece al expandir. */
 @media (max-width: 920px) {
   .inv-cards-grid { display: flex; flex-direction: column; gap: var(--space-2); }
   .inv-card { padding: var(--space-3) var(--space-4); }
-  .inv-card__head { flex-direction: row; align-items: center; justify-content: space-between; gap: var(--space-3); padding-right: var(--space-5); }
-  .inv-card__title-wrap { flex-direction: row; align-items: baseline; flex-wrap: wrap; gap: var(--space-2); flex: 1; }
+  .inv-card__head { flex-direction: row; align-items: center; justify-content: space-between; gap: var(--space-3); padding-right: var(--space-6); }
+  .inv-card__title-wrap { flex-direction: column; align-items: flex-start; gap: 2px; flex: 1; min-width: 0; }
+  .inv-card__ticker { font-size: var(--fs-body); }
   .inv-card__name { font-size: var(--fs-micro); }
+  /* badges fuera de la fila colapsada; reaparecen al expandir */
+  .inv-card:not(.is-open) .inv-card__title-wrap .badge { display: none; }
   .inv-card__value-wrap { text-align: right; flex-shrink: 0; }
-  .inv-card__value { font-size: var(--fs-body); font-weight: var(--fw-semibold); }
+  .inv-card__value { font-size: var(--fs-body); font-weight: var(--fw-bold); }
+  .inv-card__today { display: none; }
   .inv-card__chev { top: 50%; transform: translateY(-50%); right: var(--space-3); }
   .inv-card.is-open .inv-card__chev { transform: translateY(-50%) rotate(180deg); }
+  /* al expandir, los badges pasan a su propia línea bajo el ticker/nombre */
+  .inv-card.is-open .inv-card__title-wrap { flex-wrap: wrap; }
 }
 
 /* Control de orden de posiciones */

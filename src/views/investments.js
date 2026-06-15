@@ -461,7 +461,7 @@ function positionCard(group, livePrice, fxRates, baseCur) {
         [`${isPos ? '+' : ''}${fmtI(Math.abs(gain), currency)}  ${pctFmt(gainPct)}`]));
     }
     if (livePrice?.changePct !== undefined) {
-      valWrap.appendChild(el('div', { class: `t-caption ${livePrice.changePct >= 0 ? 'text-positive' : 'text-negative'}` },
+      valWrap.appendChild(el('div', { class: `t-caption inv-card__today ${livePrice.changePct >= 0 ? 'text-positive' : 'text-negative'}` },
         [`Hoy: ${pctFmt(livePrice.changePct)}`]));
     }
   } else {
@@ -756,7 +756,7 @@ export function renderInvestments() {
       return sum + v;
     }, 0), baseCur);
 
-    const wrap = el('div', { class: 'stack' });
+    const wrap = el('div', { class: 'stack stack--lg' });
 
     // Héroe (R3): valor total + P&L + XIRR — mismas cifras que el resumen
     // (pTotal/cTotal/gTotal calculados arriba; solo cambia la presentación).
