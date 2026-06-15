@@ -606,7 +606,10 @@ body.modal-open { overflow: hidden; }
    Se ocultan badges y "Hoy %" de la fila (redundantes/ruido); el detalle
    completo aparece al expandir. */
 @media (max-width: 920px) {
-  .inv-cards-grid { display: flex; flex-direction: column; gap: var(--space-2); }
+  /* align-items: stretch → todas las filas a ancho completo uniforme (sin esto
+     heredaban el align-items:start del grid desktop y tomaban el ancho de su
+     contenido, quedando cada card de un tamaño distinto). */
+  .inv-cards-grid { display: flex; flex-direction: column; gap: var(--space-2); align-items: stretch; }
   .inv-card { padding: var(--space-3) var(--space-4); }
   .inv-card__head { flex-direction: row; align-items: center; justify-content: space-between; gap: var(--space-3); padding-right: var(--space-6); }
   .inv-card__title-wrap { flex-direction: column; align-items: flex-start; gap: 2px; flex: 1; min-width: 0; }
