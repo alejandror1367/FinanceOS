@@ -3,98 +3,112 @@
    Solo valores crudos. Los temas (themes.css) mapean estos
    primitivos a tokens semánticos. La UI usa SOLO semánticos.
 
-   Paleta v3 (rediseño fintech): Navy · Slate · Periwinkle · Violet ·
-   Emerald · Champagne. Fondo azul profundo, gradientes azul-violeta.
+   Paleta v4 (rework "near-black" 2026): Ink (casi negro neutro) ·
+   Blue (acento, restringido a acciones/activo) · Violet · Profit ·
+   Loss · Gold (metas). Fondo near-black neutro, el azul ya no tiñe
+   las superficies — solo comunica acción. Profundidad estilo Linear
+   vía hairline borders + highlight superior, no por sombras fuertes.
    ============================================================ */
 
 :root {
-  /* ---- Navy (neutros azul profundo, base de superficies dark) ---- */
-  --navy-950: #070B14;
-  --navy-900: #0C1322;
-  --navy-850: #111827;
-  --navy-800: #151D2D;
-  --navy-750: #1A2334;
-  --navy-700: #223048;
-  --navy-650: #2B3A55;
+  /* ---- Ink (neutros near-black, base de superficies dark) ---- */
+  --ink-950: #0A0A0B;
+  --ink-900: #111214;
+  --ink-850: #161719;
+  --ink-800: #17181C;
+  --ink-750: #1D1F24;
+  --ink-700: #2A2D35;
+  --ink-650: #353942;
 
-  /* ---- Graphite (legado, neutros sin tinte — aún referenciado) ---- */
-  --graphite-950: #0E1116;
-  --graphite-900: #13171E;
-  --graphite-850: #161B23;
-  --graphite-800: #1B212B;
-  --graphite-750: #222A35;
-  --graphite-700: #2C3543;
-  --graphite-650: #36404F;
+  /* ---- Navy / Graphite (legado v3 — repuntados a la rampa ink
+         neutra para que cualquier referencia suelta no se rompa) ---- */
+  --navy-950: var(--ink-950);
+  --navy-900: var(--ink-900);
+  --navy-850: var(--ink-850);
+  --navy-800: var(--ink-800);
+  --navy-750: var(--ink-750);
+  --navy-700: var(--ink-700);
+  --navy-650: var(--ink-650);
+  --graphite-950: var(--ink-950);
+  --graphite-900: var(--ink-900);
+  --graphite-850: var(--ink-850);
+  --graphite-800: var(--ink-800);
+  --graphite-750: var(--ink-750);
+  --graphite-700: var(--ink-700);
+  --graphite-650: var(--ink-650);
 
-  /* ---- Slate (neutros de texto / tema claro) ---- */
-  --slate-50:  #F7F8FB;
-  --slate-100: #ECEFF4;
-  --slate-200: #DCE1EA;
-  --slate-300: #C2C9D6;
-  --slate-350: #A7B0C2;
-  --slate-400: #97A1B2;
-  --slate-500: #6B7686;
-  --slate-600: #5A6577;
-  --slate-700: #353E4D;
-  --slate-800: #232A36;
-  --slate-900: #161B23;
-  --slate-950: #0F1318;
+  /* ---- Slate (neutros de texto / tema claro) — neutralizados ---- */
+  --slate-50:  #F7F8FA;
+  --slate-100: #EDEFF3;
+  --slate-200: #DCDFE6;
+  --slate-300: #C3C7D0;
+  --slate-350: #B6BAC5;   /* texto secundario (dark) */
+  --slate-400: #8C919E;   /* texto terciario (dark) */
+  --slate-500: #6F7480;   /* texto muted */
+  --slate-600: #5A6170;
+  --slate-700: #3A3F4B;
+  --slate-800: #23262E;
+  --slate-900: #16171B;
+  --slate-950: #0E0F12;
 
-  /* ---- Periwinkle (primario / marca) ---- */
-  --periwinkle-300: #BCC6FF;
-  --periwinkle-400: #A3B0FF;
-  --periwinkle-500: #8B9CFF;
-  --periwinkle-600: #6F82E8;
-  --periwinkle-700: #5266C9;
+  /* ---- Blue (primario / marca — el azul SOLO comunica acción) ---- */
+  --periwinkle-300: #A8C0FF;
+  --periwinkle-400: #5D88FF;   /* hover */
+  --periwinkle-500: #4F7CFF;   /* accent */
+  --periwinkle-600: #3B6BFF;
+  --periwinkle-700: #2F5AE0;   /* light mode (AA sobre blanco) */
 
-  /* ---- Violet (gradientes de marca azul-violeta) ---- */
-  --violet-300: #C4B0FC;
+  /* ---- Violet (acento secundario / gradiente de marca) ---- */
+  --violet-300: #C4B5FD;
   --violet-400: #A78BFA;
-  --violet-500: #8B6CF0;
-  --violet-600: #7857DB;
+  --violet-500: #8B5CF6;
+  --violet-600: #7C46E8;
 
-  /* ---- Emerald (crecimiento / inversiones / tendencia ↑) ---- */
-  --emerald-300: #84EDC7;
-  --emerald-400: #60E3B7;
-  --emerald-500: #3ECF8E;
-  --emerald-600: #2BB077;
-  --emerald-700: #1F9D6B;
+  /* ---- Profit (crecimiento / inversiones / tendencia ↑) ---- */
+  --emerald-300: #5CE6B0;
+  --emerald-400: #16C784;   /* profit */
+  --emerald-500: #00E091;   /* profit strong */
+  --emerald-600: #0FA86E;
+  --emerald-700: #0C8C5C;   /* light mode (AA) */
 
-  /* ---- Champagne Gold (metas / patrimonio aspiracional) ---- */
-  --champagne-300: #E4D2AC;
-  --champagne-400: #D6BE8C;
-  --champagne-500: #C6A76A;
-  --champagne-600: #AE9056;
-  --champagne-700: #8A6D3B;
+  /* ---- Gold (metas / patrimonio aspiracional) — cálido sobrio ---- */
+  --champagne-300: #E6D3A8;
+  --champagne-400: #D9B872;
+  --champagne-500: #C6A24E;
+  --champagne-600: #A9853A;
+  --champagne-700: #8A6A2E;   /* light mode (AA) */
 
   /* ---- Amber (advertencia) ---- */
   --amber-300: #F5C76B;
   --amber-400: #E8AE45;
   --amber-500: #C98A1E;
-  --amber-600: #B07A1E;
+  --amber-600: #9C6F1C;
 
-  /* ---- Red (tendencia ↓ / peligro, desaturado) ---- */
-  --red-300: #FFA3A3;
-  --red-400: #FF7A7A;
-  --red-500: #D85A50;
-  --red-600: #C4493F;
+  /* ---- Loss (tendencia ↓ / peligro) ---- */
+  --red-300: #FF9098;
+  --red-400: #FF5A67;   /* loss strong */
+  --red-500: #EA3943;   /* loss */
+  --red-600: #C92A33;   /* light mode (AA) */
 
   /* ---- Tipografía ---- */
-  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-sans: "Inter", "SF Pro Display", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
-  /* Escala tipográfica (jerarquía ampliada) */
-  --fs-display-xl: 3rem;    /* 48px — cifra héroe */
-  --fs-display: 2.625rem;   /* 42px */
-  --fs-h1: 2rem;            /* 32px */
-  --fs-h2: 1.375rem;        /* 22px */
-  --fs-h3: 1.125rem;        /* 18px */
-  --fs-kpi: 1.75rem;        /* 28px — valor de KPI */
-  --fs-body: 0.9375rem;     /* 15px */
-  --fs-caption: 0.8125rem;  /* 13px */
-  --fs-micro: 0.6875rem;    /* 11px */
+  /* Escala tipográfica (rework — cifras financieras dominan) */
+  --fs-display-xl: 3.5rem;   /* 56px — cifra héroe */
+  --fs-display-l: 3rem;      /* 48px */
+  --fs-display-m: 2.5rem;    /* 40px */
+  --fs-display: 2.5rem;      /* 40px (alias legado) */
+  --fs-h1: 2rem;             /* 32px */
+  --fs-h2: 1.5rem;           /* 24px */
+  --fs-h3: 1.25rem;          /* 20px */
+  --fs-kpi: 1.75rem;         /* 28px — valor de KPI */
+  --fs-body-lg: 1rem;        /* 16px */
+  --fs-body: 0.9375rem;      /* 15px */
+  --fs-caption: 0.8125rem;   /* 13px */
+  --fs-micro: 0.75rem;       /* 12px — labels micro uppercase */
 
-  --lh-tight: 1.1;
+  --lh-tight: 1.08;
   --lh-snug: 1.3;
   --lh-normal: 1.55;
 
@@ -110,30 +124,32 @@
 
   /* ---- Espaciado (escala 4px) ---- */
   --space-0: 0;
-  --space-1: 0.25rem;
-  --space-2: 0.5rem;
-  --space-3: 0.75rem;
-  --space-4: 1rem;
-  --space-5: 1.25rem;
-  --space-6: 1.5rem;
-  --space-8: 2rem;
-  --space-10: 2.5rem;
-  --space-12: 3rem;
-  --space-16: 4rem;
+  --space-1: 0.25rem;   /* 4 */
+  --space-2: 0.5rem;    /* 8 */
+  --space-3: 0.75rem;   /* 12 */
+  --space-4: 1rem;      /* 16 */
+  --space-5: 1.25rem;   /* 20 */
+  --space-6: 1.5rem;    /* 24 */
+  --space-8: 2rem;      /* 32 */
+  --space-10: 2.5rem;   /* 40 */
+  --space-12: 3rem;     /* 48 */
+  --space-16: 4rem;     /* 64 */
+  --space-24: 6rem;     /* 96 */
 
-  /* ---- Radios (amplios, premium) ---- */
-  --radius-xs: 7px;
-  --radius-sm: 11px;
-  --radius-md: 15px;
+  /* ---- Radios (spec rework: 12·16·20·24·28) ---- */
+  --radius-xs: 10px;
+  --radius-sm: 12px;
+  --radius-md: 16px;
   --radius-lg: 20px;
-  --radius-xl: 26px;
+  --radius-xl: 24px;    /* cards principales */
+  --radius-2xl: 28px;   /* hero cards */
   --radius-full: 999px;
 
-  /* ---- Sombras (suaves) ---- */
-  --shadow-xs: 0 1px 2px rgba(0,0,0,0.20);
-  --shadow-sm: 0 2px 10px rgba(0,0,0,0.22);
-  --shadow-md: 0 10px 30px rgba(0,0,0,0.30);
-  --shadow-lg: 0 24px 60px rgba(0,0,0,0.44);
+  /* ---- Sombras (muy discretas — la elevación viene del borde + highlight) ---- */
+  --shadow-xs: 0 1px 2px rgba(0,0,0,0.30);
+  --shadow-sm: 0 2px 10px rgba(0,0,0,0.32);
+  --shadow-md: 0 10px 30px rgba(0,0,0,0.40);
+  --shadow-lg: 0 24px 60px rgba(0,0,0,0.55);
 
   /* ---- Z-index ---- */
   --z-base: 1;
@@ -143,17 +159,17 @@
   --z-toast: 800;
   --z-command: 900;
 
-  /* ---- Motion ---- */
+  /* ---- Motion (microinteracciones 120–180ms) ---- */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
-  --dur-fast: 120ms;
-  --dur-base: 200ms;
-  --dur-slow: 320ms;
+  --dur-fast: 130ms;
+  --dur-base: 180ms;
+  --dur-slow: 300ms;
 
   /* ---- Layout ---- */
   --sidebar-w: 252px;
   --topbar-h: 64px;
-  --content-max: 1200px;
+  --content-max: 1400px;
 }
 
 @media (prefers-reduced-motion: reduce) {

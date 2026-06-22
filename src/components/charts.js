@@ -4,8 +4,8 @@
 import { el, esc } from '../utils/dom.js';
 
 export const CHART_PALETTE = [
-  'var(--accent)', 'var(--positive)', 'var(--gold)', 'var(--info)',
-  'var(--warning)', 'var(--negative)', 'var(--periwinkle-300)', 'var(--neutral)',
+  'var(--accent)', 'var(--positive)', 'var(--accent-2)', 'var(--gold)',
+  'var(--warning)', 'var(--negative)', 'var(--neutral)',
 ];
 
 // FE-011/TD-07: tabla accesible (sr-only) para lectores de pantalla — LineChart

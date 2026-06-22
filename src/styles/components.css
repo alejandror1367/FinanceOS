@@ -10,7 +10,10 @@
   padding: var(--space-6);
   /* Elevación sutil + hairline superior (solo dark) — profundidad estilo Linear */
   box-shadow: var(--shadow-xs), var(--card-highlight);
+  transition: border-color var(--dur-base) var(--ease-out);
 }
+.card:hover { border-color: var(--border); }
+@media (pointer: coarse) { .card:hover { border-color: var(--border-subtle); } }
 .card--pad-sm { padding: var(--space-4); }
 .card__head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-4); }
 .card__title { font-size: var(--fs-h3); font-weight: var(--fw-semibold); }
@@ -57,6 +60,7 @@
 /* KPI héroe — Patrimonio Neto destacado */
 .kpi--hero {
   grid-column: span 2;
+  border-radius: var(--radius-2xl);
   background:
     radial-gradient(120% 140% at 100% 0%, var(--accent-bg), transparent 60%),
     radial-gradient(90% 120% at 0% 100%, color-mix(in srgb, var(--accent-2) 7%, transparent), transparent 55%),
@@ -114,7 +118,7 @@ details[open] .kpi__dchev { transform: rotate(180deg); }
 /* ---------- Button ---------- */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);
-  height: 38px; padding: 0 var(--space-4);
+  height: 40px; padding: 0 var(--space-4);
   border-radius: var(--radius-sm);
   font-weight: var(--fw-semibold); font-size: var(--fs-body);
   border: 1px solid transparent;
@@ -135,7 +139,7 @@ details[open] .kpi__dchev { transform: rotate(180deg); }
 /* Outline — usado en inversiones/import (acciones secundarias con borde marcado) */
 .btn--outline { background: transparent; color: var(--text-primary); border-color: var(--border); }
 .btn--outline:hover { background: var(--bg-hover); border-color: var(--border-strong); }
-.btn--icon { width: 38px; height: 38px; padding: 0; }
+.btn--icon { width: 40px; height: 40px; padding: 0; }
 .btn svg { width: 18px; height: 18px; }
 
 /* ---------- Data table ---------- */
@@ -296,9 +300,9 @@ details[open] .kpi__dchev { transform: rotate(180deg); }
 .field__label { font-size: var(--fs-caption); font-weight: var(--fw-medium); color: var(--text-secondary); }
 .field__error { font-size: var(--fs-caption); color: var(--negative); min-height: 0; }
 .input {
-  height: 42px; padding: 0 var(--space-3);
+  height: 44px; padding: 0 var(--space-3);
   background: var(--bg-input); color: var(--text-primary);
-  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  border: 1px solid var(--border); border-radius: 14px;
   font-size: var(--fs-body); width: 100%;
   transition: border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
 }
@@ -310,7 +314,7 @@ textarea.input { height: auto; min-height: 76px; padding: var(--space-3); resize
 select.input { appearance: none; cursor: pointer;
   padding-right: 2.5rem; /* espacio para la flecha custom; evita que texto largo solape el chevron */
   background-image: linear-gradient(45deg, transparent 50%, var(--text-tertiary) 50%), linear-gradient(135deg, var(--text-tertiary) 50%, transparent 50%);
-  background-position: calc(100% - 18px) 18px, calc(100% - 13px) 18px; background-size: 5px 5px; background-repeat: no-repeat;
+  background-position: calc(100% - 18px) 19px, calc(100% - 13px) 19px; background-size: 5px 5px; background-repeat: no-repeat;
 }
 .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
 @media (max-width: 480px) { .field-row { grid-template-columns: 1fr; } }
@@ -919,6 +923,7 @@ body.modal-open { overflow: hidden; }
 .dash-hero {
   position: relative;
   overflow: hidden;
+  border-radius: var(--radius-2xl);
   background:
     radial-gradient(120% 140% at 100% 0%, var(--accent-bg), transparent 60%),
     radial-gradient(90% 120% at 0% 100%, color-mix(in srgb, var(--accent-2) 7%, transparent), transparent 55%),

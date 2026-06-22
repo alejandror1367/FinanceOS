@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FinanceOS — preview (CSS real)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap">
+<link rel="stylesheet" href="../../src/styles/tokens.css">
+<link rel="stylesheet" href="../../src/styles/themes.css">
+<link rel="stylesheet" href="../../src/styles/base.css">
+<link rel="stylesheet" href="../../src/styles/layout.css">
+<link rel="stylesheet" href="../../src/styles/components.css">
+<style>.ic{width:20px;height:20px;border-radius:5px;background:currentColor;opacity:.55;display:inline-block}</style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="brand"><img class="brand__mark" src="../../assets/icon.svg" width="34" height="34" alt=""><span class="brand__name">Finance<b>OS</b></span></div>
+    <nav class="nav">
+      <div class="nav__section t-micro">General</div>
+      <a class="nav__item" aria-current="page"><span class="nav__icon"><span class="ic"></span></span><span class="nav__label">Dashboard</span></a>
+      <a class="nav__item"><span class="nav__icon"><span class="ic"></span></span><span class="nav__label">Hoy</span></a>
+      <a class="nav__item"><span class="nav__icon"><span class="ic"></span></span><span class="nav__label">Transacciones</span></a>
+      <a class="nav__item"><span class="nav__icon"><span class="ic"></span></span><span class="nav__label">Cuentas</span></a>
+      <div class="nav__section t-micro">Patrimonio</div>
+      <a class="nav__item"><span class="nav__icon"><span class="ic"></span></span><span class="nav__label">Patrimonio</span></a>
+      <a class="nav__item"><span class="nav__icon"><span class="ic"></span></span><span class="nav__label">Inversiones</span></a>
+      <a class="nav__item"><span class="nav__icon"><span class="ic"></span></span><span class="nav__label">Metas</span></a>
+      <a class="nav__item"><span class="nav__icon"><span class="ic"></span></span><span class="nav__label">Deudas</span></a>
+    </nav>
+  </aside>
+  <main class="main">
+    <header class="topbar"><h1 class="topbar__title">Dashboard</h1><div class="topbar__spacer"></div>
+      <div class="topbar__actions"><span class="sync-pill sync-pill--synced"><span class="sync-pill__dot"></span><span class="sync-pill__label">Sincronizado</span></span></div>
+    </header>
+    <div class="content">
+      <div class="page-header"><div class="row-flex between">
+        <div><h2 class="t-h1">Hola, Alejo</h2><p class="page-header__sub">Tu centro de comando financiero.</p></div>
+        <button class="btn btn--primary"><span>+ Nuevo movimiento</span></button>
+      </div></div>
+
+      <div class="grid dash-row dash-row--hero">
+        <article class="card dash-hero">
+          <div class="dash-hero__top"><span class="kpi__label">Patrimonio neto</span></div>
+          <div class="dash-hero__value tabular">$47.812.400</div>
+          <div class="dash-hero__trend"><span class="trend trend--up"><span>▲</span><span>+3.4%</span></span><span class="t-caption">este mes</span></div>
+          <div class="dash-hero__split">
+            <div><div class="dash-hero__k">Activos</div><div class="dash-hero__v tabular">$54.2M</div></div>
+            <div><div class="dash-hero__k">Pasivos</div><div class="dash-hero__v tabular text-negative">−$6.4M</div></div>
+            <div><div class="dash-hero__k">Liquidez</div><div class="dash-hero__v tabular">$12.1M</div></div>
+          </div>
+        </article>
+        <article class="card">
+          <div class="card__head"><h3 class="card__title">Salud</h3><span class="badge badge--positive">Excelente</span></div>
+          <div class="dash-health"><div class="dash-gauge dash-gauge--positive" style="width:80px;height:80px;position:relative">
+            <svg width="80" height="80" viewBox="0 0 80 80"><circle cx="40" cy="40" r="34" stroke="var(--border)" stroke-width="7" fill="none"/><circle cx="40" cy="40" r="34" stroke="currentColor" stroke-width="7" fill="none" stroke-dasharray="213.6" stroke-dashoffset="21" stroke-linecap="round" transform="rotate(-90 40 40)"/></svg>
+            <div class="dash-gauge__num tabular">90</div></div>
+            <div class="dash-health__rows">
+              <div class="dash-health__row"><span class="t-caption">Liquidez</span><span class="tabular text-positive">25/25</span></div>
+              <div class="dash-health__row"><span class="t-caption">Ahorro</span><span class="tabular text-positive">22/25</span></div>
+              <div class="dash-health__row"><span class="t-caption">Deuda</span><span class="tabular dash-warn">16/25</span></div>
+            </div></div>
+        </article>
+        <article class="card">
+          <div class="card__head"><h3 class="card__title">Flujo</h3><span class="badge badge--info">Junio</span></div>
+          <div class="dash-flow">
+            <div class="dash-flow__item"><div class="dash-flow__top"><span class="t-caption">Ingresos</span><span class="tabular dash-flow__amt">$8.420.000</span></div><div class="progress"><div class="progress__bar progress__bar--positive" style="width:100%"></div></div></div>
+            <div class="dash-flow__item"><div class="dash-flow__top"><span class="t-caption">Gastos</span><span class="tabular dash-flow__amt">$4.110.000</span></div><div class="progress"><div class="progress__bar progress__bar--negative" style="width:49%"></div></div></div>
+            <div class="dash-flow__net"><span class="t-caption">Ahorro neto</span><span class="row-flex"><span class="tabular dash-flow__netval text-positive">+$4.310.000</span><span class="badge badge--positive">51%</span></span></div>
+          </div>
+        </article>
+      </div>
+
+      <div class="grid dash-row section">
+        <article class="card">
+          <div class="card__head"><h3 class="card__title">Inversiones</h3><span class="badge badge--positive">▲ +18.2%</span></div>
+          <div class="dash-blocktotal tabular">$18.940.300</div>
+          <div class="dash-minilist">
+            <div class="dash-mini"><div class="dash-mini__avatar dash-mini__avatar--accent">VO</div><div class="dash-mini__main"><div class="dash-mini__title">VOO</div><div class="dash-mini__sub">ETFs</div></div><div class="dash-mini__right"><div class="dash-mini__val tabular">$6.1M</div><div class="dash-mini__valsub tabular text-positive">+12.4%</div></div></div>
+            <div class="dash-mini"><div class="dash-mini__avatar dash-mini__avatar--accent">AA</div><div class="dash-mini__main"><div class="dash-mini__title">AAPL</div><div class="dash-mini__sub">Acciones</div></div><div class="dash-mini__right"><div class="dash-mini__val tabular">$4.3M</div><div class="dash-mini__valsub tabular text-positive">+31.0%</div></div></div>
+            <div class="dash-mini"><div class="dash-mini__avatar dash-mini__avatar--accent">BT</div><div class="dash-mini__main"><div class="dash-mini__title">BTC</div><div class="dash-mini__sub">Cripto</div></div><div class="dash-mini__right"><div class="dash-mini__val tabular">$3.2M</div><div class="dash-mini__valsub tabular text-negative">−4.1%</div></div></div>
+          </div>
+        </article>
+        <article class="card">
+          <div class="card__head"><h3 class="card__title">Deudas</h3><span class="badge badge--info">Ver plan</span></div>
+          <div class="dash-blocktotal tabular">$6.420.000</div>
+          <div class="dash-dist"><span style="width:55%;background:var(--negative)"></span><span style="width:28%;background:var(--warning)"></span><span style="width:17%;background:var(--accent)"></span></div>
+          <div class="dash-strategy"><span>⚡</span><span>Avalanche: libre de deuda en <b>sep 2027</b> · $412K en intereses</span></div>
+        </article>
+        <article class="card">
+          <div class="card__head"><h3 class="card__title">Metas</h3><span class="badge badge--gold">3</span></div>
+          <div class="goal"><div class="goal__top"><span class="goal__name">Fondo emergencia</span><span class="goal__meta tabular">$9.0M / $12.0M</span></div><div class="progress"><div class="progress__bar progress__bar--gold" style="width:75%"></div></div><div class="goal__outlook"><span class="t-caption">Proyección: dic 2026</span><span class="badge badge--positive">82% prob.</span></div></div>
+          <div class="goal"><div class="goal__top"><span class="goal__name">Viaje Japón</span><span class="goal__meta tabular">$3.2M / $8.0M</span></div><div class="progress"><div class="progress__bar progress__bar--gold" style="width:40%"></div></div><div class="goal__outlook"><span class="t-caption">Proyección: ago 2027</span><span class="badge badge--warning">48% prob.</span></div></div>
+        </article>
+      </div>
+
+      <div class="grid grid--kpi section">
+        <article class="kpi"><div class="kpi__top"><span class="kpi__label">Ingresos</span><span class="kpi__icon kpi--positive"></span></div><div class="kpi__value tabular">$8.42M</div><div class="kpi__foot"><span class="trend trend--up">▲ +6%</span></div></article>
+        <article class="kpi"><div class="kpi__top"><span class="kpi__label">Gastos</span></div><div class="kpi__value tabular">$4.11M</div><div class="kpi__foot"><span class="trend trend--down">▼ −3%</span></div></article>
+        <article class="kpi"><div class="kpi__top"><span class="kpi__label">Ahorro</span></div><div class="kpi__value tabular">51%</div><div class="kpi__foot"><span class="t-caption">tasa del mes</span></div></article>
+        <article class="kpi"><div class="kpi__top"><span class="kpi__label">Liquidez</span></div><div class="kpi__value tabular">$12.1M</div><div class="kpi__foot"><span class="t-caption">2.9 meses</span></div></article>
+      </div>
+
+      <div class="card section" style="max-width:420px">
+        <div class="card__head"><h3 class="card__title">Formulario</h3></div>
+        <div class="field"><label class="field__label">Descripción</label><input class="input" value="Mercado semanal"></div>
+        <div class="field"><label class="field__label">Categoría</label><select class="input"><option>Mercado</option></select></div>
+        <div class="row-flex"><button class="btn btn--primary"><span>Guardar</span></button><button class="btn btn--ghost"><span>Cancelar</span></button></div>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

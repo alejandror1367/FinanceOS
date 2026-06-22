@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FinanceOS — Rework near-black (mockup)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* near-black ink ramp */
+  --ink-950:#0A0A0B; --ink-900:#111214; --ink-850:#161719;
+  --ink-800:#17181C; --ink-750:#1D1F24; --ink-700:#2A2D35; --ink-650:#353942;
+  /* text */
+  --tp:#FFFFFF; --ts:#B6BAC5; --tt:#8C919E; --tm:#6F7480;
+  /* brand / financial */
+  --accent:#4F7CFF; --accent-h:#5D88FF; --accent-bg:rgba(79,124,255,.12);
+  --purple:#8B5CF6; --purple-bg:rgba(139,92,246,.12);
+  --profit:#16C784; --profit-strong:#00E091; --profit-bg:rgba(22,199,132,.12);
+  --loss:#EA3943; --loss-bg:rgba(234,57,67,.12);
+  --gold:#D9B872; --gold-bg:rgba(217,184,114,.12);
+  --warn:#E8AE45; --warn-bg:rgba(232,174,69,.12);
+  /* surfaces */
+  --bg:var(--ink-950); --surface:var(--ink-800); --elev:var(--ink-750);
+  --border:rgba(255,255,255,.08); --border-s:rgba(255,255,255,.14);
+  --r-sm:12px; --r-md:16px; --r-lg:20px; --r-xl:24px; --r-2xl:28px;
+  --sp1:4px; --sp2:8px; --sp3:12px; --sp4:16px; --sp5:20px; --sp6:24px; --sp8:32px;
+}
+*{box-sizing:border-box;margin:0}
+body{
+  font-family:"Inter",system-ui,sans-serif;background:var(--bg);color:var(--tp);
+  -webkit-font-smoothing:antialiased;font-size:15px;line-height:1.5;
+  background-image:radial-gradient(900px 480px at 88% -10%,rgba(79,124,255,.06),transparent 60%);
+  background-attachment:fixed;
+}
+.wrap{max-width:1400px;margin:0 auto;display:grid;grid-template-columns:248px 1fr;min-height:100vh}
+/* sidebar */
+.side{background:var(--ink-900);border-right:1px solid var(--border);padding:20px 12px;display:flex;flex-direction:column;gap:2px}
+.brand{display:flex;align-items:center;gap:10px;padding:8px 12px 20px;font-weight:800;font-size:20px;letter-spacing:-.02em}
+.brand .mk{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--accent),var(--purple))}
+.brand b{color:var(--accent)}
+.nsec{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--tm);font-weight:600;padding:16px 12px 6px}
+.nav{display:flex;align-items:center;gap:12px;padding:9px 12px;border-radius:12px;color:var(--ts);font-weight:500;font-size:14px;position:relative}
+.nav .ic{width:18px;height:18px;border-radius:5px;background:currentColor;opacity:.55;flex:0 0 auto}
+.nav:hover{background:rgba(255,255,255,.04);color:var(--tp)}
+.nav.on{background:var(--accent-bg);color:var(--tp)}
+.nav.on .ic{background:var(--accent);opacity:1}
+.nav.on::before{content:"";position:absolute;left:-3px;top:22%;bottom:22%;width:3px;border-radius:9px;background:var(--accent)}
+/* main */
+.main{display:flex;flex-direction:column;min-width:0}
+.top{height:64px;display:flex;align-items:center;gap:16px;padding:0 28px;border-bottom:1px solid var(--border);position:sticky;top:0;background:rgba(10,10,11,.8);backdrop-filter:blur(12px)}
+.top h2{font-size:24px;font-weight:600;letter-spacing:-.02em}
+.spacer{flex:1}
+.pill{display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 12px;border-radius:999px;border:1px solid var(--border);background:var(--elev);font-size:13px;color:var(--ts)}
+.pill .d{width:8px;height:8px;border-radius:50%;background:var(--profit)}
+.content{padding:32px 28px 64px}
+.phead{margin-bottom:24px}
+.phead h1{font-size:32px;font-weight:700;letter-spacing:-.02em}
+.phead p{color:var(--ts);margin-top:4px}
+.btn{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 16px;border-radius:12px;font-weight:600;font-size:14px;border:1px solid transparent;cursor:pointer}
+.btn.pri{background:linear-gradient(135deg,var(--accent),#3b6bff);color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.2),0 6px 18px -8px rgba(79,124,255,.6)}
+.btn.gh{background:transparent;border-color:var(--border-s);color:var(--ts)}
+.row{display:grid;gap:16px;margin-top:16px}
+.r-hero{grid-template-columns:1.45fr 1fr 1fr}
+.r-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.r-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-xl);padding:24px;box-shadow:0 1px 0 rgba(255,255,255,.04) inset,0 2px 10px rgba(0,0,0,.3)}
+.chead{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.ctitle{font-size:20px;font-weight:600}
+.lbl{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--tt);font-weight:600}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;background:rgba(255,255,255,.06);color:var(--tt)}
+.badge.pos{background:var(--profit-bg);color:var(--profit)} .badge.inf{background:var(--accent-bg);color:var(--accent)}
+.badge.gold{background:var(--gold-bg);color:var(--gold)} .badge.warn{background:var(--warn-bg);color:var(--warn)}
+/* hero */
+.hero{position:relative;overflow:hidden;border-radius:var(--r-2xl);
+  background:radial-gradient(120% 140% at 100% 0%,rgba(79,124,255,.10),transparent 58%),var(--surface);
+  border-color:rgba(79,124,255,.18)}
+.hero .top2{display:flex;align-items:center;justify-content:space-between}
+.hicon{width:34px;height:34px;border-radius:10px;background:var(--accent-bg);color:var(--accent);display:grid;place-items:center;font-size:16px}
+.heroval{font-size:clamp(40px,6vw,56px);font-weight:800;letter-spacing:-.03em;margin-top:8px;font-variant-numeric:tabular-nums}
+.htrend{display:flex;align-items:center;gap:8px;margin-top:6px;color:var(--profit);font-weight:600}
+.htrend .mut{color:var(--tt);font-weight:400;font-size:13px}
+.split{display:flex;gap:28px;margin-top:20px;padding-top:14px;border-top:1px solid var(--border)}
+.split .k{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--tt);font-weight:600}
+.split .v{font-size:20px;font-weight:600;margin-top:3px;font-variant-numeric:tabular-nums}
+.spark{position:absolute;right:24px;top:64px;opacity:.9}
+/* health */
+.health{display:flex;align-items:center;gap:20px}
+.gauge{position:relative;width:84px;height:84px;flex:0 0 auto}
+.gauge .num{position:absolute;inset:0;display:grid;place-items:center;font-size:24px;font-weight:800}
+.hrows{flex:1;display:flex;flex-direction:column;gap:8px}
+.hrow{display:flex;justify-content:space-between;font-size:13px}
+.hrow .c{color:var(--ts)} .pos{color:var(--profit)} .neg{color:var(--loss)} .wn{color:var(--warn)}
+/* flow */
+.flow{display:flex;flex-direction:column;gap:14px}
+.fitem .ft{display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px}
+.fitem .ft .a{font-weight:600}
+.bar{height:8px;border-radius:999px;background:var(--elev);overflow:hidden}
+.bar i{display:block;height:100%;border-radius:999px}
+.fnet{display:flex;justify-content:space-between;align-items:center;padding-top:14px;border-top:1px solid var(--border)}
+.fnet .nv{font-size:20px;font-weight:800}
+/* mini rows */
+.btot{font-size:28px;font-weight:800;letter-spacing:-.02em;margin-bottom:12px;font-variant-numeric:tabular-nums}
+.mini{display:flex;align-items:center;gap:12px;padding:9px 0;border-top:1px solid var(--border)}
+.mini:first-of-type{border-top:0}
+.av{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-size:11px;font-weight:800;background:var(--accent-bg);color:var(--accent);flex:0 0 auto}
+.mmain{flex:1;min-width:0}
+.mt{font-weight:500} .ms{font-size:13px;color:var(--tt)}
+.mr{text-align:right} .mv{font-weight:600} .mvs{font-size:13px}
+.dist{display:flex;height:9px;border-radius:999px;overflow:hidden;gap:2px;margin-bottom:12px}
+.dist span{display:block;height:100%}
+.strat{display:flex;gap:8px;margin-top:12px;padding:8px 12px;border-radius:12px;background:var(--accent-bg);border:1px solid rgba(79,124,255,.25);font-size:13px;color:var(--ts)}
+.strat b{color:var(--accent)}
+/* goals */
+.goal{padding:12px 0;border-top:1px solid var(--border)} .goal:first-of-type{border-top:0}
+.gtop{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.gmeta{font-size:13px;color:var(--ts);font-variant-numeric:tabular-nums}
+.gout{display:flex;justify-content:space-between;align-items:center;margin-top:6px;font-size:13px;color:var(--tt)}
+/* insights */
+.ins{display:flex;gap:12px;padding:9px 0;border-top:1px solid var(--border);font-size:13px;color:var(--ts)}
+.ins:first-of-type{border-top:0}
+.iico{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;flex:0 0 auto;font-size:12px}
+.iico.pos{background:var(--profit-bg);color:var(--profit)} .iico.warn{background:var(--warn-bg);color:var(--warn)}
+.iico.inf{background:var(--accent-bg);color:var(--accent)}
+.ins b{color:var(--tp)}
+.note{max-width:1400px;margin:0 auto;padding:8px 28px 40px;color:var(--tm);font-size:12px}
+@media(max-width:1180px){.r-hero{grid-template-columns:1.4fr 1fr}.r-hero .hero{grid-column:span 2}.r-3{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:920px){.wrap{grid-template-columns:1fr}.side{display:none}.content{padding:24px 16px 64px}.top{padding:0 16px}
+  .r-hero,.r-3,.r-2{grid-template-columns:1fr}.r-hero .hero{grid-column:span 1}
+  .phead{flex-direction:column;gap:12px}.phead .btn{display:none}
+  .heroval{font-size:40px}.spark{display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <aside class="side">
+    <div class="brand"><span class="mk"></span>Finance<b>OS</b></div>
+    <div class="nsec">General</div>
+    <a class="nav on"><span class="ic"></span>Dashboard</a>
+    <a class="nav"><span class="ic"></span>Hoy</a>
+    <a class="nav"><span class="ic"></span>Transacciones</a>
+    <a class="nav"><span class="ic"></span>Cuentas</a>
+    <div class="nsec">Patrimonio</div>
+    <a class="nav"><span class="ic"></span>Patrimonio</a>
+    <a class="nav"><span class="ic"></span>Inversiones</a>
+    <a class="nav"><span class="ic"></span>Metas</a>
+    <a class="nav"><span class="ic"></span>Deudas</a>
+    <div class="nsec">Inteligencia</div>
+    <a class="nav"><span class="ic"></span>Analítica</a>
+    <a class="nav"><span class="ic"></span>Diario</a>
+  </aside>
+  <main class="main">
+    <div class="top">
+      <h2>Dashboard</h2><span class="spacer"></span>
+      <span class="pill"><span class="d"></span>Sincronizado</span>
+      <span class="pill">⌘K</span>
+    </div>
+    <div class="content">
+      <div class="phead" style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div><h1>Hola, Alejo</h1><p>Tu centro de comando financiero.</p></div>
+        <button class="btn pri">+ Nuevo movimiento</button>
+      </div>
+
+      <div class="row r-hero">
+        <article class="card hero">
+          <div class="top2"><span class="lbl">Patrimonio neto</span><span class="hicon">◆</span></div>
+          <div class="heroval">$47.812.400</div>
+          <div class="htrend">▲ +3.4% <span class="mut">este mes · +1.9% vs snapshot</span></div>
+          <div class="spark">
+            <svg width="170" height="52" viewBox="0 0 170 52" fill="none">
+              <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+                <stop stop-color="#4F7CFF" stop-opacity=".30"/><stop offset="1" stop-color="#4F7CFF" stop-opacity="0"/></linearGradient></defs>
+              <path d="M0 40 L28 36 L56 38 L85 24 L113 26 L141 14 L170 8" stroke="#4F7CFF" stroke-width="2.4" stroke-linecap="round"/>
+              <path d="M0 40 L28 36 L56 38 L85 24 L113 26 L141 14 L170 8 L170 52 L0 52 Z" fill="url(#g)"/>
+            </svg>
+          </div>
+          <div class="split">
+            <div><div class="k">Activos</div><div class="v">$54.2M</div></div>
+            <div><div class="k">Pasivos</div><div class="v neg">−$6.4M</div></div>
+            <div><div class="k">Liquidez</div><div class="v">$12.1M</div></div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="chead"><span class="ctitle">Salud</span><span class="badge pos">Excelente</span></div>
+          <div class="health">
+            <div class="gauge">
+              <svg width="84" height="84" viewBox="0 0 84 84">
+                <circle cx="42" cy="42" r="34" stroke="rgba(255,255,255,.10)" stroke-width="7" fill="none"/>
+                <circle cx="42" cy="42" r="34" stroke="#16C784" stroke-width="7" fill="none"
+                  stroke-dasharray="213.6" stroke-dashoffset="21" stroke-linecap="round" transform="rotate(-90 42 42)"/>
+              </svg><div class="num">90</div>
+            </div>
+            <div class="hrows">
+              <div class="hrow"><span class="c">Liquidez</span><span class="pos">25/25</span></div>
+              <div class="hrow"><span class="c">Ahorro</span><span class="pos">22/25</span></div>
+              <div class="hrow"><span class="c">Deuda</span><span class="wn">16/25</span></div>
+              <div class="hrow"><span class="c">Inversión</span><span class="pos">27/25</span></div>
+            </div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="chead"><span class="ctitle">Flujo</span><span class="badge inf">Junio</span></div>
+          <div class="flow">
+            <div class="fitem"><div class="ft"><span>Ingresos</span><span class="a">$8.420.000</span></div><div class="bar"><i style="width:100%;background:var(--profit)"></i></div></div>
+            <div class="fitem"><div class="ft"><span>Gastos</span><span class="a">$4.110.000</span></div><div class="bar"><i style="width:49%;background:var(--loss)"></i></div></div>
+            <div class="fnet"><span class="lbl">Ahorro neto</span><span><span class="nv pos">+$4.310.000</span> <span class="badge pos">51%</span></span></div>
+          </div>
+        </article>
+      </div>
+
+      <div class="row r-3">
+        <article class="card">
+          <div class="chead"><span class="ctitle">Inversiones</span><span class="badge pos">▲ +18.2%</span></div>
+          <div class="btot">$18.940.300</div>
+          <div class="mini"><span class="av">VO</span><div class="mmain"><div class="mt">VOO</div><div class="ms">ETFs</div></div><div class="mr"><div class="mv">$6.1M</div><div class="mvs pos">+12.4%</div></div></div>
+          <div class="mini"><span class="av">AA</span><div class="mmain"><div class="mt">AAPL</div><div class="ms">Acciones</div></div><div class="mr"><div class="mv">$4.3M</div><div class="mvs pos">+31.0%</div></div></div>
+          <div class="mini"><span class="av">BT</span><div class="mmain"><div class="mt">BTC</div><div class="ms">Cripto</div></div><div class="mr"><div class="mv">$3.2M</div><div class="mvs neg">−4.1%</div></div></div>
+        </article>
+
+        <article class="card">
+          <div class="chead"><span class="ctitle">Deudas</span><span class="badge inf">Ver plan</span></div>
+          <div class="btot">$6.420.000</div>
+          <div class="dist"><span style="width:55%;background:var(--loss)"></span><span style="width:28%;background:var(--warn)"></span><span style="width:17%;background:var(--accent)"></span></div>
+          <div class="mini"><span class="av" style="background:transparent"><span style="width:9px;height:9px;border-radius:50%;background:var(--loss)"></span></span><div class="mmain"><div class="mt">Tarjeta Amex</div><div class="ms">28.8% E.A.</div></div><div class="mr"><div class="mv">$3.5M</div></div></div>
+          <div class="mini"><span class="av" style="background:transparent"><span style="width:9px;height:9px;border-radius:50%;background:var(--warn)"></span></span><div class="mmain"><div class="mt">Crédito vehículo</div><div class="ms">14.2% E.A.</div></div><div class="mr"><div class="mv">$1.8M</div></div></div>
+          <div class="strat">⚡ <span>Avalanche: libre de deuda en <b>sep 2027</b> · $412K en intereses</span></div>
+        </article>
+
+        <article class="card">
+          <div class="chead"><span class="ctitle">Metas</span><span class="badge gold">3</span></div>
+          <div class="goal"><div class="gtop"><span style="font-weight:500">Fondo emergencia</span><span class="gmeta">$9.0M / $12.0M</span></div><div class="bar"><i style="width:75%;background:var(--gold)"></i></div><div class="gout"><span>Proyección: dic 2026</span><span class="badge pos">82% prob.</span></div></div>
+          <div class="goal"><div class="gtop"><span style="font-weight:500">Viaje Japón</span><span class="gmeta">$3.2M / $8.0M</span></div><div class="bar"><i style="width:40%;background:var(--gold)"></i></div><div class="gout"><span>Proyección: ago 2027</span><span class="badge warn">48% prob.</span></div></div>
+        </article>
+      </div>
+
+      <div class="row r-3">
+        <article class="card">
+          <div class="chead"><span class="ctitle">Pagos próximos</span><span class="badge warn">2 urgentes</span></div>
+          <div class="mini"><span class="av" style="background:var(--loss-bg);color:var(--loss)">!</span><div class="mmain"><div class="mt">Cuota Amex</div><div class="ms">Mañana</div></div><div class="mr"><div class="mv">$1.340.000</div></div></div>
+          <div class="mini"><span class="av" style="background:var(--accent-bg)">N</span><div class="mmain"><div class="mt">Netflix</div><div class="ms">En 3 días</div></div><div class="mr"><div class="mv">$44.900</div></div></div>
+          <div class="mini"><span class="av" style="background:var(--accent-bg)">A</span><div class="mmain"><div class="mt">Arriendo</div><div class="ms">En 8 días</div></div><div class="mr"><div class="mv">$2.100.000</div></div></div>
+        </article>
+
+        <article class="card">
+          <div class="chead"><span class="ctitle">Insights</span><span class="badge inf">4</span></div>
+          <div class="ins"><span class="iico pos">▲</span><span><b>AAPL</b> lidera tu portafolio: +31.0% ($1.0M).</span></div>
+          <div class="ins"><span class="iico warn">!</span><span><b>Restaurantes</b> aumentó 22% vs el mes pasado ($610K).</span></div>
+          <div class="ins"><span class="iico pos">▲</span><span>A este ritmo ahorrarás <b>$4.3M</b> este mes.</span></div>
+          <div class="ins"><span class="iico inf">i</span><span>Tu liquidez cubre <b>2.9 meses</b> de gastos.</span></div>
+        </article>
+
+        <article class="card">
+          <div class="chead"><span class="ctitle">Gastos por categoría</span><span class="badge inf">Este mes</span></div>
+          <div class="fitem" style="margin-top:8px"><div class="ft"><span>Vivienda</span><span class="a">$2.100.000</span></div><div class="bar"><i style="width:100%;background:var(--accent)"></i></div></div>
+          <div class="fitem" style="margin-top:12px"><div class="ft"><span>Restaurantes</span><span class="a">$610.000</span></div><div class="bar"><i style="width:29%;background:var(--purple)"></i></div></div>
+          <div class="fitem" style="margin-top:12px"><div class="ft"><span>Transporte</span><span class="a">$420.000</span></div><div class="bar"><i style="width:20%;background:var(--accent)"></i></div></div>
+          <div class="fitem" style="margin-top:12px"><div class="ft"><span>Mercado</span><span class="a">$380.000</span></div><div class="bar"><i style="width:18%;background:var(--purple)"></i></div></div>
+        </article>
+      </div>
+
+    </div>
+  </main>
+</div>
+<div class="note">Mockup — Rework near-black 2026 · Solo presentación visual (datos ficticios). Dark mode. Inter. Accent #4F7CFF solo en acciones/activo · profit #16C784 · loss #EA3943.</div>
+</body>
+</html>
