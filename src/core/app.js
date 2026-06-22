@@ -179,37 +179,51 @@ async function registerSW() {
 // se perdía: eliminar una tx desde el diálogo de confirmación dejaba el dashboard
 // con totales viejos hasta el siguiente cambio del store (sync 30 s).
 let renderPending = false;
+let renderScheduled = false;
 
-function flushPendingRender() {
-  if (!renderPending) return;
+// ¿Es seguro re-renderizar ahora? No mientras el usuario escribe, hay un modal
+// abierto o una importación en curso (perdería foco/estado de la vista).
+function canRenderNow() {
   const ae = document.activeElement;
   const typing = ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT');
-  if (typing || document.body.classList.contains('modal-open') || document.querySelector('[data-import-busy]')) return;
-  renderPending = false;
-  const s = store.get();
-  if (s.ready && shellRefs && currentRoute) renderView(routes[s.ui.route], { animate: false });
+  return !typing
+    && !document.body.classList.contains('modal-open')
+    && !document.querySelector('[data-import-busy]');
 }
 
-function onStoreChange() {
+// Aplica un re-render de la vista activa (o lo deja pendiente si no es seguro).
+function applyRender() {
   const s = store.get();
-  // Actualiza la píldora de sincronización sin reconstruir la topbar.
-  const pill = document.getElementById('sync-pill');
-  if (pill) pill.replaceWith(SyncPill(s.sync));
-  // No re-renderizar si hay un modal abierto o el usuario está escribiendo
-  // (evita perder foco/estado durante una sincronización en segundo plano).
-  const ae = document.activeElement;
-  const typing = ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT');
-  const modalOpen = document.body.classList.contains('modal-open');
-  // L.6/TD-57: una importación en curso (#/import con preview/contraseña abiertos) es
-  // estado local de la vista; re-montarla por un sync de fondo la perdería.
-  const importBusy = !!document.querySelector('[data-import-busy]');
-
-  // Re-renderiza la vista activa cuando hay datos (sin animación ni reset de scroll).
-  if (s.ready && shellRefs && currentRoute && !typing && !modalOpen && !importBusy) {
+  if (!s.ready || !shellRefs || !currentRoute) return;
+  if (canRenderNow()) {
+    renderPending = false;
     renderView(routes[s.ui.route], { animate: false });
-  } else if (s.ready) {
+  } else {
     renderPending = true;
   }
+}
+
+function flushPendingRender() {
+  if (!renderPending || !canRenderNow()) return;
+  applyRender();
+}
+
+// Coalescing (perf): una sola mutación dispara varios store.set (refreshStore,
+// ajuste de saldos, refreshPending, flush). Antes cada uno reconstruía la vista
+// completa de forma síncrona → N renders + N×recálculo de selectores por acción.
+// Agrupamos todos los cambios de un mismo frame en UN único render vía rAF.
+function onStoreChange() {
+  // La píldora de sincronización se actualiza al instante (barato, sin reconstruir
+  // la topbar) para que el estado de sync se sienta inmediato.
+  const pill = document.getElementById('sync-pill');
+  if (pill) pill.replaceWith(SyncPill(store.get().sync));
+
+  if (renderScheduled) return;
+  renderScheduled = true;
+  requestAnimationFrame(() => {
+    renderScheduled = false;
+    applyRender();
+  });
 }
 
 // Desbloqueos que aplican un render pendiente: cierre de modal y blur de inputs.

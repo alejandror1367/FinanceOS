@@ -1095,8 +1095,8 @@ export function renderInvestments() {
 
   root.append(headerEl, bodyMount, Fab('Nueva inversión', { onClick: () => openPurchaseModal({ defaultType: 'etf' }) }));
 
-  // Guard: si bodyMount ya no está en el DOM (render anterior), ignorar cambios del store.
-  store.subscribe(() => { if (bodyMount.isConnected) paint(); });
+  // Reactividad centralizada en core/app.js (render coalescido por rAF): re-montar
+  // en cada store.set duplicaba el render y filtraba suscripciones al store.
   paint();
   // Auto-refresh si el servicio de precios está desactualizado
   if (priceService.isStale) refreshPrices();

@@ -464,6 +464,6 @@ export function renderDebts() {
   repaint();
   // Repintar al cambiar el store (tras un abono, edición o sync) sin fuga: el guard
   // isConnected evita renders sobre un root ya desmontado (idéntico a investments.js).
-  store.subscribe(() => { if (root.isConnected) repaint(); });
+  // Reactividad centralizada en core/app.js (render coalescido por rAF).
   return root;
 }

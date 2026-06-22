@@ -315,7 +315,7 @@ export function renderGoals() {
     );
   }
 
-  store.subscribe(() => { if (root.isConnected) repaint(); });
+  // Reactividad centralizada en core/app.js (render coalescido por rAF).
   repaint();
   return root;
 }

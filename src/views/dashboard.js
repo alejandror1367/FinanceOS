@@ -1,7 +1,8 @@
 // views/dashboard.js — Dashboard: centro de comando financiero.
 // Rediseño fintech (docs/DOSSIER_UI_UX_FINTECH): 8 bloques — Patrimonio,
 // Salud, Flujo del Mes, Inversiones, Deudas, Metas, Pagos Próximos, Insights.
-// Patrón root + repaint() + store.subscribe (reactivo sin fugas).
+// Patrón root + repaint(); la reactividad la dispara core/app.js (render
+// coalescido por rAF) — la vista ya no se suscribe al store (evita doble render).
 
 import { el, mount } from '../utils/dom.js';
 import { icon } from '../utils/icons.js';
@@ -499,7 +500,9 @@ export function renderDashboard() {
     );
   }
 
-  store.subscribe(() => { if (root.isConnected) repaint(); });
+  // Reactividad centralizada en core/app.js (render coalescido por rAF): re-montar
+  // la vista en cada store.set duplicaba el render y filtraba suscripciones (cada
+  // re-montaje añadía un listener al store que nunca se liberaba).
   repaint();
   return root;
 }

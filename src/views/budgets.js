@@ -294,6 +294,6 @@ export function renderBudgets() {
   }
 
   repaint();
-  store.subscribe(() => { if (root.isConnected) repaint(); });
+  // Reactividad centralizada en core/app.js (render coalescido por rAF).
   return root;
 }
