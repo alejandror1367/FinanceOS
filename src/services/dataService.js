@@ -219,33 +219,42 @@ export const dataService = {
     }
 
     // Modo conectado.
+    // PERF (cold start / BUG-C1): hidratamos desde la caché local y DEVOLVEMOS de
+    // inmediato para que el router/Dashboard rendericen al instante. El flush de la
+    // cola y el pull de datos frescos corren en segundo plano y reconcilian de forma
+    // reactiva (applyCollections → store.hydrate → render coalescido). Antes init()
+    // esperaba el pull de red: en cold start con backend lento la app se quedaba en
+    // el skeleton hasta ~15-30 s.
     try {
       if (db.available()) await loadFromLocal(); // render instantáneo desde caché
     } catch (e) { /* caché vacía, continuamos */ }
     await normalizeCCBalancesInDB(); // normaliza CCs con balance positivo (datos antiguos)
 
     syncEngine.start();
-    try { await syncEngine.flush(); } catch (e) { /* offline: se reintenta */ }
-
-    if (navigator.onLine) {
-      try {
-        let res = await pullData();
-        // BUG-C1: si TODO falló (cold start con la verificación del token todavía
-        // fría/transitoria), reintentar una vez tras un breve respiro. El primer
-        // intento ya habrá calentado el estado de auth en el backend.
-        if (res.pulled === 0) {
-          await new Promise((r) => setTimeout(r, 800));
-          res = await pullData();
-        }
-        await normalizeCCBalancesInDB(); // re-normaliza tras sync (backend puede devolver positivo)
-        // Backfill: crea categorías base faltantes en instalaciones existentes.
-        const cats = store.get().categories || [];
-        const hasOtros = cats.some((c) => c.name === 'Otros' && c.kind === 'expense' && !c.isDeleted);
-        if (!hasOtros) await this.create('categories', { name: 'Otros', kind: 'expense', color: 'slate', icon: 'wallet' }).catch(() => {});
-      }
-      catch (e) { console.warn('[dataService] pull falló (se usa caché):', e); }
-    }
+    this._backgroundSync(); // no-await: flush + pull en segundo plano
     return { source: 'backend', connected: true };
+  },
+
+  // Flush de la cola pendiente + descarga de datos frescos, en segundo plano.
+  // Reconcilia vía store (render reactivo); no bloquea el arranque.
+  async _backgroundSync() {
+    try { await syncEngine.flush(); } catch (e) { /* offline: se reintenta */ }
+    if (!navigator.onLine) return;
+    try {
+      let res = await pullData();
+      // BUG-C1: si TODO falló (cold start con la verificación del token todavía
+      // fría/transitoria), reintentar una vez tras un breve respiro. El primer
+      // intento ya habrá calentado el estado de auth en el backend.
+      if (res.pulled === 0) {
+        await new Promise((r) => setTimeout(r, 800));
+        res = await pullData();
+      }
+      await normalizeCCBalancesInDB(); // re-normaliza tras sync (backend puede devolver positivo)
+      // Backfill: crea categorías base faltantes en instalaciones existentes.
+      const cats = store.get().categories || [];
+      const hasOtros = cats.some((c) => c.name === 'Otros' && c.kind === 'expense' && !c.isDeleted);
+      if (!hasOtros) await this.create('categories', { name: 'Otros', kind: 'expense', color: 'slate', icon: 'wallet' }).catch(() => {});
+    } catch (e) { console.warn('[dataService] pull falló (se usa caché):', e); }
   },
 
   // -------- API de mutaciones (Optimistic UI) --------
@@ -283,7 +292,7 @@ export const dataService = {
       s[cfg.store].put(record);
       s.syncQueue.put(op);
     });
-    await this._refreshStore(coll);
+    await this._refreshStore(coll, { record });
     if (coll === 'transactions') await this._adjustAccountBalances(record, +1);
     await syncEngine.refreshPending();
     syncEngine.flush();
@@ -299,7 +308,7 @@ export const dataService = {
       s[cfg.store].put(record);
       s.syncQueue.put(op);
     });
-    await this._refreshStore(coll);
+    await this._refreshStore(coll, { record });
     // BE-002 (TD-46): para transacciones, recalcular el saldo de las cuentas afectadas
     // desde las transacciones locales en lugar de aplicar deltas manualmente.
     // La razón: si el usuario edita la misma tx N veces offline antes del flush, el
@@ -331,18 +340,34 @@ export const dataService = {
       s[cfg.store].delete(id); // optimista: fuera de la caché local
       s.syncQueue.put(op);
     });
-    await this._refreshStore(coll);
+    await this._refreshStore(coll, { removedId: id });
     if (existing) await this._adjustAccountBalances(existing, -1);
     await syncEngine.refreshPending();
     syncEngine.flush();
     return { id, deleted: true };
   },
 
-  async _refreshStore(coll) {
+  // PERF: en lugar de re-leer TODA la colección de IndexedDB tras cada mutación
+  // (deserializa N registros por structured-clone), aplicamos el cambio puntual
+  // sobre el array en memoria del store. `change` = { record } | { removedId }.
+  // Sin change, recarga completa (fallback seguro).
+  async _refreshStore(coll, change) {
+    if (change && (change.record || change.removedId)) {
+      const cur = store.get()[coll] || [];
+      let next;
+      if (change.removedId) {
+        next = cur.filter((r) => r.id !== change.removedId);
+      } else {
+        const rec = change.record;
+        const i = cur.findIndex((r) => r.id === rec.id);
+        next = i >= 0 ? cur.slice() : cur.concat([rec]);
+        if (i >= 0) next[i] = rec;
+      }
+      store.set({ [coll]: next });
+      return;
+    }
     const items = await db.getAll(ENTITIES[coll].store);
-    const patch = {};
-    patch[coll] = items;
-    store.set(patch);
+    store.set({ [coll]: items });
   },
 
   // Fuerza una descarga manual (botón "Actualizar").
@@ -393,7 +418,7 @@ export const dataService = {
     // BE-013 (TD-22): redondear según divisa — evita centavos fantasma en COP.
     const updated = { ...account, balance: roundMoney((account.balance || 0) + delta, account.currency || 'COP'), updatedAt: new Date().toISOString() };
     await db.put('accounts', updated);
-    await this._refreshStore('accounts');
+    await this._refreshStore('accounts', { record: updated });
   },
 
   // BE-002 (TD-46): recalcula el saldo de una cuenta leyendo TODAS sus transacciones
@@ -418,7 +443,7 @@ export const dataService = {
     }
     const updated = { ...account, balance: Math.round(balance), updatedAt: new Date().toISOString() };
     await db.put('accounts', updated);
-    await this._refreshStore('accounts');
+    await this._refreshStore('accounts', { record: updated });
   },
 
   // Recalcula todos los saldos desde 0 sumando las transacciones (migración TD-01).
