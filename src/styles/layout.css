@@ -204,3 +204,22 @@
 .view-anim .grid--2 > :nth-child(1), .view-anim > .section:nth-of-type(1) { animation-delay: 120ms; }
 .view-anim .grid--2 > :nth-child(2), .view-anim > .section:nth-of-type(2) { animation-delay: 180ms; }
 .view-anim > .section:nth-of-type(n+3) { animation-delay: 240ms; }
+
+/* ---------- PERF: contención de render (scroll fluido) ----------
+   content-visibility:auto evita layout+paint de lo que está fuera del viewport
+   (clave en Transacciones/Inversiones/Analítica con muchas filas y cards). El
+   valor `auto` de contain-intrinsic-size recuerda el tamaño real tras el primer
+   render → sin saltos al volver a scrollear. `contain` aísla los reflows de cada
+   fila para que un cambio en una no repinte la lista entera.
+   No es animación → no lo toca prefers-reduced-motion. Las cards visibles sí
+   renderizan, así que el stagger de .view-anim sigue intacto. */
+.card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 320px;
+}
+.row-list > .row,
+.tx-row {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 56px;
+  contain: layout style paint;
+}
