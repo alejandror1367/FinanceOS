@@ -156,11 +156,18 @@
     z-index: var(--z-sticky);
   }
   .bottom-nav__item {
-    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 3px; color: var(--text-tertiary); font-size: var(--fs-micro); font-weight: var(--fw-semibold);
+    flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 3px; color: var(--text-tertiary); font-size: 0.6875rem; font-weight: var(--fw-semibold);
     position: relative;
     transition: color var(--dur-fast) var(--ease-out);
   }
+  /* QA-005: labels largos ("Transacciones"/"Inversiones") no se peguen entre ítems */
+  .bottom-nav__item span:last-child {
+    max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 2px;
+  }
+  /* QA-001: el título del topbar a 24px se truncaba en móvil junto a los 4 iconos
+     de acción → en móvil baja a 20px (fs-h3) para respirar sin truncar. */
+  .topbar__title { font-size: var(--fs-h3); }
   .bottom-nav__item[aria-current="page"] { color: var(--accent); }
   /* Indicador superior del ítem activo (espejo del indicador lateral del sidebar) */
   .bottom-nav__item[aria-current="page"]::before {
@@ -175,6 +182,10 @@
 @media (max-width: 520px) {
   .grid--2 { grid-template-columns: 1fr; }
   .content { padding-left: var(--space-3); padding-right: var(--space-3); }
+  /* QA-002: evitar que el min-content de una card fuerce el track más ancho que
+     el viewport (overflow ~17px a 375px en dashboard/today). min-width:0 deja que
+     las cards se contraigan y su contenido use elipsis/wrap. */
+  .dash-row > *, .dash-row--hero > *, .grid--kpi > *, .grid--2 > * { min-width: 0; }
 }
 
 /* ---------- Entrada de vista con stagger ----------

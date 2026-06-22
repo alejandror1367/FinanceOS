@@ -56,9 +56,10 @@
   --gold: var(--champagne-400);
   --gold-bg: rgba(217,184,114,0.13);
 
-  /* Loss — tendencia ↓ */
-  --negative: var(--red-500);
-  --negative-bg: rgba(234,57,67,0.13);
+  /* Loss — tendencia ↓ (red-400 más brillante: AA ≥4.5:1 en texto pequeño
+     sobre superficies sólidas; #EA3943 quedaba en ~4.36 — QA-003) */
+  --negative: var(--red-400);
+  --negative-bg: rgba(234,57,67,0.14);
 
   /* Funcionales */
   --warning: var(--amber-300);
@@ -107,27 +108,28 @@
   --text-muted: #868B94;
   --text-inverse: #FFFFFF;
 
-  /* En claro usamos tonos profundos (contraste AA en texto/relleno) */
-  --accent: var(--periwinkle-700);
+  /* En claro usamos tonos profundos (contraste AA ≥4.5:1 en texto pequeño,
+     incl. sobre los chips de tinte .12 — QA-004 cruzó varios al límite) */
+  --accent: #2A4FCC;
   --accent-hover: var(--periwinkle-600);
   --accent-contrast: #FFFFFF;
-  --accent-bg: rgba(47,90,224,0.12);
-  --accent-2: var(--violet-500);
-  --accent-2-bg: rgba(139,92,246,0.12);
+  --accent-bg: rgba(42,79,204,0.12);
+  --accent-2: var(--violet-600);
+  --accent-2-bg: rgba(124,70,232,0.12);
 
-  --positive: var(--emerald-700);
-  --positive-bg: rgba(12,140,92,0.12);
+  --positive: #0A7A4F;
+  --positive-bg: rgba(10,122,79,0.12);
 
-  --gold: var(--champagne-700);
-  --gold-bg: rgba(138,106,46,0.12);
+  --gold: #7A5D28;
+  --gold-bg: rgba(122,93,40,0.12);
 
   --negative: var(--red-600);
   --negative-bg: rgba(201,42,51,0.10);
 
-  --warning: var(--amber-600);
-  --warning-bg: rgba(156,111,28,0.12);
-  --info: var(--periwinkle-700);
-  --info-bg: rgba(47,90,224,0.12);
+  --warning: #855F14;
+  --warning-bg: rgba(133,95,20,0.12);
+  --info: #2A4FCC;
+  --info-bg: rgba(42,79,204,0.12);
   --neutral: var(--slate-600);
   --neutral-bg: rgba(90,97,112,0.12);
 
