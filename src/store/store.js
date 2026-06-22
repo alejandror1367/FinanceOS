@@ -8,6 +8,12 @@ const state = {
   user: 'Alejo',
   baseCurrency: 'COP',
 
+  // Revisión monótona del estado. La bumpean set()/hydrate() en cada mutación.
+  // selectors.js la usa como clave de memoización por render: misma revisión →
+  // mismos datos → resultado cacheado. Los estados ad-hoc de los tests no la
+  // tienen (undefined) → la memoización se desactiva y siempre recalculan.
+  __rev: 0,
+
   accounts: [],
   transactions: [],
   categories: [],
@@ -54,12 +60,14 @@ export const store = {
       delete patch.ui;
     }
     Object.assign(state, patch);
+    state.__rev++;
     emit();
   },
   // Reemplaza colecciones de datos de dominio en bloque.
   hydrate(collections) {
     Object.assign(state, collections);
     state.ready = true;
+    state.__rev++;
     emit();
   },
   subscribe(fn) {
@@ -69,7 +77,10 @@ export const store = {
 };
 
 function emit() {
-  for (const fn of listeners) {
+  // Snapshot de los listeners: re-renderizar puede crear/destruir suscriptores
+  // (las vistas se re-montan), y mutar el Set durante la iteración haría que un
+  // suscriptor recién añadido se dispare en el mismo emit (doble render).
+  for (const fn of [...listeners]) {
     try { fn(state); } catch (e) { console.error('[store] listener error', e); }
   }
 }

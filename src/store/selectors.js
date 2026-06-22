@@ -4,6 +4,34 @@
 import { priceService } from '../services/priceService.js';
 import { roundMoney } from '../utils/format.js';
 
+// ── Memoización por render (cuello de botella de rendimiento) ─────────────────
+// El Dashboard llama ~30 selectores por repaint y muchos vuelven a recorrer las
+// MISMAS colecciones (p. ej. monthlyIncome/Expense se recomputan 6–8× vía
+// savingsRate/financialScore/financialScoreBreakdown; budgetConsumed recorre las
+// 3000 tx por cada presupuesto y se invoca 36×). Con datasets reales esto cuesta
+// decenas de ms por render.
+//
+// `memo` cachea el resultado de un selector puro derivado del estado, con clave
+// (identidad del estado + state.__rev + args). Como store.set/hydrate bumpean
+// __rev en cada mutación (incluido _priceRevision tras actualizar precios/FX), la
+// caché se invalida sola en el siguiente cambio. Los estados ad-hoc de los tests
+// no tienen __rev → la memoización se desactiva y siempre recalculan (correctitud
+// intacta; los 200 tests lo verifican).
+function memo(fn) {
+  const cache = new WeakMap(); // estado -> { rev, map: Map(argKey -> value) }
+  return function memoized(s, ...args) {
+    const rev = s && s.__rev;
+    if (rev === undefined) return fn.call(this, s, ...args);
+    let entry = cache.get(s);
+    if (!entry || entry.rev !== rev) { entry = { rev, map: new Map() }; cache.set(s, entry); }
+    const key = args.length === 0 ? '' : JSON.stringify(args);
+    if (entry.map.has(key)) return entry.map.get(key);
+    const value = fn.call(this, s, ...args);
+    entry.map.set(key, value);
+    return value;
+  };
+}
+
 // Normalizes a periodKey that Google Sheets may auto-convert from 'YYYY-MM' to a Date object.
 export function normPeriodKey(raw, len) {
   const s = String(raw);
@@ -1400,3 +1428,26 @@ export const selectors = {
     return currencies.some((c) => c && c !== base);
   },
 };
+
+// ── Activar memoización en los selectores puros y costosos ───────────────────
+// Se envuelven DESPUÉS de definir el objeto: las llamadas internas (p. ej.
+// financialScore → savingsRate → monthlyIncome) resuelven `selectors.x` en tiempo
+// de ejecución y reutilizan la versión memoizada, colapsando los recálculos
+// duplicados de un mismo render a uno solo. No se memoizan helpers con argumentos
+// de objeto variables (goalOutlook, positionValue) ni finds triviales
+// (categoryById/accountById): la clave JSON costaría más que recalcular.
+for (const name of [
+  'liquidAccounts', 'totalLiquidity', 'creditCardAccounts', 'creditCardDebt',
+  'investmentsValue', 'investmentsCost', 'investmentsReturnPct', 'investmentsIncompleteCount',
+  'investmentsSummary', 'portfolioOverview', 'portfolioAlerts', 'portfolioXIRR',
+  'totalAssets', 'totalLiabilities', 'netWorth', 'netWorthBreakdown',
+  'monthlyIncome', 'monthlyExpense', 'monthlySavings', 'monthlySavingsAvg',
+  'savingsRate', 'goalSavingsSplit', 'recentTransactions', 'activeGoals',
+  'upcomingPayments', 'debtList', 'debtStats', 'budgetConsumed', 'budgetStats',
+  'cashflow', 'categorySpend', 'topCategoryChange', 'categoryTrends', 'expenseByCategory',
+  'financialScore', 'financialScoreBreakdown', 'dailyHealth', 'actionItems',
+  'monthProgress', 'liquidityCoverageMonths', 'savingsStreak', 'snapshotDeltas',
+  'recurringMonthlyLoad', 'fxGaps',
+]) {
+  selectors[name] = memo(selectors[name]);
+}

@@ -1,7 +1,7 @@
 // core/config.js — configuración global del frontend.
 export const CONFIG = {
   appName: 'FinanceOS',
-  version: '0.2.141',
+  version: '0.2.142',
   owner: 'Alejo',
   dbName: 'financeos',
   storageKeys: {
