@@ -17,6 +17,12 @@ let timer = null;
 
 function setStatus(patch) {
   const current = store.get().sync || {};
+  // PERF: no emitir si ningún campo cambia. Sin esto, el flush periódico (30 s)
+  // con la cola vacía disparaba store.set → re-render completo de la vista activa
+  // cada 30 s para nada.
+  let changed = false;
+  for (const k in patch) { if (current[k] !== patch[k]) { changed = true; break; } }
+  if (!changed) return;
   store.set({ sync: { ...current, ...patch } });
 }
 
@@ -101,10 +107,18 @@ async function flush() {
     await refreshPending();
     return;
   }
+  // PERF: si no hay nada en la cola (estado normal en reposo), no entrar en el
+  // flujo "syncing → idle" ni tocar lastSync — eso re-renderizaba la vista activa
+  // cada 30 s sin sincronizar nada. refreshPending va guardado (no emite si los
+  // contadores no cambian).
+  const ops = await syncQueue.all();
+  if (!ops.length) {
+    await refreshPending();
+    return;
+  }
   running = true;
   setStatus({ state: 'syncing' });
   try {
-    const ops = await syncQueue.all();
     if (ops.length >= 2) {
       try {
         await flushBatch(ops);
