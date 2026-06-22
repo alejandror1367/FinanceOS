@@ -432,7 +432,7 @@ export function renderDashboard() {
             const cls   = isIncome ? 'text-positive' : isTransfer ? '' : 'text-negative';
             const label = isTransfer ? 'Transferencia' : (cat?.name || 'Sin categoría');
             return el('div', { class: 'row' }, [
-              el('div', { class: 'row__avatar', html: icon(isTransfer ? 'transactions' : (cat?.icon || 'wallet')) }),
+              el('div', { class: `row__avatar ${isIncome ? 'row__avatar--pos' : isTransfer ? 'row__avatar--accent' : ''}`, html: icon(isTransfer ? 'transactions' : (cat?.icon || 'wallet')) }),
               el('div', { class: 'row__main' }, [
                 el('div', { class: 'row__title', text: t.description || label }),
                 el('div', { class: 'row__sub', text: `${label} · ${acc?.name || ''} · ${relativeDay(t.date)}` }),

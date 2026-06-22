@@ -252,7 +252,7 @@ function txRow(t, m, cur) {
     if (e.target.closest('button, a')) return;
     openActionSheet({ title: t.description || label, actions });
   } } }, [
-    el('div', { class: 'row__avatar', html: icon(iconName) }),
+    el('div', { class: `row__avatar ${isIncome ? 'row__avatar--pos' : isTransfer ? 'row__avatar--accent' : ''}`, html: icon(iconName) }),
     el('div', { class: 'row__main' }, [
       el('div', { class: 'row__title', text: t.description || label }),
       el('div', { class: 'row__sub', text: subLabel }),

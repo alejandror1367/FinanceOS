@@ -4,7 +4,7 @@
 import { CONFIG } from '../core/config.js';
 
 const KEY = CONFIG.storageKeys.theme;
-const THEME_COLORS = { dark: '#070B14', light: '#F1F3F7' };
+const THEME_COLORS = { dark: '#0A0A0B', light: '#F4F5F7' };
 
 export const theme = {
   get() {

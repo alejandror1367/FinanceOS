@@ -172,6 +172,10 @@ details[open] .kpi__dchev { transform: rotate(180deg); }
   display: grid; place-items: center; background: var(--bg-surface-2); color: var(--text-secondary);
 }
 .row__avatar svg { width: 18px; height: 18px; }
+/* Tinte por tipo (feed estilo Apple Wallet) — el color comunica significado */
+.row__avatar--pos { background: var(--positive-bg); color: var(--positive); }
+.row__avatar--accent { background: var(--accent-bg); color: var(--accent); }
+.row__avatar--neg { background: var(--negative-bg); color: var(--negative); }
 .row__main { flex: 1; min-width: 0; }
 .row__title { font-weight: var(--fw-medium); overflow-wrap: break-word; }
 /* QA-002/003: en listas de filas (tx, cuentas) el título usa elipsis para no romper por caracteres */
